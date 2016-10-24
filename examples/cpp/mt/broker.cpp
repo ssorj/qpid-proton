@@ -149,6 +149,7 @@ class broker_connection_handler : public proton::messaging_handler {
 
     // A sender sends messages from a queue to a subscriber.
     void on_sender_open(proton::sender &sender) OVERRIDE {
+        // FIXME aconway 2016-09-29: need to set the source address here.
         queue *q = sender.source().dynamic() ?
             queues_.dynamic() : queues_.get(sender.source().address());
         std::cout << "sending from " << q->name() << std::endl;

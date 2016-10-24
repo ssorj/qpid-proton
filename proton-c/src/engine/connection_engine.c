@@ -37,14 +37,17 @@ int pn_connection_engine_init(pn_connection_engine_t* e) {
 }
 
 void pn_connection_engine_final(pn_connection_engine_t* e) {
-    if (e->transport && e->connection) {
+    if (e->transport) {
         pn_transport_unbind(e->transport);
-        pn_decref(e->transport);
+        pn_transport_free(e->transport);
     }
-    if (e->collector)
+    if (e->collector) {
+        pn_collector_release(e->collector);
         pn_collector_free(e->collector); /* Break cycle with connection */
-    if (e->connection)
-        pn_decref(e->connection);
+    }
+    if (e->connection) {
+        pn_connection_free(e->connection);
+    }
     memset(e, 0, sizeof(*e));
 }
 
@@ -109,6 +112,10 @@ pn_event_t* pn_connection_engine_dispatch(pn_connection_engine_t* e) {
 
 bool pn_connection_engine_finished(pn_connection_engine_t* e) {
     return pn_transport_closed(e->transport) && (pn_collector_peek(e->collector) == NULL);
+}
+
+bool pn_connection_engine_closed(pn_connection_engine_t* e) {
+    return pn_transport_closed(e->transport);
 }
 
 pn_connection_t* pn_connection_engine_connection(pn_connection_engine_t* e) {
