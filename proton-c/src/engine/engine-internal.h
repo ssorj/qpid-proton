@@ -22,12 +22,13 @@
  *
  */
 
-#include <proton/object.h>
-#include <proton/engine.h>
-#include <proton/types.h>
 #include "buffer.h"
 #include "dispatcher/dispatcher.h"
 #include "util.h"
+
+#include <proton/object.h>
+#include <proton/engine.h>
+#include <proton/types.h>
 
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
 
@@ -218,7 +219,6 @@ struct pn_transport_t {
   bool auth_required;
   bool authenticated;
   bool encryption_required;
-
   bool referenced;
 };
 

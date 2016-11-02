@@ -71,6 +71,7 @@ typedef struct pn_bytes_t {
 } pn_bytes_t;
 
 PN_EXTERN pn_bytes_t pn_bytes(size_t size, const char *start);
+static const pn_bytes_t pn_bytes_null = { 0, NULL };
 
 /** A non-const byte buffer. */
 typedef struct pn_rwbytes_t {
@@ -79,6 +80,7 @@ typedef struct pn_rwbytes_t {
 } pn_rwbytes_t;
 
 PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
+static const pn_bytes_t pn_rwbytes_null = { 0, NULL };
 
 /** @}
  */
