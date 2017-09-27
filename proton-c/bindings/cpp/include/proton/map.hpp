@@ -61,7 +61,7 @@ PN_CPP_EXTERN void swap(map<K,T>&, map<K,T>&);
 /// This class provides only basic get() and put() operations for
 /// convenience.  For more complicated uses (iteration, preserving
 /// order, and so on), convert the value to a standard C++ map type
-/// such as `std::map`. See @ref message_properties.cpp and @ref
+/// such as `std::map`. See @ref message-properties.cpp and @ref
 /// types_page.
 template <class K, class T>
 class PN_CPP_CLASS_EXTERN map {

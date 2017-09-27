@@ -10,7 +10,7 @@
 // DEVELOPER NOTE: If you add or modify examples, please add/update a short
 // description below and (if appropriate) extend/update tutorial.dox.
 
-/** @example helloworld.cpp
+/** @example hello-world.cpp
 
 Connects to a broker on 127.0.0.1:5672, establishes a subscription
 from the 'examples' node, and creates a sending link to the same
@@ -18,16 +18,16 @@ node. Sends one message and receives it back.
 
 */
 
-/** @example helloworld_direct.cpp
+/** @example hello-world-direct.cpp
 
-Variation of helloworld that does not use a broker, but listens for
+A variation of hello-world that does not use a broker, but listens for
 incoming connections itself. It establishes a connection to itself
 with a link over which a single message is sent. This demonstrates the
 ease with which a simple daemon an be built using the API.
 
 */
 
-/** @example simple_send.cpp
+/** @example simple-send.cpp
 
 An example of sending a fixed number of messages and tracking their
 (asynchronous) acknowledgement. Messages are sent through the 'examples' node on
@@ -35,37 +35,37 @@ an intermediary accessible on 127.0.0.1:5672.
 
 */
 
-/** @example simple_recv.cpp
+/** @example simple-recv.cpp
 
 Subscribes to the 'examples' node on an intermediary accessible
 on 127.0.0.1:5672. Simply prints out the body of received messages.
 
 */
 
-/** @example message_properties.cpp
+/** @example message-properties.cpp
 
 Shows how to set and examine message properties.
 
 */
 
-/** @example direct_send.cpp
+/** @example direct-send.cpp
 
-Accepts an incoming connection and then sends like `simple_send`.  You can
-connect directly to `direct_send` *without* a broker using @ref simple_recv.cpp.
-Make sure to stop the broker first or use a different port for `direct_send`.
+Accepts an incoming connection and then sends like `simple-send`.  You can
+connect directly to `direct-send` *without* a broker using @ref simple-recv.cpp.
+Make sure to stop the broker first or use a different port for `direct-send`.
 
 */
 
-/** @example direct_recv.cpp
+/** @example direct-recv.cpp
 
-Accepts an incoming connection and then receives like `simple_recv`.  You can
-connect directly to `direct_recv` *without* a broker using @ref simple_send.cpp.
-Make sure to stop the broker first or use a different port for `direct_recv`.
+Accepts an incoming connection and then receives like `simple-recv`.  You can
+connect directly to `direct-recv` *without* a broker using @ref simple-send.cpp.
+Make sure to stop the broker first or use a different port for `direct-recv`.
 
 */
 
 /// @cond INTERNAL
-/** @example encode_decode.cpp
+/** @example encode-decode.cpp
 
 Shows how C++ data types can be converted to and from AMQP types.
 
@@ -89,7 +89,7 @@ result back to the indicated reply address.
 
 */
 
-/** @example server_direct.cpp
+/** @example server-direct.cpp
 
 A variant of the server part of a request-response example that
 accepts incoming connections and does not need an intermediary. Much
@@ -108,30 +108,33 @@ creates queues automatically when a client tries to send or subscribe.
 
 */
 
-/** @example scheduled_send.cpp
+/** @example scheduled-send.cpp
 
 Shows how to use proton::container::schedule to schedule a timed callback.
-This version uses std::function and so requires C++11 or better. For a C++03 compatible
-approach see @ref scheduled_send_03.cpp.
+
+This version uses std::function and so requires C++11 or better. For a
+C++03-compatible approach see @ref scheduled-send-03.cpp.
 
 */
 
-/** @example scheduled_send_03.cpp
+/** @example scheduled-send-03.cpp
 
 Shows how to use proton::container::schedule to schedule a timed callback in a
-C++03 compatible way. See @ref scheduled_send.cpp for a more convenient approach
+C++03-compatible way. See @ref scheduled-send.cpp for a more convenient approach
 using std::function if you have C++11.
 
 */
 
-/** @example service_bus.cpp
+/** @example service-bus.cpp
 
 A working example for accessing Service Bus session-enabled queues.
 Also provides some general notes on Service Bus usage.
 
+__Requires C++11__
+
 */
 
-/** @example multithreaded_client.cpp
+/** @example multithreaded-client.cpp
 
 A multithreaded sender and receiver.
 
@@ -139,7 +142,7 @@ __Requires C++11__
 
 */
 
-/** @example multithreaded_client_flow_control.cpp
+/** @example multithreaded-client-flow-control.cpp
 
 A multithreaded sender and receiver enhanced for flow control.
 

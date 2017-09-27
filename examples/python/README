@@ -11,7 +11,7 @@ configuration which is described below.
 
 ------------------------------------------------------------------
 
-helloworld.py
+hello-world.py
 
 Basic example that connects to an intermediary on localhost:5672,
 establishes a subscription from the 'examples' node on that
@@ -19,33 +19,33 @@ intermediary, then creates a sending link to the same node and sends
 one message. On receving the message back via the subcription, the
 connection is closed.
 
-helloworld_blocking.py
+hello-world-blocking.py
 
-The same as the basic helloworld.py, but using a
+The same as the basic hello-world.py, but using a
 synchronous/sequential style wrapper on top of the
 asynchronous/reactive API. The purpose of this example is just to show
 how different functionality can be easily layered should it be
 desired.
 
-helloworld_direct.py
+hello-world-direct.py
 
-A variant of the basic helloworld example, that does not use an
+A variant of the basic hello-world example, that does not use an
 intermediary, but listens for incoming connections itself. It
 establishes a connection to itself with a link over which a single
 message is sent. This demonstrates the ease with which a simple daemon
 can be built using the API.
 
-helloworld_tornado.py
-helloworld_direct_tornado.py
+hello-world-tornado.py
+hello-world-direct-tornado.py
 
-These are variant of the helloworld.py and helloworld_direct.py
+These are variant of the hello-world.py and hello-world-direct.py
 examples that use the event loop from the tornado library, rather than
 that provided within proton itself and demonstrate how proton can be
 used with external loops.
 
 -------------------------------------------------------------------
 
-simple_send.py
+simple-send.py
 
 An example of sending a fixed number of messages and tracking their
 (asynchronous) acknowledgement. Handles disconnection while
@@ -54,12 +54,12 @@ no message in the sequence should be lost). Messages are sent through
 the 'examples' node on an intermediary accessible on port 5672 on
 localhost.
 
-simple_recv.py
+simple-recv.py
 
 Subscribes to the 'examples' node on an intermediary accessible on port 5672 on
 localhost. Simply prints out the body of received messages.
 
-db_send.py
+db-send.py
 
 A more realistic sending example, where the messages come from records
 in a simple database table. On being acknowledged the records can be
@@ -68,14 +68,14 @@ thread, so as not to block the event thread during data
 access. Messages are sent through the 'examples' node on an
 intermediary accessible on port 5672 on localhost.
 
-db_recv.py
+db-recv.py
 
 A receiving example that records messages received from the 'examples'
 node on localhost:5672 in a database table and only acknowledges them
 when the insert completes. Database access is again done in a separate
 thread from the event loop.
 
-db_ctrl.py
+db-ctrl.py
 
 A utility for setting up the database tables for the two examples
 above. Takes two arguments, the action to perform and the name of the
@@ -86,17 +86,17 @@ which creates the table, 'list' which displays the contents and
 populate src_db, e.g. for i in `seq 1 50`; do echo "Message-$i"; done
 | ./db_ctrl.py insert src_db.
 
-tx_send.py
+tx-send.py
 
 A sender that sends messages in atomic batches using local
 transactions (this example does not persist the messages in any way).
 
-tx_recv.py
+tx-recv.py
 
 A receiver example that accepts batches of messages using local
 transactions.
 
-tx_recv_interactive.py
+tx-recv-interactive.py
 
 A testing utility that allow interactive control of the
 transactions. Actions are keyed in to the console, 'fetch' will
@@ -105,17 +105,17 @@ will commit it.
 
 The various send/recv examples can be mixed and matched if desired.
 
-direct_send.py
+direct-send.py
 
 An example that accepts incoming links and connections over which it
-will then send out messages. Can be used with simple_recv.py or
-db_recv.py for direct, non-intermediated communication.
+will then send out messages. Can be used with simple-recv.py or
+db-recv.py for direct, non-intermediated communication.
 
-direct_recv.py
+direct-recv.py
 
 An example that accepts incoming links and connections over which it
 will then receive messages, printing out the content. Can be used with
-simple_send.py or db_send.py for direct, non-intermediated
+simple-send.py or db-send.py for direct, non-intermediated
 communication.
 
 -------------------------------------------------------------------
@@ -133,22 +133,22 @@ The server part of a request-response example, that receives requests
 via the examples node, converts the body to uppercase and sends the
 result back to the indicated reply address.
 
-sync_client.py
+sync-client.py
 
 A variant of the client part, that uses a blocking/synchronous style
 instead of the reactive/asynchronous style.
 
-client_http.py
+client-http.py
 
 A variant of the client part that takes the input to be submitted in
-the request over HTTP (point your browser to localhost:8888/client)
+the request over HTTP (point your browser to localhost:8888/client).
 
-server_tx.py
+server-tx.py
 
 A variant of the server part that consumes the request and sends out
 the response atomically in a local transaction.
 
-direct_server.py
+direct-server.py
 
 A variant of the server part of a request-response example, that
 accepts incoming connections and does not need an intermediary. Much
@@ -159,17 +159,17 @@ alternatives.
 
 -------------------------------------------------------------------
 
-selected_recv.py
+selected-recv.py
 
 An example that uses a selector filter.
 
 -------------------------------------------------------------------
 
-recurring_timer.py
+recurring-timer.py
 
 An example showing a simple timer event.
 
-recurring_timer_tornado.py
+recurring-timer-tornado.py
 
 A variant of the above that uses the tornado eventloop instead.
 

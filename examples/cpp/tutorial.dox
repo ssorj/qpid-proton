@@ -44,12 +44,12 @@ a different queue or topic name (the ADDRESS part of the URL).
 Hello World!
 ------------
 
-\dontinclude helloworld.cpp
+\dontinclude hello-world.cpp
 
 Tradition dictates that we start with Hello World! This example sends
 a message to a broker and then receives the same message back. In a
 realistic system the sender and receiver would normally be in
-different processes. The complete example is @ref helloworld.cpp
+different processes. The complete example is @ref hello-world.cpp.
 
 We will include the following classes. `proton::container` runs an
 event loop which dispatches events to a
@@ -112,7 +112,7 @@ subclass of `proton::error`. That in turn is a subclass of
 Hello World, direct!
 --------------------
 
-\dontinclude helloworld_direct.cpp
+\dontinclude hello-world-direct.cpp
 
 Though often used in conjunction with a broker, AMQP does not require
 this. It also allows senders and receivers to communicate directly if
@@ -120,7 +120,7 @@ desired.
 
 We will modify our example to send a message directly to itself. This
 is a bit contrived but illustrates both sides of the direct send and
-receive scenario. The full code is at @ref helloworld_direct.cpp.
+receive scenario. The full code is at @ref hello-world-direct.cpp.
 
 The first difference is that, rather than creating a receiver on the
 same connection as our sender, we listen for incoming connections by
@@ -179,9 +179,9 @@ separate machines.
 Let's separate the sender from the receiver, and transfer more than a
 single message between them.
 
-We'll start with a simple sender, @ref simple_send.cpp.
+We'll start with a simple sender, @ref simple-send.cpp.
 
-\dontinclude simple_send.cpp
+\dontinclude simple-send.cpp
 
 As with the previous example, we define the application logic in a
 class that handles events. Because we are transferring more than one
@@ -241,9 +241,9 @@ receiver got to.
 \skip on_transport_close
 \until }
 
-\dontinclude simple_recv.cpp
+\dontinclude simple-recv.cpp
 
-Now let's look at the corresponding receiver, @ref simple_recv.cpp.
+Now let's look at the corresponding receiver, @ref simple-recv.cpp.
 
 This time we'll use an `expected` member variable for for the number
 of messages we expect and a `received` variable to count how many we
@@ -276,9 +276,9 @@ since neither accepts incoming connections. AMQP allows us to send
 messages directly between two processes. In that case, one or other of
 the processes needs to accept incoming connections. Let's create a
 modified version of the receiving example that does this with @ref
-direct_recv.cpp.
+direct-recv.cpp.
 
-\dontinclude direct_recv.cpp
+\dontinclude direct-recv.cpp
 
 There are only two differences here. Instead of initiating a link (and
 implicitly a connection), we listen for incoming connections.
@@ -296,16 +296,16 @@ listening for incoming connections by calling
 \until }
 \until }
 
-You can use the @ref simple_send.cpp example to send to this receiver
+You can use the @ref simple-send.cpp example to send to this receiver
 directly. (Note: you will need to stop any broker that is listening on
 the 5672 port, or else change the port used by specifying a different
 address to each example via the `-a` command-line switch).
 
 We can also modify the sender to allow the original receiver to
-connect to it, in @ref direct_send.cpp. Again, that requires just two
+connect to it, in @ref direct-send.cpp. Again, that requires just two
 modifications:
 
-\dontinclude direct_send.cpp
+\dontinclude direct-send.cpp
 
 As with the modified receiver, instead of initiating establishment of a
 link, we listen for incoming connections.
@@ -320,7 +320,7 @@ When we have received confirmation of all the messages we sent, we call
 \until }
 \until }
 
-To try this modified sender, run the original @ref simple_recv.cpp
+To try this modified sender, run the original @ref simple-recv.cpp
 against it.
 
 The symmetry in the underlying AMQP wire protocol that enables this is
@@ -395,10 +395,10 @@ Direct request and response
 ---------------------------
 
 We can avoid the intermediary process by writing a server that accepts
-connections directly, @ref server_direct.cpp. It involves the
+connections directly, @ref server-direct.cpp. It involves the
 following changes to our original server:
 
-\dontinclude server_direct.cpp
+\dontinclude server-direct.cpp
 
 Our server must generate unique `reply-to` addresses for links from
 the client that request a dynamic address (previously this was done by

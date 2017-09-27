@@ -10,7 +10,6 @@ connection the container calls `proton::messaging_handler` event callbacks.  The
 calls for each connection are *serialized* - callbacks for the same connection
 are never made concurrently.
 
-
 You assign a handler to a connection in `proton::container::connect()` or
 `proton::listen_handler::on_accept()` with
 `proton::connection_options::handler()`.  We recommend you create a separate
@@ -19,9 +18,8 @@ synchronization to protect it against concurrent use by proton threads.
 (If you use the handler concurrently from non-proton threads then you will need
 synchronization.)
 
-The examples @ref multithreaded_client.cpp and @ref
-multithreaded_client_flow_control.cpp illustrate these points.
-
+The examples @ref multithreaded-client.cpp and @ref
+multithreaded-client-flow-control.cpp illustrate these points.
 
 ## Thread-safety rules
 
@@ -71,8 +69,8 @@ When the work function is called by Proton, it will be serialized
 safely so that you can treat the work function like an event callback
 and safely access the handler and Proton objects stored on it.
 
-The examples @ref multithreaded_client.cpp and @ref
-multithreaded_client_flow_control.cpp show how you can send and
+The examples @ref multithreaded-client.cpp and @ref
+multithreaded-client-flow-control.cpp show how you can send and
 receive messages from non-Proton threads using work queues.
 
 ## The wake primitive

@@ -27,9 +27,8 @@ if sys.version_info[0] == 2:
 else:
     _unicode_prefix = ''
 
-
 class ExamplesTest(unittest.TestCase):
-    def test_helloworld(self, example="helloworld.py"):
+    def test_helloworld(self, example="hello-world.py"):
         p = subprocess.Popen([example], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         p.wait()
@@ -37,18 +36,18 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(output, ['Hello World!'])
 
     def test_helloworld_direct(self):
-        self.test_helloworld('helloworld_direct.py')
+        self.test_helloworld('hello-world-direct.py')
 
     def test_helloworld_blocking(self):
-        self.test_helloworld('helloworld_blocking.py')
+        self.test_helloworld('hello-world-blocking.py')
 
     def test_helloworld_tornado(self):
-        self.test_helloworld('helloworld_tornado.py')
+        self.test_helloworld('hello-world-tornado.py')
 
     def test_helloworld_direct_tornado(self):
-        self.test_helloworld('helloworld_direct_tornado.py')
+        self.test_helloworld('hello-world-direct-tornado.py')
 
-    def test_simple_send_recv(self, recv='simple_recv.py', send='simple_send.py'):
+    def test_simple_send_recv(self, recv='simple-recv.py', send='simple-send.py'):
         r = subprocess.Popen([recv], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         s = subprocess.Popen([send], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
@@ -77,26 +76,26 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_sync_client_server(self):
-        self.test_client_server(client=['sync_client.py'])
+        self.test_client_server(client=['sync-client.py'])
 
     def test_client_server_tx(self):
-        self.test_client_server(server=['server_tx.py'])
+        self.test_client_server(server=['server-tx.py'])
 
     def test_sync_client_server_tx(self):
-        self.test_client_server(client=['sync_client.py'], server=['server_tx.py'])
+        self.test_client_server(client=['sync-client.py'], server=['server-tx.py'])
 
     def test_client_server_direct(self):
-        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
+        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server-direct.py'], sleep=0.5)
 
     def test_sync_client_server_direct(self):
-        self.test_client_server(client=['sync_client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
+        self.test_client_server(client=['sync-client.py', '-a', 'localhost:8888/examples'], server=['server-direct.py'], sleep=0.5)
 
     def test_db_send_recv(self):
         self.maxDiff = None
         # setup databases
-        subprocess.check_call(['db_ctrl.py', 'init', './src_db'])
-        subprocess.check_call(['db_ctrl.py', 'init', './dst_db'])
-        fill = subprocess.Popen(['db_ctrl.py', 'insert', './src_db'],
+        subprocess.check_call(['db-ctrl.py', 'init', './src_db'])
+        subprocess.check_call(['db-ctrl.py', 'init', './dst_db'])
+        fill = subprocess.Popen(['db-ctrl.py', 'insert', './src_db'],
                                 stdin=subprocess.PIPE, stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                                 universal_newlines=True)
         for i in range(100):
@@ -104,9 +103,9 @@ class ExamplesTest(unittest.TestCase):
         fill.stdin.close()
         fill.wait()
         # run send and recv
-        r = subprocess.Popen(['db_recv.py', '-m', '100'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        r = subprocess.Popen(['db-recv.py', '-m', '100'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
-        s = subprocess.Popen(['db_send.py', '-m', '100'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        s = subprocess.Popen(['db-send.py', '-m', '100'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         s.wait()
         r.wait()
@@ -115,7 +114,7 @@ class ExamplesTest(unittest.TestCase):
         expected = ["inserted message %i" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)
         # verify state of databases
-        v = subprocess.Popen(['db_ctrl.py', 'list', './dst_db'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        v = subprocess.Popen(['db-ctrl.py', 'list', './dst_db'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         v.wait()
         expected = ["(%i, %s'Message-%i')" % ((i+1), _unicode_prefix, (i+1)) for i in range(100)]
@@ -123,14 +122,14 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_tx_send_tx_recv(self):
-        self.test_simple_send_recv(recv='tx_recv.py', send='tx_send.py')
+        self.test_simple_send_recv(recv='tx-recv.py', send='tx-send.py')
 
     def test_simple_send_direct_recv(self):
         self.maxDiff = None
-        r = subprocess.Popen(['direct_recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        r = subprocess.Popen(['direct-recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         time.sleep(0.5)
-        s = subprocess.Popen(['simple_send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        s = subprocess.Popen(['simple-send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         s.wait()
         r.wait()
@@ -139,10 +138,10 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
-        s = subprocess.Popen(['direct_send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        s = subprocess.Popen(['direct-send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         time.sleep(0.5)
-        r = subprocess.Popen(['simple_recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+        r = subprocess.Popen(['simple-recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         r.wait()
         s.wait()

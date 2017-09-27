@@ -79,7 +79,7 @@ closes. The client uses this source address as the reply-to when it
 sends the request, so the response is delivered to the client's
 receiver.
 
-The @ref server_direct.cpp example shows how to implement a
+The @ref server-direct.cpp example shows how to implement a
 request-response server.
 
 ## Delivery guarantees

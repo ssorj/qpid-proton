@@ -37,46 +37,42 @@ endmacro()
 # Single-threaded examples that work on C++03
 foreach(example
     broker
-    helloworld
-    helloworld_direct
-    simple_recv
-    simple_send
-    reconnect_client
-    message_properties
-    scheduled_send_03
-    direct_recv
-    direct_send
+    hello-world
+    hello-world-direct
+    simple-recv
+    simple-send
+    reconnect-client
+    message-properties
+    scheduled-send-03
+    direct-recv
+    direct-send
     client
     server
-    server_direct
-    connection_options
-    queue_browser
-    selected_recv
-    flow_control
+    server-direct
+    connection-options
+    queue-browser
+    selected-recv
+    flow-control
     ssl
-    ssl_client_cert
-    service_bus
-    encode_decode)
+    ssl-client-cert
+    service-bus
+    encode-decode)
   add_executable(${example} ${example}.cpp)
 endforeach()
 
 if(HAS_CPP11)
   # Examples that require C++11
   foreach(example
-      scheduled_send
-      multithreaded_client
-      multithreaded_client_flow_control
+      scheduled-send
+      multithreaded-client
+      multithreaded-client-flow-control
       )
     add_executable(${example} ${example}.cpp)
   endforeach()
 endif()
 
-add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
+add_cpp_test(cpp-example-tests ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test.py -v ContainerExampleTest)
 
-if (NOT SSL_IMPL STREQUAL none)
-add_cpp_test(cpp-example-container-ssl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleSSLTest)
+if(NOT SSL_IMPL STREQUAL none)
+  add_cpp_test(cpp-example-tests-ssl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test.py -v ContainerExampleSSLTest)
 endif()
-
-
-
-
