@@ -26,7 +26,7 @@
 #include "./fwd.hpp"
 #include "./function.hpp"
 #include "./internal/config.hpp"
-#include "./internal/export.hpp"
+n#include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
 #include <functional>
@@ -51,6 +51,7 @@ namespace proton {
 namespace v03 {
 
 /// @cond INTERNAL
+
 struct invocable {
     invocable() {}
     virtual ~invocable() {}
@@ -78,6 +79,7 @@ struct invocable_wrapper {
 
     invocable* wrapped_;
 };
+
 /// @endcond
 
 class work {
@@ -99,8 +101,10 @@ class work {
 };
 
 /// @cond INTERNAL
+//
 // Utilities to make work from functions/member functions (C++03 version)
 // Lots of repetition to handle functions/member functions with up to 3 arguments
+
 template <class R>
 struct work0 : public invocable_cloner<work0<R> > {
     R (* fn_)();
@@ -212,10 +216,11 @@ struct work_pmf3 : public invocable_cloner<work_pmf3<R,T,A,B,C> > {
         (holder_.*fn_)(a_, b_, c_);
     }
 };
+
 /// @endcond
 
-/// make_work is the equivalent of C++11 std::bind for C++03
-/// It will bind both free functions and pointers to member functions
+/// `make_work` is the equivalent of C++11 `std::bind` for C++03.  It
+/// will bind both free functions and pointers to member functions.
 template <class R, class T>
 work make_work(R (T::*f)(), T* t) {
     return work_pmf0<R, T>(f, *t);
@@ -266,6 +271,7 @@ class work {
     work() {}
 
     /// **Unsettled API**
+    ///
     /// Construct a unit of work from anything
     /// function-like that takes no arguments and returns
     /// no result.
@@ -277,6 +283,7 @@ class work {
     work(T&& f): item_(std::forward<T>(f)) {}
 
     /// **Unsettled API**
+    ///
     /// Execute the piece of work
     void operator()() { item_(); }
 
@@ -286,11 +293,13 @@ class work {
     std::function<void()> item_;
 };
 
-/// **Unsettled API**
+/// **Unsettled API** - Make a unit of work.
+///
 /// Make a unit of work from either a function or a member function
 /// and an object pointer.
 ///
-/// This C++11 version is just a wrapper for std::bind
+/// **C++ versions** - This C++11 version is just a wrapper for
+/// `std::bind`.
 template <class... Rest>
 work make_work(Rest&&... r) {
     return std::bind(std::forward<Rest>(r)...);
