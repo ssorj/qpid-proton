@@ -31,17 +31,18 @@ endif ()
 add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c StandaloneFuzzTargetInit.c)
 
 macro (pn_add_fuzz_test test)
-  add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  set (executable_name c-${test})
+  add_executable (${executable_name} ${ARGN})
+  target_link_libraries (${executable_name} qpid-proton-core ${FUZZING_LIBRARY})
 
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
-    file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
-    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${files})
+    file (GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
+    add_test (${executable_name} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${executable_name} ${files})
   else ()
-    add_test (${test} ${CMAKE_CURRENT_BINARY_DIR}/${test} -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test})
+    add_test (${executable_name} ${CMAKE_CURRENT_BINARY_DIR}/${executable_name} -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test})
   endif ()
-endmacro(pn_add_fuzz_test)
+endmacro ()
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)

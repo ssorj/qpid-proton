@@ -193,9 +193,6 @@ install (DIRECTORY "examples/"
   DESTINATION "${PROTON_SHARE}/examples/cpp"
   PATTERN "ProtonCppConfig.cmake" EXCLUDE)
 
-add_subdirectory(examples)
-add_subdirectory(docs)
-
 # Pkg config file
 configure_file (misc/libqpid-proton-cpp.pc.in libqpid-proton-cpp.pc @ONLY)
 install (FILES
@@ -222,27 +219,6 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 
-macro(add_cpp_test test)
-  add_executable (${test} tests/${test}.cpp)
-  target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME cpp-${test}
-      COMMAND ${PN_ENV_SCRIPT}
-      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      $<TARGET_FILE:${test}> ${ARGN})
-  else ()
-    add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
-  endif ()
-endmacro(add_cpp_test)
-
-add_cpp_test(codec_test)
-add_cpp_test(connection_driver_test)
-add_cpp_test(container_test)
-add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
-add_cpp_test(link_test)
-add_cpp_test(map_test)
-add_cpp_test(message_test)
-add_cpp_test(reconnect_test)
-add_cpp_test(scalar_test)
-add_cpp_test(url_test)
-add_cpp_test(value_test)
+add_subdirectory(docs)
+add_subdirectory(examples)
+add_subdirectory(tests)
