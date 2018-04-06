@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include "msg.hpp"
+#include "../src/msg.hpp"
 #include "proton/types.hpp"
 
 #include <stdexcept>

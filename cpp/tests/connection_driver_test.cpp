@@ -19,8 +19,8 @@
 
 
 #include "test_bits.hpp"
-#include "proton_bits.hpp"
-#include "link_namer.hpp"
+#include "../src/proton_bits.hpp"
+#include "../src/link_namer.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
