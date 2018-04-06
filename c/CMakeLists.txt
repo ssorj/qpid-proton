@@ -17,7 +17,7 @@
 # under the License.
 #
 
-include (versions.cmake)
+include (misc/library_versions.cmake)
 
 if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
@@ -645,9 +645,7 @@ macro(configure_lib VAR LIB)
   endif()
   set(${VAR} ${LIB_PREFIX}${LIB}${LIB_SUFFIX})
   set("${VAR}DEBUG" ${LIB_PREFIX}${LIB}${CMAKE_DEBUG_POSTFIX}${LIB_SUFFIX})
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lib${LIB}.pc.in
-    ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc @ONLY)
+  configure_file(misc/lib${LIB}.pc.in lib${LIB}.pc @ONLY)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endmacro()
 
@@ -659,9 +657,7 @@ endif(HAS_PROACTOR)
 
 include(WriteBasicConfigVersionFile)
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake @ONLY)
+configure_file(misc/ProtonConfig.cmake.in ProtonConfig.cmake @ONLY)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   VERSION ${PN_VERSION}

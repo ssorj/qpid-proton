@@ -23,7 +23,7 @@ enable_language(CXX)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
 
-include(versions.cmake)
+include(misc/library_versions.cmake)
 
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
 
@@ -38,7 +38,7 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
   if (MSVC)  # Compiler feature checks only needed for Visual Studio in this case
-    include(cpp.cmake)
+    include(misc/cpp_feature_tests.cmake)
   elseif (STD EQUAL 11)
     set(CPP_DEFINITIONS "HAS_CPP11")
   endif()
@@ -82,7 +82,7 @@ else()
   set(presets "${presets}#endif // qpid_proton_cpp_EXPORTS\n")
 endif()
 
-configure_file(config_presets.hpp.in config_presets.hpp @ONLY)
+configure_file(misc/config_presets.hpp.in config_presets.hpp @ONLY)
 
 # Make these CACHE INTERNAL so they will be set for the C++ examples
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
@@ -197,9 +197,7 @@ add_subdirectory(examples)
 add_subdirectory(docs)
 
 # Pkg config file
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/libqpid-proton-cpp.pc.in
-  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc @ONLY)
+configure_file (misc/libqpid-proton-cpp.pc.in libqpid-proton-cpp.pc @ONLY)
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
@@ -214,9 +212,7 @@ endif ()
 
 include(WriteBasicConfigVersionFile)
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
+configure_file(misc/ProtonCppConfig.cmake.in ProtonCppConfig.cmake @ONLY)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   VERSION ${PN_VERSION}
