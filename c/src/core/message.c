@@ -644,6 +644,64 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
+static inline bool _next_node(pn_message_t* msg, int* err, pn_type_t type) {
+    bool found = pn_data_next(msg->data);
+
+    if (found && pn_data_type(msg->data) != type) {
+        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s", pn_error_text(pn_data_error(msg->data)));
+    }
+
+    return found;
+}
+
+static inline void _require_next_node(pn_message_t* msg, int* err, pn_type_t type) {
+    bool found = _next_node(msg, err, type);
+
+    if (!found) {
+        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s", pn_error_text(pn_data_error(msg->data)));
+    }
+
+    return;
+}
+
+static inline void _next_node_set_bool(pn_message_t* msg, int* err, bool* var) {
+    if (_next_node(msg, err, PN_BOOL)) {
+        *var = pn_data_get_bool(msg->data);
+    }
+}
+
+static inline void _next_node_set_uint(pn_message_t* msg, int* err, uint32_t* var) {
+    if (_next_node(msg, err, PN_UINT)) {
+        *var = pn_data_get_uint(msg->data);
+    }
+}
+
+static inline void _next_node_set_timestamp(pn_message_t* msg, int* err, pn_timestamp_t* var) {
+    if (_next_node(msg, err, PN_TIMESTAMP)) {
+        *var = pn_data_get_timestamp(msg->data);
+    }
+}
+
+static inline void _next_node_set_string(pn_message_t* msg, int* err, pn_string_t** var) {
+    if (_next_node(msg, err, PN_STRING)) {
+        pn_bytes_t str = pn_data_get_string(msg->data);
+        *err = pn_string_setn(*var, str.start, str.size);
+    }
+}
+
+static inline void _next_node_set_symbol(pn_message_t* msg, int* err, pn_string_t** var) {
+    if (_next_node(msg, err, PN_SYMBOL)) {
+        pn_bytes_t str = pn_data_get_string(msg->data);
+        *err = pn_string_setn(*var, str.start, str.size);
+    }
+}
+
+static inline void _next_node_set_message_id(pn_message_t* msg, int* err, pn_data_t** var) {
+    if (pn_data_next(msg->data)) {
+        *err = pn_data_put_string(*var, pn_data_get_string(msg->data));
+    }
+}
+
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg && bytes && size);
@@ -652,74 +710,111 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
   while (size) {
     pn_data_clear(msg->data);
+
     ssize_t used = pn_data_decode(msg->data, bytes, size);
+
     if (used < 0)
         return pn_error_format(msg->error, used, "data error: %s",
                                pn_error_text(pn_data_error(msg->data)));
+
     size -= used;
     bytes += used;
-    bool scanned;
-    uint64_t desc;
-    int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
-    if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                    pn_error_text(pn_data_error(msg->data)));
-    if (!scanned) {
-      desc = 0;
-    }
 
     pn_data_rewind(msg->data);
-    pn_data_next(msg->data);
-    pn_data_enter(msg->data);
-    pn_data_next(msg->data);
 
-    switch (desc) {
-    case HEADER: {
-      bool priority_q;
-      uint8_t priority;
-      err = pn_data_scan(msg->data, "D.[o?BIoI]",
-                         &msg->durable,
-                         &priority_q, &priority,
-                         &msg->ttl,
-                         &msg->first_acquirer,
-                         &msg->delivery_count);
-      if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                      pn_error_text(pn_data_error(msg->data)));
-      msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
-      break;
+    int err = 0;
+
+    _require_next_node(msg, &err, PN_DESCRIBED);
+    if (err) return err;
+    pn_data_enter(msg->data);
+
+    uint64_t descriptor = 0;
+    if (_next_node(msg, &err, PN_ULONG)) {
+        descriptor = pn_data_get_ulong(msg->data);
     }
-    case PROPERTIES:
-      {
-        pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
-          group_id, reply_to_group_id;
+    if (err) return err;
+
+    switch (descriptor) {
+    case HEADER: {
+        _require_next_node(msg, &err, PN_LIST);
+        if (err) return err;
+        pn_data_enter(msg->data);
+
+        // XXX Could check if the list is empty here
+
+        _next_node_set_bool(msg, &err, &msg->durable);
+        if (err) return err;
+
+        if (_next_node(msg, &err, PN_UBYTE)) {
+            msg->priority = pn_data_get_ubyte(msg->data);
+        }
+        if (err) return err;
+
+        _next_node_set_uint(msg, &err, &msg->ttl);
+        if (err) return err;
+
+        _next_node_set_bool(msg, &err, &msg->first_acquirer);
+        if (err) return err;
+
+        _next_node_set_uint(msg, &err, &msg->delivery_count);
+        if (err) return err;
+
+        break;
+    }
+    case PROPERTIES: {
         pn_data_clear(msg->id);
         pn_data_clear(msg->correlation_id);
-        err = pn_data_scan(msg->data, "D.[CzSSSCssttSIS]", msg->id,
-                           &user_id, &address, &subject, &reply_to,
-                           msg->correlation_id, &ctype, &cencoding,
-                           &msg->expiry_time, &msg->creation_time, &group_id,
-                           &msg->group_sequence, &reply_to_group_id);
-        if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                        pn_error_text(pn_data_error(msg->data)));
-        err = pn_string_set_bytes(msg->user_id, user_id);
-        if (err) return pn_error_format(msg->error, err, "error setting user_id");
-        err = pn_string_setn(msg->address, address.start, address.size);
-        if (err) return pn_error_format(msg->error, err, "error setting address");
-        err = pn_string_setn(msg->subject, subject.start, subject.size);
-        if (err) return pn_error_format(msg->error, err, "error setting subject");
-        err = pn_string_setn(msg->reply_to, reply_to.start, reply_to.size);
-        if (err) return pn_error_format(msg->error, err, "error setting reply_to");
-        err = pn_string_setn(msg->content_type, ctype.start, ctype.size);
-        if (err) return pn_error_format(msg->error, err, "error setting content_type");
-        err = pn_string_setn(msg->content_encoding, cencoding.start,
-                             cencoding.size);
-        if (err) return pn_error_format(msg->error, err, "error setting content_encoding");
-        err = pn_string_setn(msg->group_id, group_id.start, group_id.size);
-        if (err) return pn_error_format(msg->error, err, "error setting group_id");
-        err = pn_string_setn(msg->reply_to_group_id, reply_to_group_id.start,
-                             reply_to_group_id.size);
-        if (err) return pn_error_format(msg->error, err, "error setting reply_to_group_id");
-      }
-      break;
+
+        _require_next_node(msg, &err, PN_LIST);
+        if (err) return err;
+        pn_data_enter(msg->data);
+
+        // XXX Could ditch here if empty
+
+        _next_node_set_message_id(msg, &err, &msg->id);
+        if (err) return err;
+
+        if (_next_node(msg, &err, PN_BINARY)) {
+            err = pn_string_set_bytes(msg->user_id, pn_data_get_binary(msg->data));
+            if (err) return pn_error_format(msg->error, err, "error setting user_id");
+        }
+        if (err) return err;
+
+        _next_node_set_string(msg, &err, &msg->address);
+        if (err) return err;
+
+        _next_node_set_string(msg, &err, &msg->subject);
+        if (err) return err;
+
+        _next_node_set_string(msg, &err, &msg->reply_to);
+        if (err) return err;
+
+        _next_node_set_message_id(msg, &err, &msg->correlation_id);
+        if (err) return err;
+
+        _next_node_set_symbol(msg, &err, &msg->content_type);
+        if (err) return err;
+
+        _next_node_set_symbol(msg, &err, &msg->content_encoding);
+        if (err) return err;
+
+        _next_node_set_timestamp(msg, &err, &msg->expiry_time);
+        if (err) return err;
+
+        _next_node_set_timestamp(msg, &err, &msg->creation_time);
+        if (err) return err;
+
+        _next_node_set_string(msg, &err, &msg->group_id);
+        if (err) return err;
+
+        _next_node_set_uint(msg, &err, &msg->group_sequence);
+        if (err) return err;
+
+        _next_node_set_string(msg, &err, &msg->reply_to_group_id);
+        if (err) return err;
+
+        break;
+    }
     case DELIVERY_ANNOTATIONS:
       pn_data_narrow(msg->data);
       err = pn_data_copy(msg->instructions, msg->data);
@@ -783,6 +878,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   return 0;
 }
 
+// The name of this is obnoxious.  How about fill_data, init_data?
+// Compare to pn_message_error, which is an *accessor*.
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
   pn_data_clear(data);
