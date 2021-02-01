@@ -1460,7 +1460,7 @@ void pn_data_dump(pn_data_t *data)
     pni_node_t *node = &data->nodes[i];
     pn_string_setn(str, "", 0);
     pni_inspect_atom((pn_atom_t *) &node->atom, str);
-    printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
+    printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI
            ", children=%" PN_ZI ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
            (size_t) node->next,
@@ -1778,6 +1778,15 @@ int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
   return pni_data_intern_node(data, node);
 }
 
+int pni_data_put_string_external(pn_data_t *data, pn_bytes_t string)
+{
+  pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
+  node->atom.type = PN_STRING;
+  node->atom.u.as_bytes = string;
+  return 0;
+}
+
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
 {
   pni_node_t *node = pni_data_add(data);
@@ -1785,6 +1794,15 @@ int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
   node->atom.type = PN_SYMBOL;
   node->atom.u.as_bytes = symbol;
   return pni_data_intern_node(data, node);
+}
+
+int pni_data_put_symbol_external(pn_data_t *data, pn_bytes_t symbol)
+{
+  pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
+  node->atom.type = PN_SYMBOL;
+  node->atom.u.as_bytes = symbol;
+  return 0;
 }
 
 int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
