@@ -644,61 +644,50 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
-static inline bool _next_node(pn_message_t* msg, int* err, pn_type_t type) {
+static inline bool pni_message_data_next(pn_message_t* msg, int* err, pn_type_t type, const char* name) {
     bool found = pn_data_next(msg->data);
+    pn_type_t found_type = pn_data_type(msg->data);
 
-    if (found && pn_data_type(msg->data) != type) {
-        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s", pn_error_text(pn_data_error(msg->data)));
+    if (found && found_type != PN_NULL && found_type != type) {
+        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: expected %s and got %s",
+                               name, pn_type_name(type), pn_type_name(found_type));
     }
 
     return found;
 }
 
-static inline void _require_next_node(pn_message_t* msg, int* err, pn_type_t type) {
-    bool found = _next_node(msg, err, type);
+static inline void pni_require_next_node(pn_message_t* msg, int* err, pn_type_t type, const char* name) {
+    bool found = pni_message_data_next(msg, err, type, name);
+
+    if (err) return;
 
     if (!found) {
-        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s", pn_error_text(pn_data_error(msg->data)));
+        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: required node not found", name);
     }
 
     return;
 }
 
-static inline void _next_node_set_bool(pn_message_t* msg, int* err, bool* var) {
-    if (_next_node(msg, err, PN_BOOL)) {
-        *var = pn_data_get_bool(msg->data);
-    }
-}
-
-static inline void _next_node_set_uint(pn_message_t* msg, int* err, uint32_t* var) {
-    if (_next_node(msg, err, PN_UINT)) {
-        *var = pn_data_get_uint(msg->data);
-    }
-}
-
-static inline void _next_node_set_timestamp(pn_message_t* msg, int* err, pn_timestamp_t* var) {
-    if (_next_node(msg, err, PN_TIMESTAMP)) {
-        *var = pn_data_get_timestamp(msg->data);
-    }
-}
-
-static inline void _next_node_set_string(pn_message_t* msg, int* err, pn_string_t** var) {
-    if (_next_node(msg, err, PN_STRING)) {
+static inline void pni_message_data_get_string(pn_message_t* msg, int* err, const char* name, pn_string_t* var) {
+    if (pni_message_data_next(msg, err, PN_STRING, name)) {
+        if (err) return;
         pn_bytes_t str = pn_data_get_string(msg->data);
-        *err = pn_string_setn(*var, str.start, str.size);
+        *err = pn_string_setn(var, str.start, str.size);
     }
 }
 
-static inline void _next_node_set_symbol(pn_message_t* msg, int* err, pn_string_t** var) {
-    if (_next_node(msg, err, PN_SYMBOL)) {
+static inline void pni_message_data_get_symbol(pn_message_t* msg, int* err, const char* name, pn_string_t* var) {
+    if (pni_message_data_next(msg, err, PN_SYMBOL, name)) {
+        if (err) return;
         pn_bytes_t str = pn_data_get_string(msg->data);
-        *err = pn_string_setn(*var, str.start, str.size);
+        *err = pn_string_setn(var, str.start, str.size);
     }
 }
 
-static inline void _next_node_set_message_id(pn_message_t* msg, int* err, pn_data_t** var) {
+static inline void pni_message_data_get_message_id(pn_message_t* msg, int* err, const char* name, pn_data_t* var) {
+    // XXX Other message ID types
     if (pn_data_next(msg->data)) {
-        *err = pn_data_put_string(*var, pn_data_get_string(msg->data));
+        *err = pn_data_put_string(var, pn_data_get_string(msg->data));
     }
 }
 
@@ -724,39 +713,36 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
     int err = 0;
 
-    _require_next_node(msg, &err, PN_DESCRIBED);
+    pni_require_next_node(msg, &err, PN_DESCRIBED, "described");
     if (err) return err;
     pn_data_enter(msg->data);
 
     uint64_t descriptor = 0;
-    if (_next_node(msg, &err, PN_ULONG)) {
-        descriptor = pn_data_get_ulong(msg->data);
-    }
+    if (pni_message_data_next(msg, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
     if (err) return err;
 
     switch (descriptor) {
     case HEADER: {
-        _require_next_node(msg, &err, PN_LIST);
+        pni_require_next_node(msg, &err, PN_LIST, "header");
         if (err) return err;
+
         pn_data_enter(msg->data);
 
         // XXX Could check if the list is empty here
 
-        _next_node_set_bool(msg, &err, &msg->durable);
+        if (pni_message_data_next(msg, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
         if (err) return err;
 
-        if (_next_node(msg, &err, PN_UBYTE)) {
-            msg->priority = pn_data_get_ubyte(msg->data);
-        }
+        if (pni_message_data_next(msg, &err, PN_UBYTE, "priority")) msg->priority = pn_data_get_ubyte(msg->data);
         if (err) return err;
 
-        _next_node_set_uint(msg, &err, &msg->ttl);
+        if (pni_message_data_next(msg, &err, PN_UINT, "ttl")) msg->ttl = pn_data_get_uint(msg->data);
         if (err) return err;
 
-        _next_node_set_bool(msg, &err, &msg->first_acquirer);
+        if (pni_message_data_next(msg, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pn_data_get_bool(msg->data);
         if (err) return err;
 
-        _next_node_set_uint(msg, &err, &msg->delivery_count);
+        if (pni_message_data_next(msg, &err, PN_UINT, "delivery_count")) msg->delivery_count = pn_data_get_uint(msg->data);
         if (err) return err;
 
         break;
@@ -765,52 +751,52 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         pn_data_clear(msg->id);
         pn_data_clear(msg->correlation_id);
 
-        _require_next_node(msg, &err, PN_LIST);
+        pni_require_next_node(msg, &err, PN_LIST, "properties");
         if (err) return err;
         pn_data_enter(msg->data);
 
         // XXX Could ditch here if empty
 
-        _next_node_set_message_id(msg, &err, &msg->id);
+        pni_message_data_get_message_id(msg, &err, "message_id", msg->id);
         if (err) return err;
 
-        if (_next_node(msg, &err, PN_BINARY)) {
+        if (pni_message_data_next(msg, &err, PN_BINARY, "user_id")) {
             err = pn_string_set_bytes(msg->user_id, pn_data_get_binary(msg->data));
-            if (err) return pn_error_format(msg->error, err, "error setting user_id");
+            if (err) return err;
         }
         if (err) return err;
 
-        _next_node_set_string(msg, &err, &msg->address);
+        pni_message_data_get_string(msg, &err, "address", msg->address);
         if (err) return err;
 
-        _next_node_set_string(msg, &err, &msg->subject);
+        pni_message_data_get_string(msg, &err, "subject", msg->subject);
         if (err) return err;
 
-        _next_node_set_string(msg, &err, &msg->reply_to);
+        pni_message_data_get_string(msg, &err, "reply_to", msg->reply_to);
         if (err) return err;
 
-        _next_node_set_message_id(msg, &err, &msg->correlation_id);
+        pni_message_data_get_message_id(msg, &err, "correlation_id", msg->correlation_id);
         if (err) return err;
 
-        _next_node_set_symbol(msg, &err, &msg->content_type);
+        pni_message_data_get_symbol(msg, &err, "content_type", msg->content_type);
         if (err) return err;
 
-        _next_node_set_symbol(msg, &err, &msg->content_encoding);
+        pni_message_data_get_symbol(msg, &err, "content_encoding", msg->content_encoding);
         if (err) return err;
 
-        _next_node_set_timestamp(msg, &err, &msg->expiry_time);
+        if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "expiry_time")) msg->expiry_time = pn_data_get_timestamp(msg->data);
         if (err) return err;
 
-        _next_node_set_timestamp(msg, &err, &msg->creation_time);
+        if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "creation_time")) msg->creation_time = pn_data_get_timestamp(msg->data);
         if (err) return err;
 
-        _next_node_set_string(msg, &err, &msg->group_id);
+        pni_message_data_get_string(msg, &err, "group_id", msg->group_id);
         if (err) return err;
 
-        _next_node_set_uint(msg, &err, &msg->group_sequence);
+        if (pni_message_data_next(msg, &err, PN_UINT, "group_sequence")) msg->group_sequence = pn_data_get_uint(msg->data);
         if (err) return err;
 
-        _next_node_set_string(msg, &err, &msg->reply_to_group_id);
+        pni_message_data_get_string(msg, &err, "reply_to_group_id", msg->reply_to_group_id);
         if (err) return err;
 
         break;
@@ -878,20 +864,65 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   return 0;
 }
 
-// The name of this is obnoxious.  How about fill_data, init_data?
+static inline void pni_message_data_put_bool(pn_data_t* data, bool value) {
+    if (value) {
+        pn_data_put_bool(data, value);
+    } else {
+        pn_data_put_null(data);
+    }
+}
+
+static inline void pni_message_data_put_uint(pn_data_t* data, uint32_t value) {
+    if (value) {
+        pn_data_put_uint(data, value);
+    } else {
+        pn_data_put_null(data);
+    }
+}
+
+// The name of this is obnoxious.  How about fill_data, init_data, load_data?
 // Compare to pn_message_error, which is an *accessor*.
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
   pn_data_clear(data);
-  int err = pn_data_fill(data, "DL[?o?B?I?o?I]", HEADER,
-                         msg->durable, msg->durable,
-                         msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
-                         (bool)msg->ttl, msg->ttl,
-                         msg->first_acquirer, msg->first_acquirer,
-                         (bool)msg->delivery_count, msg->delivery_count);
-  if (err)
-    return pn_error_format(msg->error, err, "data error: %s",
-                           pn_error_text(pn_data_error(data)));
+
+  // int err = pn_data_fill(data, "DL[?o?B?I?o?I]", HEADER,
+  //                        msg->durable, msg->durable,
+  //                        msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
+  //                        (bool)msg->ttl, msg->ttl,
+  //                        msg->first_acquirer, msg->first_acquirer,
+  //                        (bool)msg->delivery_count, msg->delivery_count);
+  // if (err)
+  //   return pn_error_format(msg->error, err, "data error: %s",
+  //                          pn_error_text(pn_data_error(data)));
+
+  int err; // XXX
+
+  pn_data_put_described(data);
+  pn_data_enter(data);
+  pn_data_put_ulong(data, HEADER);
+  pn_data_put_list(data);
+  pn_data_enter(data);
+
+  if (msg->durable || msg->priority != 4 || msg->ttl || msg->first_acquirer || msg->delivery_count) {
+      pni_message_data_put_bool(data, msg->durable);
+
+      if (msg->priority != 4) {
+          pn_data_put_ubyte(data, msg->priority);
+      } else {
+          pn_data_put_null(data);
+      }
+
+      pni_message_data_put_uint(data, msg->ttl);
+      pni_message_data_put_bool(data, msg->first_acquirer);
+      pni_message_data_put_uint(data, msg->delivery_count);
+  }
+
+  pn_data_exit(data);
+  pn_data_exit(data);
+
+  // pn_data_dump(data);
+  // exit(1);
 
   if (pn_data_size(msg->instructions)) {
     pn_data_put_described(data);
@@ -917,25 +948,63 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pn_data_exit(data);
   }
 
-  err = pn_data_fill(data, "DL[CzSSSCss?t?tS?IS]", PROPERTIES,
-                     msg->id,
-                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
-                     pn_string_get(msg->address),
-                     pn_string_get(msg->subject),
-                     pn_string_get(msg->reply_to),
-                     msg->correlation_id,
-                     pn_string_get(msg->content_type),
-                     pn_string_get(msg->content_encoding),
-                     (bool)msg->expiry_time, msg->expiry_time,
-                     (bool)msg->creation_time, msg->creation_time,
-                     pn_string_get(msg->group_id),
-                     /*
-                      * As a heuristic, null out group_sequence if there is no group_id and
-                      * group_sequence is 0. In this case it is extremely unlikely we want
-                      * group semantics
-                      */
-                     (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
-                     pn_string_get(msg->reply_to_group_id));
+  // err = pn_data_fill(data, "DL[CzSSSCss?t?tS?IS]", PROPERTIES,
+  //                    msg->id,
+  //                    pn_string_size(msg->user_id), pn_string_get(msg->user_id),
+  //                    pn_string_get(msg->address),
+  //                    pn_string_get(msg->subject),
+  //                    pn_string_get(msg->reply_to),
+  //                    msg->correlation_id,
+  //                    pn_string_get(msg->content_type),
+  //                    pn_string_get(msg->content_encoding),
+  //                    (bool)msg->expiry_time, msg->expiry_time,
+  //                    (bool)msg->creation_time, msg->creation_time,
+  //                    pn_string_get(msg->group_id),
+  //                    /*
+  //                     * As a heuristic, null out group_sequence if there is no group_id and
+  //                     * group_sequence is 0. In this case it is extremely unlikely we want
+  //                     * group semantics
+  //                     */
+  //                    (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
+  //                    pn_string_get(msg->reply_to_group_id));
+
+  pn_data_put_described(data);
+  pn_data_enter(data);
+  pn_data_put_ulong(data, PROPERTIES);
+  pn_data_put_list(data);
+  pn_data_enter(data);
+
+  if (pn_data_size(msg->id)) {
+      pn_data_appendn(data, msg->id, 1);
+  } else {
+      pn_data_put_null(data);
+  }
+
+  pn_data_put_binary(data, pn_bytes(pn_string_size(msg->user_id), pn_string_get(msg->user_id)));
+  pn_data_put_string(data, pn_bytes(pn_string_size(msg->address), pn_string_get(msg->address)));
+  pn_data_put_string(data, pn_bytes(pn_string_size(msg->subject), pn_string_get(msg->subject)));
+  pn_data_put_string(data, pn_bytes(pn_string_size(msg->reply_to), pn_string_get(msg->reply_to)));
+
+  if (pn_data_size(msg->correlation_id)) {
+      pn_data_appendn(data, msg->correlation_id, 1);
+  } else {
+      pn_data_put_null(data);
+  }
+
+  pn_data_put_symbol(data, pn_bytes(pn_string_size(msg->content_type), pn_string_get(msg->content_type)));
+  pn_data_put_symbol(data, pn_bytes(pn_string_size(msg->content_encoding), pn_string_get(msg->content_encoding)));
+  pn_data_put_timestamp(data, msg->expiry_time);
+  pn_data_put_timestamp(data, msg->creation_time);
+  pn_data_put_string(data, pn_bytes(pn_string_size(msg->group_id), pn_string_get(msg->group_id)));
+  pn_data_put_uint(data, msg->group_sequence);
+  pn_data_put_string(data, pn_bytes(pn_string_size(msg->reply_to_group_id), pn_string_get(msg->reply_to_group_id)));
+
+  pn_data_exit(data);
+  pn_data_exit(data);
+
+  // pn_data_dump(data);
+  // exit(1);
+
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
