@@ -58,12 +58,15 @@ struct pn_data_t {
   pni_nid_t current;
   pni_nid_t base_parent;
   pni_nid_t base_current;
+  bool intern;
 };
 
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
+static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   return nd ? (data->nodes + nd - 1) : NULL;
 }
+
+pn_data_t* pni_data(size_t capacity, bool intern);
 
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),

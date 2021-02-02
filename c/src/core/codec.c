@@ -372,11 +372,17 @@ static inline pn_error_t *pni_data_error(pn_data_t *data)
 
 pn_data_t *pn_data(size_t capacity)
 {
+  return pni_data(capacity, true);
+}
+
+pn_data_t *pni_data(size_t capacity, bool intern)
+{
   static const pn_class_t clazz = PN_CLASS(pn_data);
   pn_data_t *data = (pn_data_t *) pn_class_new(&clazz, sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
+  data->intern = intern;
   data->buf = NULL;
   data->parent = 0;
   data->current = 0;
@@ -1766,7 +1772,11 @@ int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes)
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_BINARY;
   node->atom.u.as_bytes = bytes;
-  return pni_data_intern_node(data, node);
+  if (data->intern) {
+    return pni_data_intern_node(data, node);
+  } else {
+    return 0;
+  }
 }
 
 int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
@@ -1775,16 +1785,11 @@ int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_STRING;
   node->atom.u.as_bytes = string;
-  return pni_data_intern_node(data, node);
-}
-
-int pni_data_put_string_external(pn_data_t *data, pn_bytes_t string)
-{
-  pni_node_t *node = pni_data_add(data);
-  if (node == NULL) return PN_OUT_OF_MEMORY;
-  node->atom.type = PN_STRING;
-  node->atom.u.as_bytes = string;
-  return 0;
+  if (data->intern) {
+    return pni_data_intern_node(data, node);
+  } else {
+    return 0;
+  }
 }
 
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
@@ -1793,16 +1798,11 @@ int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_SYMBOL;
   node->atom.u.as_bytes = symbol;
-  return pni_data_intern_node(data, node);
-}
-
-int pni_data_put_symbol_external(pn_data_t *data, pn_bytes_t symbol)
-{
-  pni_node_t *node = pni_data_add(data);
-  if (node == NULL) return PN_OUT_OF_MEMORY;
-  node->atom.type = PN_SYMBOL;
-  node->atom.u.as_bytes = symbol;
-  return 0;
+  if (data->intern) {
+    return pni_data_intern_node(data, node);
+  } else {
+    return 0;
+  }
 }
 
 int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
@@ -1810,7 +1810,11 @@ int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom = atom;
-  return pni_data_intern_node(data, node);
+  if (data->intern) {
+    return pni_data_intern_node(data, node);
+  } else {
+    return 0;
+  }
 }
 
 size_t pn_data_get_list(pn_data_t *data)

@@ -21,6 +21,7 @@
 
 #include "platform/platform_fmt.h"
 
+#include "data.h"
 #include "max_align.h"
 #include "message-internal.h"
 #include "protocol.h"
@@ -329,7 +330,7 @@ static pn_message_t *pni_message_new(size_t size)
   msg->reply_to_group_id = pn_string(NULL);
 
   msg->inferred = false;
-  msg->data = pn_data(16);
+  msg->data = pni_data(16, false);
   msg->instructions = pn_data(16);
   msg->annotations = pn_data(16);
   msg->properties = pn_data(16);
@@ -489,7 +490,7 @@ pn_atom_t pn_message_get_id(pn_message_t *msg)
 int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
 {
   assert(msg);
-  pn_data_rewind(msg->id);
+  pn_data_clear(msg->id);
   return pn_data_put_atom(msg->id, id);
 }
 
@@ -903,17 +904,12 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
   }
 }
 
-// These help us avoid pointless copies during data-build and encode
-// inside pn_message_encode
-int pni_data_put_string_external(pn_data_t*, pn_bytes_t);
-int pni_data_put_symbol_external(pn_data_t*, pn_bytes_t);
-
 static inline void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
 
   if (size) {
-    pni_data_put_string_external(data, pn_bytes(size, pn_string_get(value)));
+    pn_data_put_string(data, pn_bytes(size, pn_string_get(value)));
   } else {
     pn_data_put_null(data);
   }
@@ -924,7 +920,7 @@ static inline void pni_data_put_symbol_or_null(pn_data_t* data, pn_string_t* val
   size_t size = pn_string_size(value);
 
   if (size) {
-    pni_data_put_symbol_external(data, pn_bytes(size, pn_string_get(value)));
+    pn_data_put_symbol(data, pn_bytes(size, pn_string_get(value)));
   } else {
     pn_data_put_null(data);
   }
@@ -1025,9 +1021,9 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pn_data_enter(data);
 
     if (pn_data_size(msg->id)) {
-        pn_data_appendn(data, msg->id, 1);
+      pn_data_appendn(data, msg->id, 1);
     } else {
-        pn_data_put_null(data);
+      pn_data_put_null(data);
     }
 
     pni_data_put_string_or_null(data, msg->address);
@@ -1035,9 +1031,9 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pni_data_put_string_or_null(data, msg->reply_to);
 
     if (pn_data_size(msg->correlation_id)) {
-        pn_data_appendn(data, msg->correlation_id, 1);
+      pn_data_appendn(data, msg->correlation_id, 1);
     } else {
-        pn_data_put_null(data);
+      pn_data_put_null(data);
     }
 
     pni_data_put_symbol_or_null(data, msg->content_type);
