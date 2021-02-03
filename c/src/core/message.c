@@ -662,7 +662,7 @@ static inline void pni_message_data_require_next(pn_message_t* msg, int* err, pn
 {
   bool found = pni_message_data_next(msg, err, type, name);
 
-  if (err) return;
+  if (*err) return;
 
   if (!found) {
     *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: required node not found", name);
@@ -672,7 +672,7 @@ static inline void pni_message_data_require_next(pn_message_t* msg, int* err, pn
 static inline void pni_message_data_get_binary(pn_message_t* msg, int* err, const char* name, pn_string_t* var)
 {
   if (pni_message_data_next(msg, err, PN_BINARY, name)) {
-    if (err) return;
+    if (*err) return;
     pn_bytes_t bytes = pn_data_get_binary(msg->data);
     *err = pn_string_set_bytes(var, bytes);
   }
@@ -681,7 +681,7 @@ static inline void pni_message_data_get_binary(pn_message_t* msg, int* err, cons
 static inline void pni_message_data_get_string(pn_message_t* msg, int* err, const char* name, pn_string_t* var)
 {
   if (pni_message_data_next(msg, err, PN_STRING, name)) {
-    if (err) return;
+    if (*err) return;
     pn_bytes_t bytes = pn_data_get_string(msg->data);
     *err = pn_string_set_bytes(var, bytes);
   }
@@ -690,7 +690,7 @@ static inline void pni_message_data_get_string(pn_message_t* msg, int* err, cons
 static inline void pni_message_data_get_symbol(pn_message_t* msg, int* err, const char* name, pn_string_t* var)
 {
   if (pni_message_data_next(msg, err, PN_SYMBOL, name)) {
-    if (err) return;
+    if (*err) return;
     pn_bytes_t bytes = pn_data_get_string(msg->data);
     *err = pn_string_set_bytes(var, bytes);
   }
