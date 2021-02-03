@@ -494,12 +494,12 @@ int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
   return pn_data_put_atom(msg->id, id);
 }
 
-static pn_bytes_t pn_string_get_bytes(pn_string_t *string)
+static inline pn_bytes_t pn_string_get_bytes(pn_string_t *string)
 {
   return pn_bytes(pn_string_size(string), (char *) pn_string_get(string));
 }
 
-static int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
+static inline int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 {
   return pn_string_setn(string, bytes.start, bytes.size);
 }
@@ -669,12 +669,21 @@ static inline void pni_message_data_require_next(pn_message_t* msg, int* err, pn
   }
 }
 
+static inline void pni_message_data_get_binary(pn_message_t* msg, int* err, const char* name, pn_string_t* var)
+{
+  if (pni_message_data_next(msg, err, PN_BINARY, name)) {
+    if (err) return;
+    pn_bytes_t bytes = pn_data_get_binary(msg->data);
+    *err = pn_string_set_bytes(var, bytes);
+  }
+}
+
 static inline void pni_message_data_get_string(pn_message_t* msg, int* err, const char* name, pn_string_t* var)
 {
   if (pni_message_data_next(msg, err, PN_STRING, name)) {
     if (err) return;
-    pn_bytes_t str = pn_data_get_string(msg->data);
-    *err = pn_string_setn(var, str.start, str.size);
+    pn_bytes_t bytes = pn_data_get_string(msg->data);
+    *err = pn_string_set_bytes(var, bytes);
   }
 }
 
@@ -682,8 +691,8 @@ static inline void pni_message_data_get_symbol(pn_message_t* msg, int* err, cons
 {
   if (pni_message_data_next(msg, err, PN_SYMBOL, name)) {
     if (err) return;
-    pn_bytes_t str = pn_data_get_string(msg->data);
-    *err = pn_string_setn(var, str.start, str.size);
+    pn_bytes_t bytes = pn_data_get_string(msg->data);
+    *err = pn_string_set_bytes(var, bytes);
   }
 }
 
@@ -788,10 +797,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         if (err) return err;
         if (count == 1) break;
 
-        if (pni_message_data_next(msg, &err, PN_BINARY, "user_id")) {
-            err = pn_string_set_bytes(msg->user_id, pn_data_get_binary(msg->data));
-            if (err) return err;
-        }
+        pni_message_data_get_binary(msg, &err, "user_id", msg->user_id);
         if (err) return err;
         if (count == 2) break;
 
@@ -904,6 +910,15 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   return 0;
 }
 
+static inline void pni_data_put_message_id_or_null(pn_data_t* data, pn_data_t* value)
+{
+  if (pn_data_size(value)) {
+    pn_data_appendn(data, value, 1);
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
 static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
 {
   if (value) {
@@ -917,6 +932,26 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
     pn_data_put_uint(data, value);
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
+static inline void pni_data_put_ubyte_or_null(pn_data_t* data, uint8_t value)
+{
+  if (value) {
+    pn_data_put_ubyte(data, value);
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
+static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* value)
+{
+  size_t size = pn_string_size(value);
+
+  if (size) {
+    pn_data_put_binary(data, pn_bytes(size, pn_string_get(value)));
   } else {
     pn_data_put_null(data);
   }
@@ -978,14 +1013,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
     pni_data_put_bool_or_null(data, msg->durable);
 
-    if (count > 1) {
-      if (msg->priority != HEADER_PRIORITY_DEFAULT) {
-        pn_data_put_ubyte(data, msg->priority);
-      } else {
-        pn_data_put_null(data);
-      }
-    }
-
+    if (count > 1) pni_data_put_ubyte_or_null(data, msg->priority);
     if (count > 2) pni_data_put_uint_or_null(data, msg->ttl);
     if (count > 3) pni_data_put_bool_or_null(data, msg->first_acquirer);
     if (count > 4) pni_data_put_uint_or_null(data, msg->delivery_count);
@@ -1024,17 +1052,18 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Properties
 
-  if (pn_string_size(msg->reply_to_group_id)) count = 12;
-  else if (msg->group_sequence) count = 11;
-  else if (pn_string_size(msg->group_id)) count = 10;
-  else if (msg->creation_time) count = 9;
-  else if (msg->expiry_time) count = 8;
-  else if (pn_string_size(msg->content_encoding)) count = 7;
-  else if (pn_string_size(msg->content_type)) count = 6;
-  else if (pn_data_size(msg->correlation_id)) count = 5;
-  else if (pn_string_size(msg->reply_to)) count = 4;
-  else if (pn_string_size(msg->subject)) count = 3;
-  else if (pn_string_size(msg->address)) count = 2;
+  if (pn_string_size(msg->reply_to_group_id)) count = 13;
+  else if (msg->group_sequence) count = 12;
+  else if (pn_string_size(msg->group_id)) count = 11;
+  else if (msg->creation_time) count = 10;
+  else if (msg->expiry_time) count = 9;
+  else if (pn_string_size(msg->content_encoding)) count = 8;
+  else if (pn_string_size(msg->content_type)) count = 7;
+  else if (pn_data_size(msg->correlation_id)) count = 6;
+  else if (pn_string_size(msg->reply_to)) count = 5;
+  else if (pn_string_size(msg->subject)) count = 4;
+  else if (pn_string_size(msg->address)) count = 3;
+  else if (pn_string_size(msg->user_id)) count = 2;
   else if (pn_data_size(msg->id)) count = 1;
   else count = 0;
 
@@ -1045,31 +1074,20 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pn_data_put_list(data);
     pn_data_enter(data);
 
-    if (pn_data_size(msg->id)) {
-      pn_data_appendn(data, msg->id, 1);
-    } else {
-      pn_data_put_null(data);
-    }
+    pni_data_put_message_id_or_null(data, msg->id);
 
-    if (count > 1) pni_data_put_string_or_null(data, msg->address);
-    if (count > 2) pni_data_put_string_or_null(data, msg->subject);
-    if (count > 3) pni_data_put_string_or_null(data, msg->reply_to);
-
-    if (count > 4) {
-      if (pn_data_size(msg->correlation_id)) {
-        pn_data_appendn(data, msg->correlation_id, 1);
-      } else {
-        pn_data_put_null(data);
-      }
-    }
-
-    if (count > 5) pni_data_put_symbol_or_null(data, msg->content_type);
-    if (count > 6) pni_data_put_symbol_or_null(data, msg->content_encoding);
-    if (count > 7) pni_data_put_timestamp_or_null(data, msg->expiry_time);
-    if (count > 8) pni_data_put_timestamp_or_null(data, msg->creation_time);
-    if (count > 9) pni_data_put_string_or_null(data, msg->group_id);
-    if (count > 10) pni_data_put_uint_or_null(data, msg->group_sequence);
-    if (count > 11) pni_data_put_string_or_null(data, msg->reply_to_group_id);
+    if (count > 1) pni_data_put_binary_or_null(data, msg->user_id);
+    if (count > 2) pni_data_put_string_or_null(data, msg->address);
+    if (count > 3) pni_data_put_string_or_null(data, msg->subject);
+    if (count > 4) pni_data_put_string_or_null(data, msg->reply_to);
+    if (count > 5) pni_data_put_message_id_or_null(data, msg->correlation_id);
+    if (count > 6) pni_data_put_symbol_or_null(data, msg->content_type);
+    if (count > 7) pni_data_put_symbol_or_null(data, msg->content_encoding);
+    if (count > 8) pni_data_put_timestamp_or_null(data, msg->expiry_time);
+    if (count > 9) pni_data_put_timestamp_or_null(data, msg->creation_time);
+    if (count > 10) pni_data_put_string_or_null(data, msg->group_id);
+    if (count > 11) pni_data_put_uint_or_null(data, msg->group_sequence);
+    if (count > 12) pni_data_put_string_or_null(data, msg->reply_to_group_id);
 
     pn_data_exit(data);
     pn_data_exit(data);
