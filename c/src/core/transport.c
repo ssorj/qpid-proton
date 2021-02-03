@@ -19,7 +19,6 @@
  *
  */
 
-#include "data.h"
 #include "engine-internal.h"
 #include "framing.h"
 #include "memory.h"
@@ -409,8 +408,8 @@ static void pn_transport_initialize(void *object)
   transport->ssl = NULL;
 
   transport->scratch = pn_string(NULL);
-  transport->args = pni_data(16, false);
-  transport->output_args = pni_data(16, false);
+  transport->args = pn_data(16);
+  transport->output_args = pn_data(16);
   transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;

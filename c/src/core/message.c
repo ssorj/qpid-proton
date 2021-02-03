@@ -691,7 +691,7 @@ static inline void pni_message_data_get_symbol(pn_message_t* msg, int* err, cons
 {
   if (pni_message_data_next(msg, err, PN_SYMBOL, name)) {
     if (*err) return;
-    pn_bytes_t bytes = pn_data_get_string(msg->data);
+    pn_bytes_t bytes = pn_data_get_symbol(msg->data);
     *err = pn_string_set_bytes(var, bytes);
   }
 }
