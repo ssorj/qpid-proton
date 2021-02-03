@@ -409,7 +409,7 @@ static void pn_transport_initialize(void *object)
   transport->ssl = NULL;
 
   transport->scratch = pn_string(NULL);
-  transport->args = pn_data(16);
+  transport->args = pni_data(16, false);
   transport->output_args = pni_data(16, false);
   transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;

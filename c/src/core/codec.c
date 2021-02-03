@@ -1229,7 +1229,7 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
   return node - data->nodes + 1;
 }
 
-static pni_node_t *pni_data_new(pn_data_t *data)
+static inline pni_node_t *pni_data_new(pn_data_t *data)
 {
   if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) return NULL;
   pni_node_t *node = pn_data_node(data, ++(data->size));
