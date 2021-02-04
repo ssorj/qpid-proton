@@ -73,6 +73,7 @@ message::message(const message &m) : pn_msg_(0) { *this = m; }
 
 #if PN_CPP_HAS_RVALUE_REFERENCES
 message::message(message &&m) : pn_msg_(0) { swap(*this, m); }
+// XXX Does this have any effect, given the operator def below?
 message& message::operator=(message&& m) {
   swap(*this, m);
   return *this;

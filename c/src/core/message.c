@@ -774,99 +774,97 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     if (err) return err;
 
     switch (descriptor) {
-    case HEADER: {
-        pni_message_data_require_next(msg, &err, PN_LIST, "header");
-        if (err) return err;
-        pn_data_enter(msg->data);
+    case HEADER:
+      pni_message_data_require_next(msg, &err, PN_LIST, "header");
+      if (err) return err;
+      pn_data_enter(msg->data);
 
-        count = pn_data_siblings(msg->data);
+      count = pn_data_siblings(msg->data);
 
-        if (pni_message_data_next(msg, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
-        if (err) return err;
-        if (count == 1) break;
+      if (pni_message_data_next(msg, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
+      if (err) return err;
+      if (count == 1) break;
 
-        if (pni_message_data_next(msg, &err, PN_UBYTE, "priority") && pn_data_type(msg->data) != PN_NULL) {
-          msg->priority = pn_data_get_ubyte(msg->data);
-        }
-        if (err) return err;
-        if (count == 2) break;
+      if (pni_message_data_next(msg, &err, PN_UBYTE, "priority") && pn_data_type(msg->data) != PN_NULL) {
+        msg->priority = pn_data_get_ubyte(msg->data);
+      }
+      if (err) return err;
+      if (count == 2) break;
 
-        if (pni_message_data_next(msg, &err, PN_UINT, "ttl")) msg->ttl = pn_data_get_uint(msg->data);
-        if (err) return err;
-        if (count == 3) break;
+      if (pni_message_data_next(msg, &err, PN_UINT, "ttl")) msg->ttl = pn_data_get_uint(msg->data);
+      if (err) return err;
+      if (count == 3) break;
 
-        if (pni_message_data_next(msg, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pn_data_get_bool(msg->data);
-        if (err) return err;
-        if (count == 4) break;
+      if (pni_message_data_next(msg, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pn_data_get_bool(msg->data);
+      if (err) return err;
+      if (count == 4) break;
 
-        if (pni_message_data_next(msg, &err, PN_UINT, "delivery_count")) msg->delivery_count = pn_data_get_uint(msg->data);
-        if (err) return err;
+      if (pni_message_data_next(msg, &err, PN_UINT, "delivery_count")) msg->delivery_count = pn_data_get_uint(msg->data);
+      if (err) return err;
 
-        break;
-    }
-    case PROPERTIES: {
-        pn_data_clear(msg->id);
-        pn_data_clear(msg->correlation_id);
+      break;
+    case PROPERTIES:
+      pn_data_clear(msg->id);
+      pn_data_clear(msg->correlation_id);
 
-        pni_message_data_require_next(msg, &err, PN_LIST, "properties");
-        if (err) return err;
-        pn_data_enter(msg->data);
+      pni_message_data_require_next(msg, &err, PN_LIST, "properties");
+      if (err) return err;
+      pn_data_enter(msg->data);
 
-        count = pn_data_siblings(msg->data);
+      count = pn_data_siblings(msg->data);
 
-        pni_message_data_get_message_id(msg, &err, "message_id", msg->id);
-        if (err) return err;
-        if (count == 1) break;
+      pni_message_data_get_message_id(msg, &err, "message_id", msg->id);
+      if (err) return err;
+      if (count == 1) break;
 
-        pni_message_data_get_binary(msg, &err, "user_id", msg->user_id);
-        if (err) return err;
-        if (count == 2) break;
+      pni_message_data_get_binary(msg, &err, "user_id", msg->user_id);
+      if (err) return err;
+      if (count == 2) break;
 
-        pni_message_data_get_string(msg, &err, "address", msg->address);
-        if (err) return err;
-        if (count == 3) break;
+      pni_message_data_get_string(msg, &err, "address", msg->address);
+      if (err) return err;
+      if (count == 3) break;
 
-        pni_message_data_get_string(msg, &err, "subject", msg->subject);
-        if (err) return err;
-        if (count == 4) break;
+      pni_message_data_get_string(msg, &err, "subject", msg->subject);
+      if (err) return err;
+      if (count == 4) break;
 
-        pni_message_data_get_string(msg, &err, "reply_to", msg->reply_to);
-        if (err) return err;
-        if (count == 5) break;
+      pni_message_data_get_string(msg, &err, "reply_to", msg->reply_to);
+      if (err) return err;
+      if (count == 5) break;
 
-        pni_message_data_get_message_id(msg, &err, "correlation_id", msg->correlation_id);
-        if (err) return err;
-        if (count == 6) break;
+      pni_message_data_get_message_id(msg, &err, "correlation_id", msg->correlation_id);
+      if (err) return err;
+      if (count == 6) break;
 
-        pni_message_data_get_symbol(msg, &err, "content_type", msg->content_type);
-        if (err) return err;
-        if (count == 7) break;
+      pni_message_data_get_symbol(msg, &err, "content_type", msg->content_type);
+      if (err) return err;
+      if (count == 7) break;
 
-        pni_message_data_get_symbol(msg, &err, "content_encoding", msg->content_encoding);
-        if (err) return err;
-        if (count == 8) break;
+      pni_message_data_get_symbol(msg, &err, "content_encoding", msg->content_encoding);
+      if (err) return err;
+      if (count == 8) break;
 
-        if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "expiry_time")) msg->expiry_time = pn_data_get_timestamp(msg->data);
-        if (err) return err;
-        if (count == 9) break;
+      if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "expiry_time")) msg->expiry_time = pn_data_get_timestamp(msg->data);
+      if (err) return err;
+      if (count == 9) break;
 
-        if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "creation_time")) msg->creation_time = pn_data_get_timestamp(msg->data);
-        if (err) return err;
-        if (count == 10) break;
+      if (pni_message_data_next(msg, &err, PN_TIMESTAMP, "creation_time")) msg->creation_time = pn_data_get_timestamp(msg->data);
+      if (err) return err;
+      if (count == 10) break;
 
-        pni_message_data_get_string(msg, &err, "group_id", msg->group_id);
-        if (err) return err;
-        if (count == 11) break;
+      pni_message_data_get_string(msg, &err, "group_id", msg->group_id);
+      if (err) return err;
+      if (count == 11) break;
 
-        if (pni_message_data_next(msg, &err, PN_UINT, "group_sequence")) msg->group_sequence = pn_data_get_uint(msg->data);
-        if (err) return err;
-        if (count == 12) break;
+      if (pni_message_data_next(msg, &err, PN_UINT, "group_sequence")) msg->group_sequence = pn_data_get_uint(msg->data);
+      if (err) return err;
+      if (count == 12) break;
 
-        pni_message_data_get_string(msg, &err, "reply_to_group_id", msg->reply_to_group_id);
-        if (err) return err;
+      pni_message_data_get_string(msg, &err, "reply_to_group_id", msg->reply_to_group_id);
+      if (err) return err;
 
-        break;
-    }
+      break;
     case DELIVERY_ANNOTATIONS:
       pn_data_narrow(msg->data);
       err = pn_data_copy(msg->instructions, msg->data);
@@ -1015,20 +1013,14 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   else if (msg->durable) count = 1;
   else count = 0;
 
-  // XXX
-  //
-  // The tests fail when you omit the header.
-  //
-  // if (count > 0) {
-  if (true) {
+  if (count > 0) {
     pn_data_put_described(data);
     pn_data_enter(data);
     pn_data_put_ulong(data, HEADER);
     pn_data_put_list(data);
     pn_data_enter(data);
 
-    // XXX pni_data_put_bool_or_null(data, msg->durable);
-    if (count > 0) pni_data_put_bool_or_null(data, msg->durable);
+    pni_data_put_bool_or_null(data, msg->durable);
 
     if (count > 1) {
       if (msg->priority != HEADER_PRIORITY_DEFAULT) pn_data_put_ubyte(data, msg->priority);

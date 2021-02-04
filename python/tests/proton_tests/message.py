@@ -236,10 +236,18 @@ class CodecTest(Test):
 
         decoder = Data()
 
-        # Skip past the headers
+        # XXX
+        #
+        # There is no header section to skip if you don't set any
+        # header properties.
+
         consumed = decoder.decode(data)
-        decoder.clear()
-        data = data[consumed:]
+        descriptor = decoder.get_py_described().descriptor
+
+        if descriptor == 0x70:
+            # Skip past the headers
+            decoder.clear()
+            data = data[consumed:]
 
         decoder.decode(data)
         dproperties = decoder.get_py_described()
@@ -255,10 +263,18 @@ class CodecTest(Test):
 
         decoder = Data()
 
-        # Skip past the headers
+        # XXX
+        #
+        # There is no header section to skip if you don't set any
+        # header properties.
+
         consumed = decoder.decode(data)
-        decoder.clear()
-        data = data[consumed:]
+        descriptor = decoder.get_py_described().descriptor
+
+        if descriptor == 0x70:
+            # Skip past the headers
+            decoder.clear()
+            data = data[consumed:]
 
         decoder.decode(data)
         dproperties = decoder.get_py_described()
@@ -274,10 +290,18 @@ class CodecTest(Test):
 
         decoder = Data()
 
-        # Skip past the headers
+        # XXX
+        #
+        # There is no header section to skip if you don't set any
+        # header properties.
+
         consumed = decoder.decode(data)
-        decoder.clear()
-        data = data[consumed:]
+        descriptor = decoder.get_py_described().descriptor
+
+        if descriptor == 0x70:
+            # Skip past the headers
+            decoder.clear()
+            data = data[consumed:]
 
         decoder.decode(data)
         dproperties = decoder.get_py_described()
@@ -295,10 +319,18 @@ class CodecTest(Test):
 
         decoder = Data()
 
-        # Skip past the headers
+        # XXX
+        #
+        # There is no header section to skip if you don't set any
+        # header properties.
+
         consumed = decoder.decode(data)
-        decoder.clear()
-        data = data[consumed:]
+        descriptor = decoder.get_py_described().descriptor
+
+        if descriptor == 0x70:
+            # Skip past the headers
+            decoder.clear()
+            data = data[consumed:]
 
         decoder.decode(data)
         dproperties = decoder.get_py_described()
