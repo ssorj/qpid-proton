@@ -307,6 +307,7 @@ class CodecTest(Test):
 
         properties = dproperties.value
         assert properties[10] == 'G', properties[10]
+
         assert properties[11] == 0, properties[11]
 
     def testDefaultCreationExpiryDecode(self):
@@ -350,6 +351,7 @@ class CodecTest(Test):
     def testDefaultPriorityDecode(self):
         # This is a message with everything filled explicitly as null or zero in LIST32 HEADER and PROPERTIES lists
         data = b'\x00\x53\x70\xd0\x00\x00\x00\x0a\x00\x00\x00\x05\x42\x40\x40\x42\x52\x00\x00\x53\x73\xd0\x00\x00\x00\x22\x00\x00\x00\x0d\x40\x40\x40\x40\x40\x40\x40\x40\x83\x00\x00\x00\x00\x00\x00\x00\x00\x83\x00\x00\x00\x00\x00\x00\x00\x00\x40\x52\x00\x40'
+
         msg2 = Message()
         msg2.decode(data)
         assert msg2.priority == 4, (msg2.priority)

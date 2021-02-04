@@ -707,8 +707,8 @@ static inline void pni_message_data_get_message_id(pn_message_t* msg, int* err, 
     case PN_BINARY:
       *err = pn_data_put_binary(var, pn_data_get_binary(msg->data));
       break;
-    case PN_LONG:
-      *err = pn_data_put_long(var, pn_data_get_long(msg->data));
+    case PN_ULONG:
+      *err = pn_data_put_ulong(var, pn_data_get_ulong(msg->data));
       break;
     case PN_STRING:
       *err = pn_data_put_string(var, pn_data_get_string(msg->data));
@@ -766,7 +766,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         if (err) return err;
         if (count == 1) break;
 
-        if (pni_message_data_next(msg, &err, PN_UBYTE, "priority")) msg->priority = pn_data_get_ubyte(msg->data);
+        if (pni_message_data_next(msg, &err, PN_UBYTE, "priority") && pn_data_type(msg->data) != PN_NULL) {
+          msg->priority = pn_data_get_ubyte(msg->data);
+        }
         if (err) return err;
         if (count == 2) break;
 
@@ -906,7 +908,6 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   bytes += encoded;
   remaining -= encoded;
   *size -= remaining;
-
   return 0;
 }
 
@@ -932,15 +933,6 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
     pn_data_put_uint(data, value);
-  } else {
-    pn_data_put_null(data);
-  }
-}
-
-static inline void pni_data_put_ubyte_or_null(pn_data_t* data, uint8_t value)
-{
-  if (value) {
-    pn_data_put_ubyte(data, value);
   } else {
     pn_data_put_null(data);
   }
@@ -1004,16 +996,26 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   else if (msg->durable) count = 1;
   else count = 0;
 
-  if (count > 0) {
+  // XXX
+  //
+  // The tests fail when you omit the header.
+  //
+  // if (count > 0) {
+  if (true) {
     pn_data_put_described(data);
     pn_data_enter(data);
     pn_data_put_ulong(data, HEADER);
     pn_data_put_list(data);
     pn_data_enter(data);
 
-    pni_data_put_bool_or_null(data, msg->durable);
+    // XXX pni_data_put_bool_or_null(data, msg->durable);
+    if (count > 0) pni_data_put_bool_or_null(data, msg->durable);
 
-    if (count > 1) pni_data_put_ubyte_or_null(data, msg->priority);
+    if (count > 1) {
+      if (msg->priority != HEADER_PRIORITY_DEFAULT) pn_data_put_ubyte(data, msg->priority);
+      else pn_data_put_null(data);
+    }
+
     if (count > 2) pni_data_put_uint_or_null(data, msg->ttl);
     if (count > 3) pni_data_put_bool_or_null(data, msg->first_acquirer);
     if (count > 4) pni_data_put_uint_or_null(data, msg->delivery_count);
@@ -1086,7 +1088,24 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     if (count > 8) pni_data_put_timestamp_or_null(data, msg->expiry_time);
     if (count > 9) pni_data_put_timestamp_or_null(data, msg->creation_time);
     if (count > 10) pni_data_put_string_or_null(data, msg->group_id);
-    if (count > 11) pni_data_put_uint_or_null(data, msg->group_sequence);
+
+    // XXX
+    //
+    // The python tests don't accept a null value for this if
+    // reply_to_group_id is set.  See
+    // testGroupSequenceEncodeAsNonNull.
+    //
+    // if (count > 11) pni_data_put_uint_or_null(data, msg->group_sequence);
+    if (count > 11) {
+      if (msg->group_sequence) {
+        pn_data_put_uint(data, msg->group_sequence);
+      } else if (pn_string_size(msg->group_id) && pn_string_size(msg->reply_to_group_id)) {
+        pn_data_put_uint(data, msg->group_sequence);
+      } else {
+        pn_data_put_null(data);
+      }
+    }
+
     if (count > 12) pni_data_put_string_or_null(data, msg->reply_to_group_id);
 
     pn_data_exit(data);
