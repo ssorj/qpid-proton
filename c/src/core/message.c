@@ -716,8 +716,27 @@ static inline void pni_message_data_get_message_id(pn_message_t* msg, int* err, 
     case PN_UUID:
       *err = pn_data_put_uuid(var, pn_data_get_uuid(msg->data));
       break;
+    case PN_INT: {
+      // XXX
+      //
+      // The C and Ruby examples produce signed int atoms for message
+      // IDs.  Those aren't legal, so I'm converting them to unsigned
+      // longs if I can.
+
+      int value = pn_data_get_int(msg->data);
+
+      if (value >= 0) {
+        *err = pn_data_put_ulong(var, pn_data_get_int(msg->data));
+      } else {
+        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: negative integer ID: %s",
+                               name, pn_type_name(type));
+      }
+
+      break;
+    }
     default:
-      *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: illegal ID type: %s", name, pn_type_name(type));
+      *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: illegal ID type: %s",
+                             name, pn_type_name(type));
       break;
     }
   }
