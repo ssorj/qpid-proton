@@ -1578,30 +1578,6 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
-static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
-{
-  bool found = pn_data_next(data);
-  pn_type_t found_type = pn_data_type(data);
-
-  if (found && found_type != PN_NULL && found_type != type) {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
-                           name, pn_type_name(type), pn_type_name(found_type));
-  }
-
-  return found && found_type != PN_NULL;
-}
-
-static inline void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
-{
-  bool found = pni_data_next_field(data, err, type, name);
-
-  if (*err) return;
-
-  if (!found) {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
-  }
-}
-
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
@@ -1618,7 +1594,6 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   bool aborted = false;
 
   pn_data_clear(transport->disp_data);
-  pn_data_enter(args);
 
   int err = 0;
   int count = pn_data_siblings(args);

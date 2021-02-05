@@ -75,4 +75,28 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
+static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+{
+  bool found = pn_data_next(data);
+  pn_type_t found_type = pn_data_type(data);
+
+  if (found && found_type != PN_NULL && found_type != type) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
+                           name, pn_type_name(type), pn_type_name(found_type));
+  }
+
+  return found && found_type != PN_NULL;
+}
+
+static inline void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+{
+  bool found = pni_data_next_field(data, err, type, name);
+
+  if (*err) return;
+
+  if (!found) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
+  }
+}
+
 #endif /* data.h */

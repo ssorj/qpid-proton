@@ -21,6 +21,7 @@
 
 #include "dispatcher.h"
 
+#include "data.h"
 #include "engine-internal.h"
 #include "framing.h"
 #include "logger_private.h"
@@ -92,28 +93,32 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
     return dsize;
   }
 
-  uint8_t frame_type = frame.type;
-  uint16_t channel = frame.channel;
-  // XXX: assuming numeric -
-  // if we get a symbol we should map it to the numeric value and dispatch on that
-  uint64_t lcode;
-  bool scanned;
-  int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
-  if (e) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Scan error");
-    return e;
+  // XXX: We're assuming numeric descriptors.  If we get a symbol we
+  // should map it to the numeric value and dispatch on that.
+  uint64_t descriptor;
+  int err = 0;
+
+  // Enter the described type
+  pn_data_enter(args);
+
+  pni_data_require_next_field(args, &err, PN_ULONG, "descriptor");
+  descriptor = pn_data_get_ulong(args);
+  if (err) {
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Data error reading frame");
+    return err;
   }
-  if (!scanned) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
-    return PN_ERR;
-  }
+
+  // Enter the list
+  pn_data_next(args);
+  pn_data_enter(args);
+
   size_t payload_size = frame.size - dsize;
   const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
   pn_bytes_t payload = {payload_size, payload_mem};
 
-  pn_do_trace(transport, channel, IN, args, payload_mem, payload_size);
+  pn_do_trace(transport, frame.channel, IN, args, payload_mem, payload_size);
 
-  int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
+  err = pni_dispatch_action(transport, descriptor, frame.type, frame.channel, args, &payload);
 
   pn_data_clear(args);
 
