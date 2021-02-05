@@ -645,50 +645,48 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
-static inline void pni_message_data_get_message_id(pn_message_t* msg, int* err, const char* name, pn_data_t* var)
+static inline void pni_data_get_message_id(pn_data_t* data, int* err, const char* name, pn_data_t* var)
 {
-  if (pn_data_next(msg->data)) {
-    pn_type_t type = pn_data_type(msg->data);
+  pn_type_t type = pn_data_type(data);
 
-    switch (type) {
-    case PN_NULL:
-      break;
-    case PN_BINARY:
-      *err = pn_data_put_binary(var, pn_data_get_binary(msg->data));
-      break;
-    case PN_ULONG:
-      *err = pn_data_put_ulong(var, pn_data_get_ulong(msg->data));
-      break;
-    case PN_STRING:
-      *err = pn_data_put_string(var, pn_data_get_string(msg->data));
-      break;
-    case PN_UUID:
-      *err = pn_data_put_uuid(var, pn_data_get_uuid(msg->data));
-      break;
-    case PN_INT: {
-      // XXX
-      //
-      // The C and Ruby examples produce signed int atoms for message
-      // IDs.  Those aren't legal, so I'm converting them to unsigned
-      // longs if I can.
+  switch (type) {
+  case PN_NULL:
+    break;
+  case PN_BINARY:
+    pn_data_put_binary(var, pn_data_get_binary(data));
+    break;
+  case PN_ULONG:
+    pn_data_put_ulong(var, pn_data_get_ulong(data));
+    break;
+  case PN_STRING:
+    pn_data_put_string(var, pn_data_get_string(data));
+    break;
+  case PN_UUID:
+    pn_data_put_uuid(var, pn_data_get_uuid(data));
+    break;
+  case PN_INT: {
+    // XXX
+    //
+    // The C and Ruby examples produce signed int atoms for message
+    // IDs.  Those aren't legal, so I'm converting them to unsigned
+    // longs if I can.
 
-      int value = pn_data_get_int(msg->data);
+    int value = pn_data_get_int(data);
 
-      if (value >= 0) {
-        *err = pn_data_put_ulong(var, pn_data_get_int(msg->data));
-      } else {
-        *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: negative integer ID: %s",
-                               name, pn_type_name(type));
-      }
-
-      break;
-    }
-    default:
-      *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: %s: illegal ID type: %s",
+    if (value >= 0) {
+      *err = pn_data_put_ulong(var, pn_data_get_int(data));
+    } else {
+      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: negative integer ID: %s",
                              name, pn_type_name(type));
-      break;
     }
-  } // XXX else!
+
+    break;
+  }
+  default:
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: illegal ID type: %s",
+                           name, pn_type_name(type));
+    break;
+  }
 }
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
@@ -761,7 +759,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       field_count = pn_data_siblings(msg->data);
 
-      pni_message_data_get_message_id(msg, &err, "message_id", msg->id);
+      if (pn_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "message_id", msg->id);
       if (err) return err;
       if (field_count == 1) break;
 
@@ -793,7 +791,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       if (field_count == 5) break;
 
-      pni_message_data_get_message_id(msg, &err, "correlation_id", msg->correlation_id);
+      if (pn_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "correlation_id", msg->correlation_id);
       if (err) return err;
       if (field_count == 6) break;
 
@@ -1000,18 +998,18 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
     pni_data_put_bool_or_null(data, msg->durable);
 
-    if (field_count > 1) {
+    if (field_count >= 2) {
       if (msg->priority != HEADER_PRIORITY_DEFAULT) pn_data_put_ubyte(data, msg->priority);
       else pn_data_put_null(data);
     }
 
-    if (field_count > 2) pni_data_put_uint_or_null(data, msg->ttl);
+    if (field_count >= 3) pni_data_put_uint_or_null(data, msg->ttl);
     else goto end_header;
 
-    if (field_count > 3) pni_data_put_bool_or_null(data, msg->first_acquirer);
+    if (field_count >= 4) pni_data_put_bool_or_null(data, msg->first_acquirer);
     else goto end_header;
 
-    if (field_count > 4) pni_data_put_uint_or_null(data, msg->delivery_count);
+    if (field_count == 5) pni_data_put_uint_or_null(data, msg->delivery_count);
 
   end_header:
 
@@ -1073,34 +1071,34 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
     pni_data_put_message_id_or_null(data, msg->id);
 
-    if (field_count > 1) pni_data_put_binary_or_null(data, msg->user_id);
+    if (field_count >= 2) pni_data_put_binary_or_null(data, msg->user_id);
     else goto end_properties;
 
-    if (field_count > 2) pni_data_put_string_or_null(data, msg->address);
+    if (field_count >= 3) pni_data_put_string_or_null(data, msg->address);
     else goto end_properties;
 
-    if (field_count > 3) pni_data_put_string_or_null(data, msg->subject);
+    if (field_count >= 4) pni_data_put_string_or_null(data, msg->subject);
     else goto end_properties;
 
-    if (field_count > 4) pni_data_put_string_or_null(data, msg->reply_to);
+    if (field_count >= 5) pni_data_put_string_or_null(data, msg->reply_to);
     else goto end_properties;
 
-    if (field_count > 5) pni_data_put_message_id_or_null(data, msg->correlation_id);
+    if (field_count >= 6) pni_data_put_message_id_or_null(data, msg->correlation_id);
     else goto end_properties;
 
-    if (field_count > 6) pni_data_put_symbol_or_null(data, msg->content_type);
+    if (field_count >= 7) pni_data_put_symbol_or_null(data, msg->content_type);
     else goto end_properties;
 
-    if (field_count > 7) pni_data_put_symbol_or_null(data, msg->content_encoding);
+    if (field_count >= 8) pni_data_put_symbol_or_null(data, msg->content_encoding);
     else goto end_properties;
 
-    if (field_count > 8) pni_data_put_timestamp_or_null(data, msg->expiry_time);
+    if (field_count >= 9) pni_data_put_timestamp_or_null(data, msg->expiry_time);
     else goto end_properties;
 
-    if (field_count > 9) pni_data_put_timestamp_or_null(data, msg->creation_time);
+    if (field_count >= 10) pni_data_put_timestamp_or_null(data, msg->creation_time);
     else goto end_properties;
 
-    if (field_count > 10) pni_data_put_string_or_null(data, msg->group_id);
+    if (field_count >= 11) pni_data_put_string_or_null(data, msg->group_id);
     else goto end_properties;
 
     // XXX
@@ -1109,8 +1107,8 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     // reply_to_group_id is set.  See
     // testGroupSequenceEncodeAsNonNull.
     //
-    // if (field_count > 11) pni_data_put_uint_or_null(data, msg->group_sequence);
-    if (field_count > 11) {
+    // if (field_count >= 12) pni_data_put_uint_or_null(data, msg->group_sequence);
+    if (field_count >= 12) {
       if (msg->group_sequence) {
         pn_data_put_uint(data, msg->group_sequence);
       } else if (pn_string_size(msg->group_id) && pn_string_size(msg->reply_to_group_id)) {
@@ -1122,7 +1120,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
       goto end_properties;
     }
 
-    if (field_count > 12) pni_data_put_string_or_null(data, msg->reply_to_group_id);
+    if (field_count == 13) pni_data_put_string_or_null(data, msg->reply_to_group_id);
 
   end_properties:
 
