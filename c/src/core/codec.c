@@ -1229,12 +1229,6 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
   return node - data->nodes + 1;
 }
 
-static inline pni_node_t *pni_data_new(pn_data_t *data)
-{
-  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) return NULL;
-  else return pn_data_node(data, ++(data->size));
-}
-
 inline void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
@@ -1478,62 +1472,42 @@ void pn_data_dump(pn_data_t *data)
 
 static pni_node_t *pni_data_add(pn_data_t *data)
 {
-  pni_node_t *current = pni_data_current(data);
-  pni_node_t *parent;
   pni_node_t *node;
 
+  if (data->capacity > data->size) {
+    node = pn_data_node(data, ++(data->size));
+  } else {
+    int err = pni_data_grow(data);
+    if (err) return NULL;
+
+    node = pn_data_node(data, ++(data->size));
+  }
+
+  pni_node_t *current = pni_data_current(data);
+
   if (current) {
-    if (data->capacity > data->size) {
-      node = pn_data_node(data, ++(data->size));
-    } else {
-      int err = pni_data_grow(data);
-      if (err) return NULL;
-
-      node = pn_data_node(data, ++(data->size));
-    }
-
-    // node = pni_data_new(data);
-    // if (!node) return NULL;
-
-    // Refresh the pointers in case we grew
-
-    current = pni_data_current(data);
     current->next = pni_data_id(data, node);
-
     node->prev = data->current;
     node->parent = data->parent;
 
-    parent = pn_data_node(data, data->parent);
+    pni_node_t* parent = pn_data_node(data, data->parent);
 
     if (parent) {
-      if (!parent->down) {
+      if (!parent->down) { // Secret nodes
         parent->down = pni_data_id(data, node);
       }
       parent->children++;
     }
   } else {
-    parent = pn_data_node(data, data->parent);
+    node->prev = 0;
+
+    pni_node_t* parent = pn_data_node(data, data->parent);
 
     if (parent) {
-      node = pni_data_new(data);
-      if (!node) return NULL;
-
-      // Refresh the pointers in case we grew
-
-      parent = pn_data_node(data, data->parent);
-
-      node->prev = 0;
       node->parent = data->parent;
-
       parent->down = pni_data_id(data, node);
       parent->children++;
-    } else if (data->size) {
-      node = pn_data_node(data, 1);
     } else {
-      node = pni_data_new(data);
-      if (!node) return NULL;
-
-      node->prev = 0;
       node->parent = 0;
     }
   }
