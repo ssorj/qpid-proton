@@ -19,6 +19,7 @@
  *
  */
 
+#include "data.h"
 #include "engine-internal.h"
 #include "framing.h"
 #include "memory.h"
@@ -957,6 +958,35 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   return 0;
 }
 
+static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
+{
+  if (value) {
+    pn_data_put_bool(data, value);
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
+static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
+{
+  if (value) {
+    pn_data_put_uint(data, value);
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
+static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* value)
+{
+  size_t size = pn_string_size(value);
+
+  if (size) {
+    pn_data_put_binary(data, pn_bytes(size, pn_string_get(value)));
+  } else {
+    pn_data_put_null(data);
+  }
+}
+
 static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                         uint32_t handle,
                                         pn_sequence_t id,
@@ -975,28 +1005,87 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   bool more_flag = more;
   unsigned framecount = 0;
   pn_buffer_t *frame = transport->frame;
+  pn_data_t* data = transport->output_args;
+  int count;
 
   // create performatives, assuming 'more' flag need not change
 
  compute_performatives:
-  pn_data_clear(transport->output_args);
-  int err = pn_data_fill(transport->output_args, "DL[IIzI?o?on?DLC?o?o?o]", TRANSFER,
-                         handle,
-                         id,
-                         tag->size, tag->start,
-                         message_format,
-                         settled, settled,
-                         more_flag, more_flag,
-                         (bool)code, code, state,
-                         resume, resume,
-                         aborted, aborted,
-                         batchable, batchable);
-  if (err) {
-    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
-                      "error posting transfer frame: %s: %s", pn_code(err),
-                      pn_error_text(pn_data_error(transport->output_args)));
-    return PN_ERR;
+  pn_data_clear(data);
+
+  pn_data_put_described(data);
+  pn_data_enter(data);
+  pn_data_put_ulong(data, TRANSFER);
+  pn_data_put_list(data);
+  pn_data_enter(data);
+
+  pn_data_put_uint(data, handle);
+  pn_data_put_uint(data, id);
+  pn_data_put_binary(data, pn_bytes(tag->size, tag->start));
+  pn_data_put_uint(data, message_format);
+
+  if (batchable) count = 7;
+  else if (aborted) count = 6;
+  else if (resume) count = 5;
+  else if (code) count = 4;
+  else if (more_flag) count = 3;
+  // Placeholder for always null field
+  else if (settled) count = 1;
+  else count = 0;
+
+  if (count > 0) pni_data_put_bool_or_null(data, settled);
+  if (count > 1) pni_data_put_bool_or_null(data, more_flag);
+  if (count > 2) pn_data_put_null(data);
+
+  if (count > 3) {
+    if (code) {
+      pn_data_put_described(data);
+      pn_data_enter(data);
+      pn_data_put_ulong(data, code);
+
+      if (pn_data_size(state)) {
+        pn_data_appendn(data, state, 1);
+      } else {
+        pn_data_put_null(data);
+      }
+
+      pn_data_exit(data);
+    } else {
+      pn_data_put_null(data);
+    }
   }
+
+  if (count > 4) pni_data_put_bool_or_null(data, resume);
+  if (count > 5) pni_data_put_bool_or_null(data, aborted);
+  if (count > 6) pni_data_put_bool_or_null(data, batchable);
+
+  pn_data_exit(data);
+  pn_data_exit(data);
+
+  // pn_data_dump(data);
+
+  // // XXX
+  // pn_data_clear(data);
+
+  // int err = pn_data_fill(transport->output_args, "DL[IIzI?o?on?DLC?o?o?o]", TRANSFER,
+  //                        handle,
+  //                        id,
+  //                        tag->size, tag->start,
+  //                        message_format,
+  //                        settled, settled,
+  //                        more_flag, more_flag,
+  //                        (bool)code, code, state,
+  //                        resume, resume,
+  //                        aborted, aborted,
+  //                        batchable, batchable);
+  // if (err) {
+  //   pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
+  //                     "error posting transfer frame: %s: %s", pn_code(err),
+  //                     pn_error_text(pn_data_error(transport->output_args)));
+  //   return PN_ERR;
+  // }
+
+  // pn_data_dump(data);
 
   do { // send as many frames as possible without changing the 'more' flag...
 
@@ -1489,23 +1578,149 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
+static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+{
+  bool found = pn_data_next(data);
+  pn_type_t found_type = pn_data_type(data);
+
+  if (found && found_type != PN_NULL && found_type != type) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
+                           name, pn_type_name(type), pn_type_name(found_type));
+  }
+
+  return found && found_type != PN_NULL;
+}
+
+static inline void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+{
+  bool found = pni_data_next_field(data, err, type, name);
+
+  if (*err) return;
+
+  if (!found) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
+  }
+}
+
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
   uint32_t handle;
-  pn_bytes_t tag;
-  bool id_present;
-  pn_sequence_t id;
-  bool settled;
-  bool more;
-  bool has_type, settled_set;
-  bool resume, aborted, batchable;
-  uint64_t type;
+  pn_sequence_t id = 0;
+  bool id_set = false;
+  pn_bytes_t tag = {0};
+  bool settled = false;
+  bool settled_set = false;
+  bool more = false;
+  uint64_t type = 0;
+  bool type_set = false;
+  bool aborted = false;
+
   pn_data_clear(transport->disp_data);
-  int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_present, &id, &tag,
-                         &settled_set, &settled, &more, &has_type, &type, transport->disp_data,
-                         &resume, &aborted, &batchable);
+
+  pn_data_rewind(args);
+  // pn_data_dump(args);
+
+  int err = 0;
+
+  pni_data_require_next_field(args, &err, PN_DESCRIBED, "described");
   if (err) return err;
+  pn_data_enter(args);
+
+  pni_data_require_next_field(args, &err, PN_ULONG, "descriptor");
+  if (err) return err;
+
+  pni_data_require_next_field(args, &err, PN_LIST, "transfer");
+  if (err) return err;
+  pn_data_enter(args);
+
+  int count = pn_data_siblings(args);
+
+  pni_data_require_next_field(args, &err, PN_UINT, "handle");
+  handle = pn_data_get_uint(args);
+  if (err) return err;
+  if (count == 1) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_UINT, "delivery_id")) {
+    id = pn_data_get_uint(args);
+    id_set = true;
+  }
+  if (err) return err;
+  if (count == 2) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_BINARY, "delivery_tag")) tag = pn_data_get_binary(args);
+  if (err) return err;
+  if (count == 3) goto valhalla;
+
+  pni_data_next_field(args, &err, PN_UINT, "message_format");
+  if (err) return err;
+  if (count == 4) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_BOOL, "settled")) {
+    settled = pn_data_get_bool(args);
+    settled_set = true;
+  }
+  if (err) return err;
+  if (count == 5) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_BOOL, "more")) more = pn_data_get_bool(args);
+  if (err) return err;
+  if (count == 6) goto valhalla;
+
+  pni_data_next_field(args, &err, PN_UINT, "settle_mode");
+  if (err) return err;
+  if (count == 7) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_DESCRIBED, "state")) {
+    if (err) return err;
+    pn_data_enter(args);
+
+    if (pni_data_next_field(args, &err, PN_ULONG, "descriptor")) {
+      if (err) return err;
+      type = pn_data_get_ulong(args);
+      type_set = true;
+    }
+
+    pn_data_next(args); // XXX
+
+    pn_data_narrow(args);
+    pn_data_copy(args, transport->disp_data);
+    pn_data_widen(args);
+
+    pn_data_exit(args);
+  }
+  if (err) return err;
+  if (count == 8) goto valhalla;
+
+  pni_data_next_field(args, &err, PN_BOOL, "resume");
+  if (err) return err;
+  if (count == 9) goto valhalla;
+
+  if (pni_data_next_field(args, &err, PN_BOOL, "aborted")) aborted = pn_data_get_bool(args);
+  if (err) return err;
+  if (count == 10) goto valhalla;
+
+valhalla:
+
+  // printf("handle %d\n", handle);
+  // printf("id %d\n", id);
+  // printf("id_set %d\n", id_set);
+  // printf("tag %s\n", tag.start);
+  // printf("settled %d\n", settled);
+  // printf("settled_set %d\n", settled_set);
+  // printf("more %d\n", more);
+  // printf("type %ld\n", type);
+  // printf("type_set %d\n", type_set);
+  // printf("aborted %d\n", aborted);
+
+  pn_data_exit(args);
+  pn_data_exit(args);
+
+  // int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_set, &id, &tag,
+  //                        &settled_set, &settled, &more, &type_set, &type, transport->disp_data,
+  //                        &resume, &aborted, &batchable);
+  // if (err) return err;
+
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
@@ -1527,12 +1742,12 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       delivery = link->unsettled_tail;
       if (settled_set && !settled && delivery->remote.settled)
         return pn_do_error(transport, "amqp:invalid-field", "invalid transition from settled to unsettled");
-      if (id_present && id != delivery->state.id)
+      if (id_set && id != delivery->state.id)
         return pn_do_error(transport, "amqp:invalid-field", "invalid delivery-id for a continuation transfer");
     } else {
       // Application has already settled.  Delivery is no more.
       // Ignore content and look for transition to a new delivery.
-      if (!id_present || id == link->more_id) {
+      if (!id_set || id == link->more_id) {
         // Still old delivery.
         if (!more || aborted)
           link->more_pending = false;
@@ -1559,12 +1774,12 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
     pn_delivery_state_t *state = pni_delivery_map_push(incoming, delivery);
-    if (id_present && id != state->id) {
+    if (id_set && id != state->id) {
       return pn_do_error(transport, "amqp:session:invalid-field",
                          "sequencing error, expected delivery-id %u, got %u",
                          state->id, id);
     }
-    if (has_type) {
+    if (type_set) {
       delivery->remote.type = type;
       pn_data_copy(delivery->remote.data, transport->disp_data);
     }
@@ -1580,7 +1795,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       if (!link->more_pending) {
         // First frame of a multi-frame transfer. Remember at link level.
         link->more_pending = true;
-        assert(id_present);  // Id MUST be set on first frame, and already checked above.
+        assert(id_set);  // Id MUST be set on first frame, and already checked above.
         link->more_id = id;
       }
       delivery->done = false;
