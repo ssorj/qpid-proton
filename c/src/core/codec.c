@@ -1483,8 +1483,17 @@ static pni_node_t *pni_data_add(pn_data_t *data)
   pni_node_t *node;
 
   if (current) {
-    node = pni_data_new(data);
-    if (!node) return NULL;
+    if (data->capacity > data->size) {
+      node = pn_data_node(data, ++(data->size));
+    } else {
+      int err = pni_data_grow(data);
+      if (err) return NULL;
+
+      node = pn_data_node(data, ++(data->size));
+    }
+
+    // node = pni_data_new(data);
+    // if (!node) return NULL;
 
     // Refresh the pointers in case we grew
 
