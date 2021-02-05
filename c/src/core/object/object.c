@@ -68,7 +68,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-void *pn_class_incref(const pn_class_t *clazz, void *object)
+inline void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
@@ -85,7 +85,7 @@ int pn_class_refcount(const pn_class_t *clazz, void *object)
   return clazz->refcount(object);
 }
 
-int pn_class_decref(const pn_class_t *clazz, void *object)
+inline int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
 
