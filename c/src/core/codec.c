@@ -1401,7 +1401,7 @@ size_t pn_data_siblings(pn_data_t *data)
   }
 }
 
-bool pn_data_enter(pn_data_t *data)
+inline bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
     data->parent = data->current;
@@ -1412,7 +1412,7 @@ bool pn_data_enter(pn_data_t *data)
   }
 }
 
-bool pn_data_exit(pn_data_t *data)
+inline bool pn_data_exit(pn_data_t *data)
 {
   if (data->parent) {
     pni_node_t *parent = pn_data_node(data, data->parent);
