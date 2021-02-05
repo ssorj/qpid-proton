@@ -77,18 +77,18 @@ int pni_data_traverse(pn_data_t *data,
 
 static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
-  bool found = pn_data_next(data);
-  pn_type_t found_type = pn_data_type(data);
-
-  if (found && found_type != PN_NULL && found_type != type) {
+  if (!pn_data_next(data) || pn_data_type(data) == PN_NULL) {
+    return false;
+  } else if (pn_data_type(data) == type) {
+    return true;
+  } else {
     *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
-                           name, pn_type_name(type), pn_type_name(found_type));
+                           name, pn_type_name(type), pn_type_name(pn_data_type(data)));
+    return false;
   }
-
-  return found && found_type != PN_NULL;
 }
 
-static inline void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+static inline void pni_data_require_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   bool found = pni_data_next_field(data, err, type, name);
 
