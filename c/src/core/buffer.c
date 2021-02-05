@@ -257,7 +257,7 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
   return 0;
 }
 
-void pn_buffer_clear(pn_buffer_t *buf)
+inline void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;
   buf->size = 0;

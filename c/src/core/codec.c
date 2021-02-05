@@ -412,7 +412,7 @@ size_t pn_data_size(pn_data_t *data)
   return data ? data->size : 0;
 }
 
-void pn_data_clear(pn_data_t *data)
+inline void pn_data_clear(pn_data_t *data)
 {
   if (data) {
     data->size = 0;
