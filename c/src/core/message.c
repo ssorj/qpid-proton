@@ -1049,7 +1049,6 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Properties
 
-  // XXX Could do this when fields are set...
   if (pn_string_size(msg->reply_to_group_id)) field_count = 13;
   else if (msg->group_sequence) field_count = 12;
   else if (pn_string_size(msg->group_id)) field_count = 11;
