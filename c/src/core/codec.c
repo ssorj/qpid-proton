@@ -1245,7 +1245,7 @@ void pn_data_rewind(pn_data_t *data)
   data->current = data->base_current;
 }
 
-static pni_node_t *pni_data_current(pn_data_t *data)
+static inline pni_node_t *pni_data_current(pn_data_t *data)
 {
   return pn_data_node(data, data->current);
 }
@@ -1303,27 +1303,29 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
   return NULL;
 }
 
-bool pn_data_next(pn_data_t *data)
+inline bool pn_data_next(pn_data_t *data)
 {
-  pni_node_t *current = pni_data_current(data);
-  pni_node_t *parent = pn_data_node(data, data->parent);
-  size_t next;
+  pni_node_t* current = pni_data_current(data);
 
   if (current) {
-    next = current->next;
-  } else if (parent && parent->down) {
-    next = parent->down;
-  } else if (!parent && data->size) {
-    next = 1;
+    if (current->next) {
+      data->current = current->next;
+      return true;
+    } else {
+      return false;
+    }
   } else {
-    return false;
-  }
+    pni_node_t* parent = pn_data_node(data, data->parent);
 
-  if (next) {
-    data->current = next;
-    return true;
-  } else {
-    return false;
+    if (parent && parent->down) {
+      data->current = parent->down;
+      return true;
+    } else if (!parent && data->size) {
+      data->current = 1;
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
@@ -1378,7 +1380,7 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-pn_type_t pn_data_type(pn_data_t *data)
+inline pn_type_t pn_data_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node) {
