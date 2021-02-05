@@ -1239,7 +1239,7 @@ static inline pni_node_t *pni_data_new(pn_data_t *data)
   return node;
 }
 
-void pn_data_rewind(pn_data_t *data)
+inline void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
   data->current = data->base_current;
@@ -1250,13 +1250,13 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
   return pn_data_node(data, data->current);
 }
 
-void pn_data_narrow(pn_data_t *data)
+inline void pn_data_narrow(pn_data_t *data)
 {
   data->base_parent = data->parent;
   data->base_current = data->current;
 }
 
-void pn_data_widen(pn_data_t *data)
+inline void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
