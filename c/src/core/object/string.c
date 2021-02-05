@@ -189,9 +189,12 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
   return string->size;
 }
 
-void pn_string_clear(pn_string_t *string)
+// XXX
+//
+// This one is a surprisingly big win
+inline void pn_string_clear(pn_string_t *string)
 {
-  pn_string_set(string, NULL);
+  string->size = PNI_NULL_SIZE;
 }
 
 int pn_string_format(pn_string_t *string, const char *format, ...)
