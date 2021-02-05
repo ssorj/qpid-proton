@@ -700,9 +700,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
     ssize_t used = pn_data_decode(msg->data, bytes, size);
 
-    if (used < 0)
-        return pn_error_format(msg->error, used, "data error: %s",
-                               pn_error_text(pn_data_error(msg->data)));
+    if (used < 0) {
+      return pn_error_format(pn_message_error(msg), used, "data error: %s", pn_error_text(pn_data_error(msg->data)));
+    }
 
     size -= used;
     bytes += used;
@@ -716,7 +716,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     if (err) return err;
     pn_data_enter(msg->data);
 
-    // XXX Should be required? See case default
+    // XXX Should be required? See switch default.
     uint64_t descriptor = 0;
     if (pni_data_next_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
     if (err) return err;
@@ -732,6 +732,10 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (pni_data_next_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
       if (err) return err;
       if (field_count == 1) break;
+
+      // XXX
+      // pn_data_prev(msg->data);
+      // pn_data_next(msg->data);
 
       if (pni_data_next_field(msg->data, &err, PN_UBYTE, "priority")) msg->priority = pn_data_get_ubyte(msg->data);
       if (err) return err;
