@@ -806,7 +806,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       if (pni_data_next_field(msg->data, &err, PN_SYMBOL, "content_encoding")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->content_type, pn_data_get_symbol(msg->data));
+        err = pn_string_set_bytes(msg->content_encoding, pn_data_get_symbol(msg->data));
       }
       if (err) return err;
       if (field_count == 8) break;
