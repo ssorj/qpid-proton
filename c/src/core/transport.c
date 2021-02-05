@@ -1605,6 +1605,7 @@ static inline void pni_data_require_next_field(pn_data_t* data, int* err, pn_typ
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
+
   uint32_t handle;
   pn_sequence_t id = 0;
   bool id_set = false;
@@ -1617,59 +1618,45 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   bool aborted = false;
 
   pn_data_clear(transport->disp_data);
-
-  pn_data_rewind(args);
-  // pn_data_dump(args);
+  pn_data_enter(args);
 
   int err = 0;
-
-  pni_data_require_next_field(args, &err, PN_DESCRIBED, "described");
-  if (err) return err;
-  pn_data_enter(args);
-
-  pni_data_require_next_field(args, &err, PN_ULONG, "descriptor");
-  if (err) return err;
-
-  pni_data_require_next_field(args, &err, PN_LIST, "transfer");
-  if (err) return err;
-  pn_data_enter(args);
-
   int count = pn_data_siblings(args);
 
   pni_data_require_next_field(args, &err, PN_UINT, "handle");
   handle = pn_data_get_uint(args);
   if (err) return err;
-  if (count == 1) goto valhalla;
+  if (count == 1) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_UINT, "delivery_id")) {
     id = pn_data_get_uint(args);
     id_set = true;
   }
   if (err) return err;
-  if (count == 2) goto valhalla;
+  if (count == 2) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_BINARY, "delivery_tag")) tag = pn_data_get_binary(args);
   if (err) return err;
-  if (count == 3) goto valhalla;
+  if (count == 3) goto args_end;
 
   pni_data_next_field(args, &err, PN_UINT, "message_format");
   if (err) return err;
-  if (count == 4) goto valhalla;
+  if (count == 4) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_BOOL, "settled")) {
     settled = pn_data_get_bool(args);
     settled_set = true;
   }
   if (err) return err;
-  if (count == 5) goto valhalla;
+  if (count == 5) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_BOOL, "more")) more = pn_data_get_bool(args);
   if (err) return err;
-  if (count == 6) goto valhalla;
+  if (count == 6) goto args_end;
 
   pni_data_next_field(args, &err, PN_UINT, "settle_mode");
   if (err) return err;
-  if (count == 7) goto valhalla;
+  if (count == 7) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_DESCRIBED, "state")) {
     if (err) return err;
@@ -1681,8 +1668,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       type_set = true;
     }
 
-    pn_data_next(args); // XXX
-
+    pn_data_next(args);
     pn_data_narrow(args);
     pn_data_copy(args, transport->disp_data);
     pn_data_widen(args);
@@ -1690,17 +1676,16 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     pn_data_exit(args);
   }
   if (err) return err;
-  if (count == 8) goto valhalla;
+  if (count == 8) goto args_end;
 
   pni_data_next_field(args, &err, PN_BOOL, "resume");
   if (err) return err;
-  if (count == 9) goto valhalla;
+  if (count == 9) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_BOOL, "aborted")) aborted = pn_data_get_bool(args);
   if (err) return err;
-  if (count == 10) goto valhalla;
 
-valhalla:
+args_end: ;
 
   // printf("handle %d\n", handle);
   // printf("id %d\n", id);
@@ -1712,14 +1697,6 @@ valhalla:
   // printf("type %ld\n", type);
   // printf("type_set %d\n", type_set);
   // printf("aborted %d\n", aborted);
-
-  pn_data_exit(args);
-  pn_data_exit(args);
-
-  // int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_set, &id, &tag,
-  //                        &settled_set, &settled, &more, &type_set, &type, transport->disp_data,
-  //                        &resume, &aborted, &batchable);
-  // if (err) return err;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
