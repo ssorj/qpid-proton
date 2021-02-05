@@ -1006,8 +1006,14 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     }
 
     if (field_count > 2) pni_data_put_uint_or_null(data, msg->ttl);
+    else goto end_header;
+
     if (field_count > 3) pni_data_put_bool_or_null(data, msg->first_acquirer);
+    else goto end_header;
+
     if (field_count > 4) pni_data_put_uint_or_null(data, msg->delivery_count);
+
+  end_header:
 
     pn_data_exit(data);
     pn_data_exit(data);
@@ -1043,6 +1049,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Properties
 
+  // XXX Could do this when fields are set...
   if (pn_string_size(msg->reply_to_group_id)) field_count = 13;
   else if (msg->group_sequence) field_count = 12;
   else if (pn_string_size(msg->group_id)) field_count = 11;
@@ -1068,15 +1075,34 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pni_data_put_message_id_or_null(data, msg->id);
 
     if (field_count > 1) pni_data_put_binary_or_null(data, msg->user_id);
+    else goto end_properties;
+
     if (field_count > 2) pni_data_put_string_or_null(data, msg->address);
+    else goto end_properties;
+
     if (field_count > 3) pni_data_put_string_or_null(data, msg->subject);
+    else goto end_properties;
+
     if (field_count > 4) pni_data_put_string_or_null(data, msg->reply_to);
+    else goto end_properties;
+
     if (field_count > 5) pni_data_put_message_id_or_null(data, msg->correlation_id);
+    else goto end_properties;
+
     if (field_count > 6) pni_data_put_symbol_or_null(data, msg->content_type);
+    else goto end_properties;
+
     if (field_count > 7) pni_data_put_symbol_or_null(data, msg->content_encoding);
+    else goto end_properties;
+
     if (field_count > 8) pni_data_put_timestamp_or_null(data, msg->expiry_time);
+    else goto end_properties;
+
     if (field_count > 9) pni_data_put_timestamp_or_null(data, msg->creation_time);
+    else goto end_properties;
+
     if (field_count > 10) pni_data_put_string_or_null(data, msg->group_id);
+    else goto end_properties;
 
     // XXX
     //
@@ -1093,9 +1119,13 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
       } else {
         pn_data_put_null(data);
       }
+    } else {
+      goto end_properties;
     }
 
     if (field_count > 12) pni_data_put_string_or_null(data, msg->reply_to_group_id);
+
+  end_properties:
 
     pn_data_exit(data);
     pn_data_exit(data);
