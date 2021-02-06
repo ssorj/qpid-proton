@@ -78,7 +78,7 @@ inline void *pn_class_incref(const pn_class_t *clazz, void *object)
   return object;
 }
 
-int pn_class_refcount(const pn_class_t *clazz, void *object)
+inline int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   clazz = clazz->reify(object);
@@ -227,7 +227,7 @@ inline void pn_object_incref(void *object)
   }
 }
 
-int pn_object_refcount(void *object)
+inline int pn_object_refcount(void *object)
 {
   assert(object);
   return pni_head(object)->refcount;
@@ -256,7 +256,7 @@ inline int pn_decref(void *object)
   return pn_class_decref(PN_OBJECT, object);
 }
 
-int pn_refcount(void *object)
+inline int pn_refcount(void *object)
 {
   return pn_class_refcount(PN_OBJECT, object);
 }
