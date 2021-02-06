@@ -126,7 +126,7 @@ const char *pn_string_get(pn_string_t *string)
   }
 }
 
-size_t pn_string_size(pn_string_t *string)
+inline size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
   if (string->size == PNI_NULL_SIZE) {

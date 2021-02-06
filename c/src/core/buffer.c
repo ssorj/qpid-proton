@@ -166,7 +166,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
+inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   if (!size) return 0;
   int err = pn_buffer_ensure(buf, size);

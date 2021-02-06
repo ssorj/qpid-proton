@@ -131,7 +131,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
   }
 }
 
-const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
+inline const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   return clazz->reify(object);
@@ -211,7 +211,7 @@ void *pn_object_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-const pn_class_t *pn_object_reify(void *object)
+inline const pn_class_t *pn_object_reify(void *object)
 {
   if (object) {
     return pni_head(object)->clazz;
@@ -220,7 +220,7 @@ const pn_class_t *pn_object_reify(void *object)
   }
 }
 
-void pn_object_incref(void *object)
+inline void pn_object_incref(void *object)
 {
   if (object) {
     pni_head(object)->refcount++;
@@ -233,7 +233,7 @@ int pn_object_refcount(void *object)
   return pni_head(object)->refcount;
 }
 
-void pn_object_decref(void *object)
+inline void pn_object_decref(void *object)
 {
   pni_head_t *head = pni_head(object);
   assert(head->refcount > 0);
@@ -246,12 +246,12 @@ void pn_object_free(void *object)
   pni_mem_deallocate(head->clazz, head);
 }
 
-void *pn_incref(void *object)
+inline void *pn_incref(void *object)
 {
   return pn_class_incref(PN_OBJECT, object);
 }
 
-int pn_decref(void *object)
+inline int pn_decref(void *object)
 {
   return pn_class_decref(PN_OBJECT, object);
 }

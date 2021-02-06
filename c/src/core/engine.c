@@ -1494,7 +1494,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   pn_condition_init(&ds->condition);
 }
 
-static void pn_disposition_clear(pn_disposition_t *ds)
+static inline void pn_disposition_clear(pn_disposition_t *ds)
 {
   ds->type = 0;
   ds->section_number = 0;
@@ -1544,7 +1544,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
-    delivery->bytes = pn_buffer(64);
+    // XXX
+    delivery->bytes = pn_buffer(256);
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
     delivery->context = pn_record();
@@ -1586,6 +1587,9 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_work_update(link->session->connection, delivery);
 
   // XXX: could just remove incref above
+  //
+  // XXX: ^^ Tried that, and it produces a big memory leak.  I'd love
+  // to understand why.
   pn_decref(delivery);
 
   return delivery;
