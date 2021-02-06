@@ -213,7 +213,7 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 }
 
 /* True if node is an element of an array - not the descriptor. */
-static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return (parent && parent->atom.type == PN_ARRAY) /* In array */
     && !(parent->described && !node->prev); /* Not the descriptor */
 }
@@ -221,7 +221,7 @@ static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_
 /** True if node is the first element of an array, not the descriptor.
  *@pre pn_is_in_array(data, parent, node)
  */
-static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   if (!node->prev) return !parent->described; /* First node */
   return parent->described && (!pn_data_node(data, node->prev)->prev);
 }
@@ -229,7 +229,7 @@ static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni
 /** True if node is in a described list - not the descriptor.
  *  - In this case we can omit trailing nulls
  */
-static inline bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return parent && parent->atom.type == PN_LIST && parent->described;
 }
 

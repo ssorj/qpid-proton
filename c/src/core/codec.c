@@ -382,7 +382,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
-  data->intern = intern;
+  data->intern = intern; // For disabling interning when it's not required
   data->buf = NULL;
   data->parent = 0;
   data->current = 0;

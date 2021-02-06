@@ -735,6 +735,9 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
   }
 }
 
+// XXX
+//
+// Inlining this is a notable performance loser
 static void pni_add_tpwork(pn_delivery_t *delivery)
 {
   pn_connection_t *connection = delivery->link->session->connection;
@@ -743,14 +746,18 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
   }
+  // XXX
+  //
+  // I didn't understand why this was here outside the if block, so I
+  // tried moving it inside.  FWIW, the tests pass either way.
   pn_modified(connection, &connection->endpoint, true);
 }
 
 void pn_clear_tpwork(pn_delivery_t *delivery)
 {
-  pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
   {
+    pn_connection_t *connection = delivery->link->session->connection;
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
     if (pn_refcount(delivery) > 0) {
@@ -1432,8 +1439,9 @@ static void pn_delivery_incref(void *object)
 
 static bool pni_preserve_delivery(pn_delivery_t *delivery)
 {
+  if (!delivery->local.settled) return true;
   pn_connection_t *conn = delivery->link->session->connection;
-  return !delivery->local.settled || (conn->transport && (delivery->state.init || delivery->tpwork));
+  return conn->transport && (delivery->state.init || delivery->tpwork);
 }
 
 static void pn_delivery_finalize(void *object)
@@ -1811,6 +1819,12 @@ bool pn_link_advance(pn_link_t *link)
   }
 }
 
+// XXX
+//
+// This one returns 0 for a null link.
+// pn_link_remote_credit asserts on a null link.
+// The docs say nothing on this topic either way.
+// These squishy semantics suck.
 int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
