@@ -71,16 +71,19 @@ void pn_buffer_free(pn_buffer_t *buf)
   }
 }
 
+__attribute__((always_inline))
 inline size_t pn_buffer_size(pn_buffer_t *buf)
 {
   return buf->size;
 }
 
+__attribute__((always_inline))
 inline size_t pn_buffer_capacity(pn_buffer_t *buf)
 {
   return buf->capacity;
 }
 
+__attribute__((always_inline))
 inline size_t pn_buffer_available(pn_buffer_t *buf)
 {
   return buf->capacity - buf->size;
@@ -140,7 +143,8 @@ static size_t pni_buffer_tail_size(pn_buffer_t *buf)
   }
 }
 
-int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
+__attribute__((always_inline))
+inline int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
   size_t old_capacity = buf->capacity;
   size_t old_head = pni_buffer_head(buf);
@@ -166,7 +170,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
+int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   if (!size) return 0;
   int err = pn_buffer_ensure(buf, size);
@@ -257,6 +261,7 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
   return 0;
 }
 
+__attribute__((always_inline))
 inline void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;

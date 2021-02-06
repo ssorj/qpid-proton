@@ -911,19 +911,23 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
   }
 }
 
-static bool pni_connection_live(pn_connection_t *conn) {
+__attribute__((always_inline))
+static inline bool pni_connection_live(pn_connection_t *conn) {
   return pn_refcount(conn) > 1;
 }
 
-static bool pni_session_live(pn_session_t *ssn) {
+__attribute__((always_inline))
+static inline bool pni_session_live(pn_session_t *ssn) {
   return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
 }
 
-static bool pni_link_live(pn_link_t *link) {
+__attribute__((always_inline))
+static inline bool pni_link_live(pn_link_t *link) {
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
 
-static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
+__attribute__((always_inline))
+static inline bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   switch (endpoint->type) {
   case CONNECTION:
     return pni_connection_live((pn_connection_t *)endpoint);
@@ -938,7 +942,8 @@ static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   }
 }
 
-static bool pni_preserve_child(pn_endpoint_t *endpoint)
+__attribute__((always_inline))
+static inline bool pni_preserve_child(pn_endpoint_t *endpoint)
 {
   pn_endpoint_t *parent = pn_ep_parent(endpoint);
   if (pni_endpoint_live(parent) && (!endpoint->freed || (pn_ep_bound(endpoint)))
