@@ -1408,12 +1408,14 @@ const char *pn_link_name(pn_link_t *link)
   return pn_string_get(link->name);
 }
 
-bool pn_link_is_sender(pn_link_t *link)
+__attribute__((always_inline))
+inline bool pn_link_is_sender(pn_link_t *link)
 {
   return link->endpoint.type == SENDER;
 }
 
-bool pn_link_is_receiver(pn_link_t *link)
+__attribute__((always_inline))
+inline bool pn_link_is_receiver(pn_link_t *link)
 {
   return link->endpoint.type == RECEIVER;
 }
