@@ -91,7 +91,8 @@ static pni_field_t *pni_record_create(pn_record_t *record) {
   return field;
 }
 
-void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
+__attribute__((always_inline))
+inline void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
 {
   assert(record);
   assert(clazz);
@@ -141,7 +142,8 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
   }
 }
 
-void pn_record_clear(pn_record_t *record)
+__attribute__((always_inline))
+inline void pn_record_clear(pn_record_t *record)
 {
   assert(record);
   for (size_t i = 0; i < record->size; i++) {
