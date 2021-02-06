@@ -407,21 +407,23 @@ pn_error_t *pn_data_error(pn_data_t *data)
   return pni_data_error(data);
 }
 
-size_t pn_data_size(pn_data_t *data)
+inline size_t pn_data_size(pn_data_t *data)
 {
-  return data ? data->size : 0;
+  assert(data);
+  return data->size;
 }
 
 inline void pn_data_clear(pn_data_t *data)
 {
-  if (data) {
-    data->size = 0;
-    data->parent = 0;
-    data->current = 0;
-    data->base_parent = 0;
-    data->base_current = 0;
-    if (data->buf) pn_buffer_clear(data->buf);
-  }
+  assert(data);
+
+  data->size = 0;
+  data->parent = 0;
+  data->current = 0;
+  data->base_parent = 0;
+  data->base_current = 0;
+
+  if (data->buf) pn_buffer_clear(data->buf);
 }
 
 static int pni_data_grow(pn_data_t *data)
