@@ -101,4 +101,15 @@ static inline void pni_data_require_field(pn_data_t* data, int* err, pn_type_t t
   }
 }
 
+__attribute__((always_inline))
+static inline pn_type_t pni_data_parent_type(pn_data_t *data)
+{
+  pni_node_t *node = pn_data_node(data, data->parent);
+  if (node) {
+    return node->atom.type;
+  } else {
+    return PN_INVALID;
+  }
+}
+
 #endif /* data.h */

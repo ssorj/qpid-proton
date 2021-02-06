@@ -1392,16 +1392,6 @@ inline pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-pn_type_t pni_data_parent_type(pn_data_t *data)
-{
-  pni_node_t *node = pn_data_node(data, data->parent);
-  if (node) {
-    return node->atom.type;
-  } else {
-    return PN_INVALID;
-  }
-}
-
 size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);

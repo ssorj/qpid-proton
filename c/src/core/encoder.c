@@ -49,7 +49,8 @@ void pn_encoder_finalize(pn_encoder_t *encoder)
   pn_error_free(encoder->error);
 }
 
-static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
+__attribute__((always_inline))
+static inline uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
 {
   switch (type)
   {
@@ -83,7 +84,8 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
+__attribute__((always_inline))
+static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -139,7 +141,8 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-static size_t pn_encoder_remaining(pn_encoder_t *encoder) {
+__attribute__((always_inline))
+static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   char * end = encoder->output + encoder->size;
   if (end > encoder->position)
     return end - encoder->position;
@@ -147,6 +150,7 @@ static size_t pn_encoder_remaining(pn_encoder_t *encoder) {
     return 0;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
@@ -155,6 +159,7 @@ static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
   encoder->position++;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 {
   if (pn_encoder_remaining(encoder) >= 2) {
@@ -164,6 +169,7 @@ static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
   encoder->position += 2;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 {
   if (pn_encoder_remaining(encoder) >= 4) {
@@ -175,6 +181,7 @@ static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
   encoder->position += 4;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   if (pn_encoder_remaining(encoder) >= 8) {
     encoder->position[0] = 0xFF & (value >> 56);
@@ -189,6 +196,7 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   encoder->position += 8;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) >= 16) {
     memmove(encoder->position, value, 16);
@@ -196,6 +204,7 @@ static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   encoder->position += 16;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef8(encoder, value->size);
@@ -204,6 +213,7 @@ static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *v
   encoder->position += value->size;
 }
 
+__attribute__((always_inline))
 static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef32(encoder, value->size);
@@ -213,7 +223,8 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 }
 
 /* True if node is an element of an array - not the descriptor. */
-static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+__attribute__((always_inline))
+static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return (parent && parent->atom.type == PN_ARRAY) /* In array */
     && !(parent->described && !node->prev); /* Not the descriptor */
 }
@@ -221,7 +232,8 @@ static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node
 /** True if node is the first element of an array, not the descriptor.
  *@pre pn_is_in_array(data, parent, node)
  */
-static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+__attribute__((always_inline))
+static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   if (!node->prev) return !parent->described; /* First node */
   return parent->described && (!pn_data_node(data, node->prev)->prev);
 }
@@ -229,7 +241,8 @@ static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t
 /** True if node is in a described list - not the descriptor.
  *  - In this case we can omit trailing nulls
  */
-static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+__attribute__((always_inline))
+static inline bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return parent && parent->atom.type == PN_LIST && parent->described;
 }
 
