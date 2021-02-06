@@ -126,6 +126,7 @@ const char *pn_string_get(pn_string_t *string)
   }
 }
 
+__attribute__((always_inline))
 inline size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
@@ -192,6 +193,7 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
 // XXX
 //
 // This one is a surprisingly big win
+__attribute__((always_inline))
 inline void pn_string_clear(pn_string_t *string)
 {
   string->size = PNI_NULL_SIZE;

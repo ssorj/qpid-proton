@@ -182,7 +182,7 @@ struct pn_transport_t {
   // XXX
   //
   // This is probably too much, but it's fast
-  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (256*1024)
+  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (1024*1024)
 
   /* output buffered for send */
   size_t output_size;

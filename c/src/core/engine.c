@@ -1426,6 +1426,7 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
+__attribute__((always_inline))
 static inline void pn_delivery_incref(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
@@ -1502,6 +1503,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   pn_condition_init(&ds->condition);
 }
 
+__attribute__((always_inline))
 static inline void pn_disposition_clear(pn_disposition_t *ds)
 {
   ds->type = 0;

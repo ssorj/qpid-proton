@@ -958,6 +958,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   return 0;
 }
 
+__attribute__((always_inline))
 static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
 {
   if (value) {
@@ -967,6 +968,7 @@ static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
   }
 }
 
+__attribute__((always_inline))
 static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
@@ -976,6 +978,7 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
   }
 }
 
+__attribute__((always_inline))
 static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
@@ -1061,31 +1064,6 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
   pn_data_exit(data);
   pn_data_exit(data);
-
-  // pn_data_dump(data);
-
-  // // XXX
-  // pn_data_clear(data);
-
-  // int err = pn_data_fill(transport->output_args, "DL[IIzI?o?on?DLC?o?o?o]", TRANSFER,
-  //                        handle,
-  //                        id,
-  //                        tag->size, tag->start,
-  //                        message_format,
-  //                        settled, settled,
-  //                        more_flag, more_flag,
-  //                        (bool)code, code, state,
-  //                        resume, resume,
-  //                        aborted, aborted,
-  //                        batchable, batchable);
-  // if (err) {
-  //   pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
-  //                     "error posting transfer frame: %s: %s", pn_code(err),
-  //                     pn_error_text(pn_data_error(transport->output_args)));
-  //   return PN_ERR;
-  // }
-
-  // pn_data_dump(data);
 
   do { // send as many frames as possible without changing the 'more' flag...
 

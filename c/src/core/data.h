@@ -75,6 +75,7 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
+__attribute__((always_inline))
 static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   if (!pn_data_next(data) || pn_data_type(data) == PN_NULL) {
@@ -88,6 +89,7 @@ static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type
   }
 }
 
+__attribute__((always_inline))
 static inline void pni_data_require_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   bool found = pni_data_next_field(data, err, type, name);
