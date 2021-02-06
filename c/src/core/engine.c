@@ -940,7 +940,6 @@ static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
 
 static bool pni_preserve_child(pn_endpoint_t *endpoint)
 {
-  pn_connection_t *conn = pni_ep_get_connection(endpoint);
   pn_endpoint_t *parent = pn_ep_parent(endpoint);
   if (pni_endpoint_live(parent) && (!endpoint->freed || (pn_ep_bound(endpoint)))
       && endpoint->referenced) {
@@ -949,6 +948,7 @@ static bool pni_preserve_child(pn_endpoint_t *endpoint)
     pn_decref(parent);
     return true;
   } else {
+    pn_connection_t *conn = pni_ep_get_connection(endpoint);
     LL_REMOVE(conn, transport, endpoint);
     return false;
   }
@@ -1426,7 +1426,7 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
-static void pn_delivery_incref(void *object)
+static inline void pn_delivery_incref(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   if (delivery->link && !delivery->referenced) {
