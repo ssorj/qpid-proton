@@ -25,7 +25,8 @@
 #include <proton/transport.h>
 #include <string.h>
 
-static pn_event_t *batch_next(pn_connection_driver_t *d) {
+__attribute__((always_inline))
+static inline pn_event_t *batch_next(pn_connection_driver_t *d) {
   if (!d->collector) return NULL;
   pn_event_t *handled = pn_collector_prev(d->collector);
   if (handled) {
@@ -89,12 +90,14 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
   memset(d, 0, sizeof(*d));
 }
 
-pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
+__attribute__((always_inline))
+inline pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
   ssize_t cap = pn_transport_capacity(d->transport);
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
-void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
+__attribute__((always_inline))
+inline void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
   if (n > 0) pn_transport_process(d->transport, n);
 }
 
@@ -108,13 +111,15 @@ void pn_connection_driver_read_close(pn_connection_driver_t *d) {
   }
 }
 
-pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
+__attribute__((always_inline))
+inline pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
   ssize_t pending = pn_transport_pending(d->transport);
   return (pending > 0) ?
     pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
 }
 
-void pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
+__attribute__((always_inline))
+inline void pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
   pn_transport_pop(d->transport, n);
 }
 
@@ -137,7 +142,8 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
   return batch_next(d);
 }
 
-bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
+__attribute__((always_inline))
+inline bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
   return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
 }
 

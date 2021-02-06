@@ -33,7 +33,8 @@ struct pn_list_t {
   void **elements;
 };
 
-size_t pn_list_size(pn_list_t *list)
+__attribute__((always_inline))
+inline size_t pn_list_size(pn_list_t *list)
 {
   assert(list);
   return list->size;
@@ -127,7 +128,8 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-void pn_list_clear(pn_list_t *list)
+__attribute__((always_inline))
+inline void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);
@@ -176,7 +178,8 @@ typedef struct {
   size_t index;
 } pni_list_iter_t;
 
-static void *pni_list_next(void *ctx)
+__attribute__((always_inline))
+inline static void *pni_list_next(void *ctx)
 {
   pni_list_iter_t *iter = (pni_list_iter_t *) ctx;
   if (iter->index < pn_list_size(iter->list)) {
@@ -267,4 +270,3 @@ pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity)
   list->size = 0;
   return list;
 }
-

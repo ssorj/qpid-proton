@@ -192,7 +192,8 @@ bool pn_collector_pop(pn_collector_t *collector) {
   return event;
 }
 
-pn_event_t *pn_collector_next(pn_collector_t *collector) {
+__attribute__((always_inline))
+inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
     pn_decref(collector->prev);
   }
@@ -204,7 +205,8 @@ pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
-bool pn_collector_more(pn_collector_t *collector)
+__attribute__((always_inline))
+inline bool pn_collector_more(pn_collector_t *collector)
 {
   assert(collector);
   return collector->head && collector->head->next;
@@ -220,7 +222,8 @@ static void pn_event_initialize(pn_event_t *event)
   event->attachments = pn_record();
 }
 
-static void pn_event_finalize(pn_event_t *event) {
+__attribute__((always_inline))
+inline static void pn_event_finalize(pn_event_t *event) {
   // decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);

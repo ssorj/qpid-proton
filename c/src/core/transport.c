@@ -3165,7 +3165,8 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
 }
 
 // input
-ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+__attribute__((always_inline))
+inline ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -3191,8 +3192,8 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
   return capacity;
 }
 
-
-char *pn_transport_tail(pn_transport_t *transport)
+__attribute__((always_inline))
+inline char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -3200,7 +3201,8 @@ char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+__attribute__((always_inline))
+inline ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3223,7 +3225,8 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
   }
 }
 
-int pn_transport_process(pn_transport_t *transport, size_t size)
+__attribute__((always_inline))
+inline int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
   size = pn_min( size, (transport->input_size - transport->input_pending) );
@@ -3249,13 +3252,15 @@ int pn_transport_close_tail(pn_transport_t *transport)
 }
 
 // output
-ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
+__attribute__((always_inline))
+inline ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
   return transport_produce( transport );
 }
 
-const char *pn_transport_head(pn_transport_t *transport)
+__attribute__((always_inline))
+inline const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3263,7 +3268,8 @@ const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+__attribute__((always_inline))
+inline ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -3283,7 +3289,8 @@ ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
   return size;
 }
 
-void pn_transport_pop(pn_transport_t *transport, size_t size)
+__attribute__((always_inline))
+inline void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
   if (transport) {
     assert( transport->output_pending >= size );
@@ -3328,15 +3335,19 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   return true;
 }
 
-bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
+__attribute__((always_inline))
+inline bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
 
-bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
+__attribute__((always_inline))
+inline bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
 
-bool pn_transport_closed(pn_transport_t *transport) {
+__attribute__((always_inline))
+inline bool pn_transport_closed(pn_transport_t *transport) {
   return transport->head_closed && transport->tail_closed;
 }
 
-pn_connection_t *pn_transport_connection(pn_transport_t *transport)
+__attribute__((always_inline))
+inline pn_connection_t *pn_transport_connection(pn_transport_t *transport)
 {
   assert(transport);
   return transport->connection;
