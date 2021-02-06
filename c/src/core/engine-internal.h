@@ -179,12 +179,12 @@ struct pn_transport_t {
   uint64_t output_frames_ct;
   uint64_t input_frames_ct;
 
-  /* output buffered for send */
-
   // XXX
   //
   // This is probably too much, but it's fast
-  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (32*1024)
+  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (128*1024)
+
+  /* output buffered for send */
   size_t output_size;
   size_t output_pending;
   char *output_buf;
