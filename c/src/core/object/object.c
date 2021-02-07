@@ -53,7 +53,8 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
-pn_cid_t pn_class_id(const pn_class_t *clazz)
+__attribute__((always_inline))
+inline pn_cid_t pn_class_id(const pn_class_t *clazz)
 {
   return clazz->cid;
 }
@@ -115,7 +116,8 @@ inline int pn_class_decref(const pn_class_t *clazz, void *object)
   return 0;
 }
 
-void pn_class_free(const pn_class_t *clazz, void *object)
+__attribute__((always_inline))
+inline void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
@@ -203,6 +205,9 @@ typedef struct {
 #define pni_head(PTR) \
   (((pni_head_t *) (PTR)) - 1)
 
+// XXX
+//
+// Inlining this is a performance loss
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
   void *object = NULL;
@@ -248,7 +253,8 @@ inline void pn_object_decref(void *object)
   head->refcount--;
 }
 
-void pn_object_free(void *object)
+__attribute__((always_inline))
+inline void pn_object_free(void *object)
 {
   pni_head_t *head = pni_head(object);
   pni_mem_deallocate(head->clazz, head);
@@ -272,12 +278,14 @@ inline int pn_refcount(void *object)
   return pn_class_refcount(PN_OBJECT, object);
 }
 
-void pn_free(void *object)
+__attribute__((always_inline))
+inline void pn_free(void *object)
 {
   pn_class_free(PN_OBJECT, object);
 }
 
-const pn_class_t *pn_class(void *object)
+__attribute__((always_inline))
+inline const pn_class_t *pn_class(void *object)
 {
   return pn_class_reify(PN_OBJECT, object);
 }

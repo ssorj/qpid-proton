@@ -780,7 +780,8 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+__attribute__((always_inline))
+inline void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
@@ -1114,7 +1115,8 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(0);
 }
 
-static void pn_link_incref(void *object)
+__attribute__((always_inline))
+static inline void pn_link_incref(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
   if (!link->endpoint.referenced) {
@@ -1770,7 +1772,8 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
   }
 }
 
-pn_delivery_t *pn_link_current(pn_link_t *link)
+__attribute__((always_inline))
+inline pn_delivery_t *pn_link_current(pn_link_t *link)
 {
   if (!link) return NULL;
   return link->current;
