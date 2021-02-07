@@ -28,6 +28,10 @@
 __attribute__((always_inline))
 static inline pn_event_t *batch_next(pn_connection_driver_t *d) {
   if (!d->collector) return NULL;
+  // XXX
+  //
+  // This is a hot path.  I wonder if we could avoid examining the
+  // previous event every time.
   pn_event_t *handled = pn_collector_prev(d->collector);
   if (handled) {
     switch (pn_event_type(handled)) {

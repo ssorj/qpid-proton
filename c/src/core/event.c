@@ -173,7 +173,8 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
 }
 
 // Advance head pointer for pop or next, return the old head.
-static pn_event_t *pop_internal(pn_collector_t *collector) {
+__attribute__((always_inline))
+static inline pn_event_t *pop_internal(pn_collector_t *collector) {
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
@@ -201,7 +202,8 @@ inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
-pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+__attribute__((always_inline))
+inline pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
