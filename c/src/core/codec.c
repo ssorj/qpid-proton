@@ -1475,6 +1475,9 @@ void pn_data_dump(pn_data_t *data)
   pn_free(str);
 }
 
+// XXX
+//
+// Inlining and simplifying this is a substantial win.
 __attribute__((always_inline))
 static inline pni_node_t *pni_data_add(pn_data_t *data)
 {
