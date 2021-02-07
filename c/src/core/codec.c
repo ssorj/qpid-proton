@@ -1228,10 +1228,10 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
   }
 }
 
-static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
-{
-  return node - data->nodes + 1;
-}
+// static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
+// {
+//   return node - data->nodes + 1;
+// }
 
 __attribute__((always_inline))
 inline void pn_data_rewind(pn_data_t *data)
@@ -1478,40 +1478,37 @@ void pn_data_dump(pn_data_t *data)
 __attribute__((always_inline))
 static inline pni_node_t *pni_data_add(pn_data_t *data)
 {
-  pni_node_t *node;
-
-  if (data->capacity > data->size) {
-    node = pn_data_node(data, ++(data->size));
-  } else {
+  if (data->capacity <= data->size) {
     int err = pni_data_grow(data);
     if (err) return NULL;
-
-    node = pn_data_node(data, ++(data->size));
   }
 
-  pni_node_t *current = pni_data_current(data);
+  pni_node_t* node = data->nodes + data->size++;
+  pni_nid_t node_id = node - data->nodes + 1;
 
-  if (current) {
-    current->next = pni_data_id(data, node);
+  if (data->current) {
+    pni_node_t* current = data->nodes + data->current - 1;
+
+    current->next = node_id;
     node->prev = data->current;
     node->parent = data->parent;
 
-    pni_node_t* parent = pn_data_node(data, data->parent);
+    if (data->parent) {
+      pni_node_t* parent = data->nodes + data->parent - 1;
 
-    if (parent) {
-      if (!parent->down) { // Secret nodes
-        parent->down = pni_data_id(data, node);
+      if (!parent->down) {
+        parent->down = node_id;
       }
       parent->children++;
     }
   } else {
     node->prev = 0;
 
-    pni_node_t* parent = pn_data_node(data, data->parent);
+    if (data->parent) {
+      pni_node_t* parent = data->nodes + data->parent - 1;
 
-    if (parent) {
       node->parent = data->parent;
-      parent->down = pni_data_id(data, node);
+      parent->down = node_id;
       parent->children++;
     } else {
       node->parent = 0;
@@ -1526,7 +1523,7 @@ static inline pni_node_t *pni_data_add(pn_data_t *data)
   node->data_offset = 0;
   node->data_size = 0;
 
-  data->current = pni_data_id(data, node);
+  data->current = node_id;
 
   return node;
 }
