@@ -1613,8 +1613,11 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   // XXX: could just remove incref above
   //
-  // XXX: ^^ Tried that, and it produces a big memory leak.  I'd love
-  // to understand why.
+
+  // XXX
+  //
+  // The presence of this decref introduces apparent calls (quite a
+  // lot) to delivery_finalize.
   pn_decref(delivery);
 
   return delivery;
