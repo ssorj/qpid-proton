@@ -172,9 +172,12 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
   return collector->head;
 }
 
+// XXX
+//
+// Interning this is a loser.
+
 // Advance head pointer for pop or next, return the old head.
-__attribute__((always_inline))
-static inline pn_event_t *pop_internal(pn_collector_t *collector) {
+static pn_event_t *pop_internal(pn_collector_t *collector) {
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
