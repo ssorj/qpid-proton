@@ -111,8 +111,7 @@ typedef union {
   double d;
 } conv_t;
 
-__attribute__((always_inline))
-static inline pn_type_t pn_code2type(uint8_t code)
+static pn_type_t pn_code2type(uint8_t code)
 {
   switch (code)
   {
