@@ -1466,6 +1466,12 @@ static void pn_delivery_finalize(void *object)
     if (pni_link_live(link) && pni_preserve_delivery(delivery) && delivery->referenced) {
       delivery->referenced = false;
       pn_object_incref(delivery);
+      // XXX
+      //
+      // I was seeing a lot of stacks in link and session_finalize
+      // (which seemed odd, since my test has one link and session for
+      // its lifetime), so I tried removing this, and they
+      // disappeared.  Memory remained stable.
       pn_decref(link);
       return;
     }
