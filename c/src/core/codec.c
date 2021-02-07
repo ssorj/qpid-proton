@@ -1486,42 +1486,34 @@ static inline pni_node_t *pni_data_add(pn_data_t *data)
   pni_node_t* node = data->nodes + data->size++;
   pni_nid_t node_id = node - data->nodes + 1;
 
+  node->prev = 0;
+  node->next = 0;
+  node->down = 0;
+  node->parent = 0;
+  node->children = 0;
+  node->data_offset = 0;
+  node->data_size = 0;
+  node->data = false;
+  node->described = false;
+  node->small = true; // XXX
+
   if (data->current) {
     pni_node_t* current = data->nodes + data->current - 1;
 
     current->next = node_id;
     node->prev = data->current;
-    node->parent = data->parent;
-
-    if (data->parent) {
-      pni_node_t* parent = data->nodes + data->parent - 1;
-
-      if (!parent->down) {
-        parent->down = node_id;
-      }
-      parent->children++;
-    }
-  } else {
-    node->prev = 0;
-
-    if (data->parent) {
-      pni_node_t* parent = data->nodes + data->parent - 1;
-
-      node->parent = data->parent;
-      parent->down = node_id;
-      parent->children++;
-    } else {
-      node->parent = 0;
-    }
   }
 
-  node->next = 0;
-  node->down = 0;
-  node->children = 0;
-  node->data = false;
-  node->described = false;
-  node->data_offset = 0;
-  node->data_size = 0;
+  if (data->parent) {
+    pni_node_t* parent = data->nodes + data->parent - 1;
+
+    if (!parent->down) {
+      parent->down = node_id;
+    }
+
+    node->parent = data->parent;
+    parent->children++;
+  }
 
   data->current = node_id;
 

@@ -45,6 +45,10 @@ typedef struct {
   // for arrays
   bool described;
   bool data;
+  // XXX
+  //
+  // Doesn't look like this is getting initialized.  I *think* that
+  // should happen in pni_data_add.
   bool small;
 } pni_node_t;
 
