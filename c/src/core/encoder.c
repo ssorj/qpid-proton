@@ -262,29 +262,30 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   uint8_t code;
   conv_t c;
 
-  /** In an array we don't write the code before each element, only the first. */
   if (pn_is_in_array(data, parent, node)) {
+    // In an array we don't write the code before each element, only
+    // the first
     code = pn_type2code(encoder, parent->type);
     if (pn_is_first_in_array(data, parent, node)) {
       pn_encoder_writef8(encoder, code);
     }
-  } else {
-    code = pn_node2code(encoder, node);
+  } else if (pn_is_in_described_list(data, parent, node)) {
     // Omit trailing nulls for described lists
-    if (pn_is_in_described_list(data, parent, node)) {
-      if (code==PNE_NULL) {
-        encoder->null_count++;
-      } else {
-        // Output pending nulls, then the nodes code
-        for (unsigned i = 0; i<encoder->null_count; i++) {
-          pn_encoder_writef8(encoder, PNE_NULL);
-        }
-        encoder->null_count = 0;
-        pn_encoder_writef8(encoder, code);
-      }
+    if (node->atom.type == PN_NULL) {
+      encoder->null_count++;
+      return 0;
     } else {
+      // Output pending nulls, then the node's code
+      for (unsigned i = 0; i<encoder->null_count; i++) {
+        pn_encoder_writef8(encoder, PNE_NULL);
+      }
+      encoder->null_count = 0;
+      code = pn_node2code(encoder, node);
       pn_encoder_writef8(encoder, code);
     }
+  } else {
+    code = pn_node2code(encoder, node);
+    pn_encoder_writef8(encoder, code);
   }
 
   switch (code) {

@@ -753,17 +753,23 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
   pn_modified(connection, &connection->endpoint, true);
 }
 
-void pn_clear_tpwork(pn_delivery_t *delivery)
+// XXX
+//
+// Wish I knew if the incref/decref was well motivated.
+// With it removed, it passes the tests and memory is stable.
+// There is a perf boost from it.
+__attribute__((always_inline))
+inline void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   if (delivery->tpwork)
   {
     pn_connection_t *connection = delivery->link->session->connection;
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
-    if (pn_refcount(delivery) > 0) {
-      pn_incref(delivery);
-      pn_decref(delivery);
-    }
+    // if (pn_refcount(delivery) > 0) {
+    //   pn_incref(delivery);
+    //   pn_decref(delivery);
+    // }
   }
 }
 
@@ -1921,8 +1927,13 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     delivery->local.settled = true;
     pni_add_tpwork(delivery);
     pn_work_update(delivery->link->session->connection, delivery);
-    pn_incref(delivery);
-    pn_decref(delivery);
+    // XXX
+    //
+    // Watch out!  I'm trying *not* this.
+    // A performance win, and the tests pass.
+    //
+    // pn_incref(delivery);
+    // pn_decref(delivery);
   }
 }
 

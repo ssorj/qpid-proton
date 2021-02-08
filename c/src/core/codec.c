@@ -392,7 +392,8 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   return data;
 }
 
-void pn_data_free(pn_data_t *data)
+__attribute__((always_inline))
+inline void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
 }
@@ -501,6 +502,10 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 }
 
 
+// XXX
+//
+// The only thing that uses 'M' and this function are some tests.
+// Remove this?
 /*
    Append src to data after normalizing for "multiple" field encoding.
 
