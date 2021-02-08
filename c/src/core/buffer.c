@@ -243,7 +243,8 @@ size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
   return sz1 + sz2;
 }
 
-int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
+__attribute__((always_inline))
+inline int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
 {
   if (left + right > buf->size) return PN_ARG_ERR;
 

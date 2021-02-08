@@ -1570,7 +1570,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     // XXX
-    delivery->bytes = pn_buffer(256);
+    delivery->bytes = pn_buffer(128);
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
     delivery->context = pn_record();
@@ -1623,7 +1623,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
-bool pn_delivery_buffered(pn_delivery_t *delivery)
+__attribute__((always_inline))
+inline bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
   if (delivery->settled) return false;

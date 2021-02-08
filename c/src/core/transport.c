@@ -410,7 +410,10 @@ static void pn_transport_initialize(void *object)
 
   transport->scratch = pn_string(NULL);
   transport->args = pn_data(16);
-  transport->output_args = pn_data(16);
+  // XXX
+  //
+  // Turning off the string interning here is a win.
+  transport->output_args = pni_data(16, false);
   transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
@@ -1009,7 +1012,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   unsigned framecount = 0;
   pn_buffer_t *frame = transport->frame;
   pn_data_t* data = transport->output_args;
-  int count;
+  int field_count;
 
   // create performatives, assuming 'more' flag need not change
 
@@ -1027,20 +1030,20 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   pn_data_put_binary(data, pn_bytes(tag->size, tag->start));
   pn_data_put_uint(data, message_format);
 
-  if (batchable) count = 7;
-  else if (aborted) count = 6;
-  else if (resume) count = 5;
-  else if (code) count = 4;
-  else if (more_flag) count = 3;
+  if (batchable) field_count = 7;
+  else if (aborted) field_count = 6;
+  else if (resume) field_count = 5;
+  else if (code) field_count = 4;
+  else if (more_flag) field_count = 3;
   // Placeholder for always null field
-  else if (settled) count = 1;
-  else count = 0;
+  else if (settled) field_count = 1;
+  else field_count = 0;
 
-  if (count > 0) pni_data_put_bool_or_null(data, settled);
-  if (count > 1) pni_data_put_bool_or_null(data, more_flag);
-  if (count > 2) pn_data_put_null(data);
+  if (field_count > 0) pni_data_put_bool_or_null(data, settled);
+  if (field_count > 1) pni_data_put_bool_or_null(data, more_flag);
+  if (field_count > 2) pn_data_put_null(data);
 
-  if (count > 3) {
+  if (field_count > 3) {
     if (code) {
       pn_data_put_described(data);
       pn_data_enter(data);
@@ -1058,9 +1061,9 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     }
   }
 
-  if (count > 4) pni_data_put_bool_or_null(data, resume);
-  if (count > 5) pni_data_put_bool_or_null(data, aborted);
-  if (count > 6) pni_data_put_bool_or_null(data, batchable);
+  if (field_count > 4) pni_data_put_bool_or_null(data, resume);
+  if (field_count > 5) pni_data_put_bool_or_null(data, aborted);
+  if (field_count > 6) pni_data_put_bool_or_null(data, batchable);
 
   pn_data_exit(data);
   pn_data_exit(data);
@@ -2425,21 +2428,25 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
-static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery, bool *settle)
+static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   pn_delivery_state_t *state = &delivery->state;
+
   if (delivery->aborted && !delivery->state.sending) {
     // Aborted delivery with no data yet sent, drop it and issue a FLOW as we may have credit.
-    *settle = true;
     state->sent = true;
+
     pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_FLOW);
+    pn_full_settle(&link->session->state.incoming, delivery);
+
     return 0;
   }
-  *settle = false;
+
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
-  bool xfr_posted = false;
+  bool transfer_posted = false;
+
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
@@ -2450,8 +2457,12 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       size_t full_size = bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+
       pn_data_clear(transport->disp_data);
-      PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
+
+      int err = pni_disposition_encode(&delivery->local, transport->disp_data);
+      if (err) return err;
+
       int count = pni_post_amqp_transfer_frame(transport,
                                                ssn_state->local_channel,
                                                link_state->local_handle,
@@ -2464,17 +2475,19 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
                                                transport->disp_data,
                                                false, /* Resume */
                                                delivery->aborted,
-                                               false /* Batchable */
-      );
+                                               false /* Batchable */);
       if (count < 0) return count;
+
       state->sending = true;
-      xfr_posted = true;
+      transfer_posted = true;
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
 
       int sent = full_size - bytes.size;
+
       pn_buffer_trim(delivery->bytes, sent, 0);
       link->session->outgoing_bytes -= sent;
+
       if (!pn_buffer_size(delivery->bytes) && delivery->done) {
         state->sent = true;
         link_state->delivery_count++;
@@ -2488,67 +2501,59 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   }
 
   if (!state->init) state = NULL;
-  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote.settled
-      && state && state->sent && !xfr_posted) {
+
+  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote.settled && state && state->sent && !transfer_posted) {
     int err = pni_post_disp(transport, delivery);
     if (err) return err;
   }
 
-  *settle = delivery->local.settled && state && state->sent;
+  if (delivery->local.settled && state && state->sent) pn_full_settle(&ssn_state->outgoing, delivery);
+
   return 0;
 }
 
-static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *delivery, bool *settle)
+static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *delivery)
 {
-  *settle = false;
   pn_link_t *link = delivery->link;
   // XXX: need to prevent duplicate disposition sending
   pn_session_t *ssn = link->session;
+  int err = 0;
+
   if ((int16_t) ssn->state.local_channel >= 0 && !delivery->remote.settled && delivery->state.init) {
-    int err = pni_post_disp(transport, delivery);
+    err = pni_post_disp(transport, delivery);
     if (err) return err;
   }
 
   // XXX: need to centralize this policy and improve it
   if (!ssn->state.incoming_window) {
-    int err = pni_post_flow(transport, ssn, link);
+    err = pni_post_flow(transport, ssn, link);
     if (err) return err;
   }
 
-  *settle = delivery->local.settled;
+  if (delivery->local.settled) pn_full_settle(&link->session->state.incoming, delivery);
+
   return 0;
 }
 
 static int pni_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
-  if (endpoint->type == CONNECTION && !transport->close_sent)
-  {
+  if (endpoint->type == CONNECTION && !transport->close_sent) {
     pn_connection_t *conn = (pn_connection_t *) endpoint;
     pn_delivery_t *delivery = conn->tpwork_head;
-    while (delivery)
-    {
-      pn_delivery_t *tp_next = delivery->tpwork_next;
-      bool settle = false;
+    int err = 0;
 
-      pn_link_t *link = delivery->link;
-      pn_delivery_map_t *dm = NULL;
-      if (pn_link_is_sender(link)) {
-        dm = &link->session->state.outgoing;
-        int err = pni_process_tpwork_sender(transport, delivery, &settle);
+    while (delivery) {
+      if (pn_link_is_sender(delivery->link)) {
+        err = pni_process_tpwork_sender(transport, delivery);
         if (err) return err;
       } else {
-        dm = &link->session->state.incoming;
-        int err = pni_process_tpwork_receiver(transport, delivery, &settle);
+        err = pni_process_tpwork_receiver(transport, delivery);
         if (err) return err;
       }
 
-      if (settle) {
-        pn_full_settle(dm, delivery);
-      } else if (!pn_delivery_buffered(delivery)) {
-        pn_clear_tpwork(delivery);
-      }
+      if (!pn_delivery_buffered(delivery)) pn_clear_tpwork(delivery);
 
-      delivery = tp_next;
+      delivery = delivery->tpwork_next;
     }
   }
 
