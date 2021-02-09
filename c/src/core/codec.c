@@ -1503,7 +1503,7 @@ static inline pni_node_t *pni_data_add(pn_data_t *data)
   node->data_size = 0;
   node->data = false;
   node->described = false;
-  node->small = true; // XXX
+  node->small = false;
 
   if (data->current) {
     pni_node_t* current = data->nodes + data->current - 1;
