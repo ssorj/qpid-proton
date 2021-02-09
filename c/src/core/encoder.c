@@ -225,7 +225,7 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 /* True if node is an element of an array - not the descriptor. */
 __attribute__((always_inline))
 static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return (parent && parent->atom.type == PN_ARRAY) /* In array */
+  return parent->atom.type == PN_ARRAY /* In array */
     && !(parent->described && !node->prev); /* Not the descriptor */
 }
 
@@ -243,7 +243,7 @@ static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni
  */
 __attribute__((always_inline))
 static inline bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return parent && parent->atom.type == PN_LIST && parent->described;
+  return parent->atom.type == PN_LIST && parent->described;
 }
 
 typedef union {
@@ -260,24 +260,29 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pni_node_t *parent = pn_data_node(data, node->parent);
   uint8_t code;
 
-  if (pn_is_in_array(data, parent, node)) {
-    // In an array we don't write the code before each element, only
-    // the first
-    code = pn_type2code(encoder, parent->type);
-    if (pn_is_first_in_array(data, parent, node)) {
-      pn_encoder_writef8(encoder, code);
-    }
-  } else if (pn_is_in_described_list(data, parent, node)) {
-    // Omit trailing nulls for described lists
-    if (node->atom.type == PN_NULL) {
-      encoder->null_count++;
-      return 0;
-    } else {
-      // Output pending nulls, then the node's code
-      for (unsigned i = 0; i<encoder->null_count; i++) {
-        pn_encoder_writef8(encoder, PNE_NULL);
+  if (parent) {
+    if (pn_is_in_array(data, parent, node)) {
+      // In an array we don't write the code before each element, only
+      // the first
+      code = pn_type2code(encoder, parent->type);
+      if (pn_is_first_in_array(data, parent, node)) {
+        pn_encoder_writef8(encoder, code);
       }
-      encoder->null_count = 0;
+    } else if (pn_is_in_described_list(data, parent, node)) {
+      // Omit trailing nulls for described lists
+      if (node->atom.type == PN_NULL) {
+        encoder->null_count++;
+        return 0;
+      } else {
+        // Output pending nulls, then the node's code
+        for (unsigned i = 0; i < encoder->null_count; i++) {
+          pn_encoder_writef8(encoder, PNE_NULL);
+        }
+        encoder->null_count = 0;
+        code = pn_node2code(encoder, node);
+        pn_encoder_writef8(encoder, code);
+      }
+    } else {
       code = pn_node2code(encoder, node);
       pn_encoder_writef8(encoder, code);
     }
@@ -353,7 +358,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   // Special case 0 length list, but not as element in an array
   pni_node_t *parent = pn_data_node(data, node->parent);
-  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
+  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0 && !(parent && pn_is_in_array(data, parent, node))) {
     encoder->position = node->start-1; // position of list opcode
     pn_encoder_writef8(encoder, PNE_LIST0);
     encoder->null_count = 0;
