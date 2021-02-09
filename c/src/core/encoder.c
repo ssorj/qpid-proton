@@ -25,6 +25,7 @@
 #include "encodings.h"
 #include "encoder.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include "data.h"
@@ -49,8 +50,7 @@ void pn_encoder_finalize(pn_encoder_t *encoder)
   pn_error_free(encoder->error);
 }
 
-__attribute__((always_inline))
-static inline uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
+static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
 {
   switch (type)
   {
@@ -84,8 +84,7 @@ static inline uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-__attribute__((always_inline))
-static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
+static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -101,13 +100,17 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
       return PNE_INT;
     }
   case PN_ULONG:
-    if (node->atom.u.as_ulong < 256) {
+    if (node->atom.u.as_ulong == 0) {
+      return PNE_ULONG0;
+    } else if (node->atom.u.as_ulong < 256) {
       return PNE_SMALLULONG;
     } else {
       return PNE_ULONG;
     }
   case PN_UINT:
-    if (node->atom.u.as_uint < 256) {
+    if (node->atom.u.as_uint == 0) {
+      return PNE_UINT0;
+    } else if (node->atom.u.as_uint < 256) {
       return PNE_SMALLUINT;
     } else {
       return PNE_UINT;
@@ -141,8 +144,7 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-__attribute__((always_inline))
-static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
+static size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   char * end = encoder->output + encoder->size;
   if (end > encoder->position)
     return end - encoder->position;
@@ -150,8 +152,7 @@ static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
     return 0;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
+static void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
     encoder->position[0] = value;
@@ -159,8 +160,7 @@ static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
   encoder->position++;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
+static void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 {
   if (pn_encoder_remaining(encoder) >= 2) {
     encoder->position[0] = 0xFF & (value >> 8);
@@ -169,8 +169,7 @@ static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
   encoder->position += 2;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
+static void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 {
   if (pn_encoder_remaining(encoder) >= 4) {
     encoder->position[0] = 0xFF & (value >> 24);
@@ -181,8 +180,7 @@ static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
   encoder->position += 4;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
+static void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   if (pn_encoder_remaining(encoder) >= 8) {
     encoder->position[0] = 0xFF & (value >> 56);
     encoder->position[1] = 0xFF & (value >> 48);
@@ -196,16 +194,14 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   encoder->position += 8;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
+static void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) >= 16) {
     memmove(encoder->position, value, 16);
   }
   encoder->position += 16;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
+static void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef8(encoder, value->size);
   if (pn_encoder_remaining(encoder) >= value->size)
@@ -213,8 +209,7 @@ static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *v
   encoder->position += value->size;
 }
 
-__attribute__((always_inline))
-static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
+static void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef32(encoder, value->size);
   if (pn_encoder_remaining(encoder) >= value->size)
@@ -223,8 +218,7 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 }
 
 /* True if node is an element of an array - not the descriptor. */
-__attribute__((always_inline))
-static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return parent->atom.type == PN_ARRAY /* In array */
     && !(parent->described && !node->prev); /* Not the descriptor */
 }
@@ -232,8 +226,7 @@ static inline bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_
 /** True if node is the first element of an array, not the descriptor.
  *@pre pn_is_in_array(data, parent, node)
  */
-__attribute__((always_inline))
-static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   if (!node->prev) return !parent->described; /* First node */
   return parent->described && (!pn_data_node(data, node->prev)->prev);
 }
@@ -241,8 +234,7 @@ static inline bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni
 /** True if node is in a described list - not the descriptor.
  *  - In this case we can omit trailing nulls
  */
-__attribute__((always_inline))
-static inline bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
   return parent->atom.type == PN_LIST && parent->described;
 }
 
@@ -259,6 +251,12 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
   uint8_t code;
+
+  // if (node->atom.type == PN_DESCRIBED) {
+  //   code = pn_node2code(encoder, node);
+  //   pn_encoder_writef8(encoder, code);
+  //   return 0;
+  // }
 
   if (parent) {
     if (pn_is_in_array(data, parent, node)) {
@@ -294,17 +292,20 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_atom_t *atom = &node->atom;
   conv_t c;
 
+  // fprintf(stderr, "%s\n", pn_type_name(atom->type));
+
   switch (code) {
   case PNE_DESCRIPTOR:
   case PNE_NULL:
   case PNE_TRUE:
-  case PNE_FALSE: return 0;
+  case PNE_FALSE:
+  case PNE_UINT0:
+  case PNE_ULONG0: return 0;
   case PNE_BOOLEAN: pn_encoder_writef8(encoder, atom->u.as_bool); return 0;
   case PNE_UBYTE: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
   case PNE_BYTE: pn_encoder_writef8(encoder, atom->u.as_byte); return 0;
   case PNE_USHORT: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
   case PNE_SHORT: pn_encoder_writef16(encoder, atom->u.as_short); return 0;
-  case PNE_UINT0: return 0;
   case PNE_SMALLUINT: pn_encoder_writef8(encoder, atom->u.as_uint); return 0;
   case PNE_UINT: pn_encoder_writef32(encoder, atom->u.as_uint); return 0;
   case PNE_SMALLINT: pn_encoder_writef8(encoder, atom->u.as_int); return 0;
@@ -348,8 +349,6 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
-
-#include <stdio.h>
 
 static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
