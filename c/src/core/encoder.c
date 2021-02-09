@@ -258,9 +258,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
-  pn_atom_t *atom = &node->atom;
   uint8_t code;
-  conv_t c;
 
   if (pn_is_in_array(data, parent, node)) {
     // In an array we don't write the code before each element, only
@@ -287,6 +285,9 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     code = pn_node2code(encoder, node);
     pn_encoder_writef8(encoder, code);
   }
+
+  pn_atom_t *atom = &node->atom;
+  conv_t c;
 
   switch (code) {
   case PNE_DESCRIPTOR:
