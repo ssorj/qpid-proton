@@ -139,6 +139,18 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
     } else {
       return PNE_VBIN32;
     }
+  case PN_LIST:
+    if (node->children < 256) {
+      return PNE_LIST8;
+    } else {
+      return PNE_LIST32;
+    }
+  case PN_MAP:
+    if (node->children < 256) {
+      return PNE_MAP8;
+    } else {
+      return PNE_MAP32;
+    }
   default:
     return pn_type2code(encoder, node->atom.type);
   }
@@ -323,17 +335,25 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   case PNE_ARRAY32:
     node->start = encoder->position;
     node->small = false;
-    // we'll backfill the size on exit
+    // We'll backfill the size on exit
     encoder->position += 4;
     pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
     if (node->described)
       pn_encoder_writef8(encoder, 0);
     return 0;
+  case PNE_LIST8:
+  case PNE_MAP8:
+    node->start = encoder->position;
+    node->small = true;
+    // We'll backfill the size later
+    encoder->position += 1;
+    pn_encoder_writef8(encoder, node->children);
+    return 0;
   case PNE_LIST32:
   case PNE_MAP32:
     node->start = encoder->position;
     node->small = false;
-    // we'll backfill the size later
+    // We'll backfill the size later
     encoder->position += 4;
     pn_encoder_writef32(encoder, node->children);
     return 0;
@@ -347,13 +367,15 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   char *pos;
 
-  // Special case 0 length list, but not as element in an array
   pni_node_t *parent = pn_data_node(data, node->parent);
-  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0 && !(parent && pn_is_in_array(data, parent, node))) {
-    encoder->position = node->start-1; // position of list opcode
-    pn_encoder_writef8(encoder, PNE_LIST0);
-    encoder->null_count = 0;
-    return 0;
+  if (node->atom.type == PN_LIST && node->children - encoder->null_count == 0) {
+    // Special case 0 length list, but not as an element in an array
+    if (!(parent && pn_is_in_array(data, parent, node))) {
+      encoder->position = node->start - 1; // Position of list opcode
+      pn_encoder_writef8(encoder, PNE_LIST0);
+      encoder->null_count = 0;
+      return 0;
+    }
   }
 
   switch (node->atom.type) {
