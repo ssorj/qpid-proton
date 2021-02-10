@@ -252,20 +252,9 @@ typedef union {
   double d;
 } conv_t;
 
-static void pni_update_size_and_count(pn_encoder_t *encoder, pni_node_t *node) {
+static inline void pni_update_size_and_count(pn_encoder_t *encoder, pni_node_t *node) {
   char *pos = encoder->position;
   encoder->position = node->start;
-
-    // if (node->children - encoder->null_count == 0) {
-    //   pni_node_t *parent = pn_data_node(data, node->parent);
-
-    //   if (parent && parent->atom.type != PN_ARRAY) {
-    //     encoder->position = node->start - 1; // Position of list opcode
-    //     pn_encoder_writef8(encoder, PNE_LIST0);
-    //     encoder->null_count = 0;
-    //     return 0;
-    //   }
-    // }
 
   if (node->small) {
     // Backfill the size
@@ -422,11 +411,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
 
-  switch (node->atom.type) {
-  case PN_ARRAY:
-    pni_update_size_and_count(encoder, node);
-    return 0;
-  case PN_LIST:
+  if (node->atom.type == PN_LIST) {
     // A special case for zero-length lists that are not an element in an array
     if (node->children - encoder->null_count == 0) {
       pni_node_t *parent = pn_data_node(data, node->parent);
@@ -440,14 +425,11 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     }
 
     pni_update_size_and_count(encoder, node);
-
-    return 0;
-  case PN_MAP:
+  } else if (node->atom.type == PN_MAP || node->atom.type == PN_ARRAY) {
     pni_update_size_and_count(encoder, node);
-    return 0;
-  default:
-    return 0;
   }
+
+  return 0;
 }
 
 ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
