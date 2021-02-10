@@ -440,14 +440,56 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   encoder->position = dst;
   encoder->size = size;
 
-  int err = pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
-  if (err) return err;
+  if (!src->size) return 0;
+
+  pni_node_t *node = pn_data_node(src, 1);
+  pni_node_t *parent = NULL;
+  size_t next;
+  int err;
+
+  while (node) {
+    err = pni_encoder_enter(encoder, src, node); // XXX Consider a goto
+    if (err) return err;
+
+    if (node->down) {
+      next = node->down;
+    } else if (node->next) {
+      err = pni_encoder_exit(encoder, src, node); // XXX Consider a goto
+      if (err) return err;
+
+      next = node->next;
+    } else {
+      next = 0;
+
+      err = pni_encoder_exit(encoder, src, node);
+      if (err) return err;
+
+      parent = pn_data_node(src, node->parent);
+
+      while (parent) {
+        err = pni_encoder_exit(encoder, src, parent);
+        if (err) return err;
+
+        if (parent->next) {
+          next = parent->next;
+          break;
+        } else {
+          parent = pn_data_node(src, parent->parent);
+        }
+      }
+    }
+
+    node = pn_data_node(src, next);
+  }
+
   size_t encoded = encoder->position - encoder->output;
+
   if (encoded > size) {
       pn_error_format(pn_data_error(src), PN_OVERFLOW, "not enough space to encode");
       return PN_OVERFLOW;
   }
-  return (ssize_t)encoded;
+
+  return (ssize_t) encoded;
 }
 
 ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)
