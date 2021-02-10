@@ -146,6 +146,10 @@ static size_t pni_buffer_tail_size(pn_buffer_t *buf)
 __attribute__((always_inline))
 inline int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
+  if (pn_buffer_available(buf) > size) {
+    return 0;
+  }
+
   size_t old_capacity = buf->capacity;
   size_t old_head = pni_buffer_head(buf);
   bool wrapped = pni_buffer_wrapped(buf);
