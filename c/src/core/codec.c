@@ -1346,8 +1346,7 @@ bool pn_data_prev(pn_data_t *data)
   }
 }
 
-__attribute__((always_inline))
-inline int pni_data_traverse(pn_data_t *data,
+int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx)
