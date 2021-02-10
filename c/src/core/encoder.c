@@ -267,11 +267,13 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
         encoder->null_count = 0;
       }
     } else if (parent_type == PN_ARRAY) {
+      // if (!(parent->described && node->prev == 0)) {
+      //   code = pn_type2code(encoder, parent_type);
+      // }
+
       // In an array we skip writing the type after the first element
-      if (parent->described) {
-        if (node->prev != 0 && pn_data_node(data, node->prev)->prev != 0) {
-          goto write_value;
-        }
+      if (parent->described && node->prev != 0 && pn_data_node(data, node->prev)->prev != 0) {
+        goto write_value;
       } else if (node->prev != 0) {
         goto write_value;
       }
