@@ -151,8 +151,23 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
     } else {
       return PNE_MAP32;
     }
+  case PN_NULL: return PNE_NULL;
+  case PN_UBYTE: return PNE_UBYTE;
+  case PN_BYTE: return PNE_BYTE;
+  case PN_USHORT: return PNE_USHORT;
+  case PN_SHORT: return PNE_SHORT;
+  case PN_CHAR: return PNE_UTF32;
+  case PN_FLOAT: return PNE_FLOAT;
+  case PN_TIMESTAMP: return PNE_MS64;
+  case PN_DOUBLE: return PNE_DOUBLE;
+  case PN_DECIMAL32: return PNE_DECIMAL32;
+  case PN_DECIMAL64: return PNE_DECIMAL64;
+  case PN_DECIMAL128: return PNE_DECIMAL128;
+  case PN_UUID: return PNE_UUID;
+  case PN_ARRAY: return PNE_ARRAY32;
+  case PN_DESCRIBED: return PNE_DESCRIPTOR;
   default:
-    return pn_type2code(encoder, node->atom.type);
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u\n", node->atom.type);
   }
 }
 
