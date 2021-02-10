@@ -252,6 +252,43 @@ typedef union {
   double d;
 } conv_t;
 
+static void pni_update_size_and_count(pn_encoder_t *encoder, pni_node_t *node) {
+  char *pos = encoder->position;
+  encoder->position = node->start;
+
+    // if (node->children - encoder->null_count == 0) {
+    //   pni_node_t *parent = pn_data_node(data, node->parent);
+
+    //   if (parent && parent->atom.type != PN_ARRAY) {
+    //     encoder->position = node->start - 1; // Position of list opcode
+    //     pn_encoder_writef8(encoder, PNE_LIST0);
+    //     encoder->null_count = 0;
+    //     return 0;
+    //   }
+    // }
+
+  if (node->small) {
+    // Backfill the size
+    size_t size = pos - node->start - 1;
+    pn_encoder_writef8(encoder, size);
+    // Adjust the count
+    if (encoder->null_count) {
+      pn_encoder_writef8(encoder, node->children - encoder->null_count);
+    }
+  } else {
+    // Backfill the size
+    size_t size = pos - node->start - 4;
+    pn_encoder_writef32(encoder, size);
+    // Adjust the count
+    if (encoder->null_count) {
+      pn_encoder_writef32(encoder, node->children - encoder->null_count);
+    }
+  }
+
+  encoder->position = pos;
+  encoder->null_count = 0;
+}
+
 static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
@@ -334,9 +371,28 @@ write_value:
     node->start = encoder->position;
     // We'll backfill the size on exit
     encoder->position += 4;
+
+    // if (node->described) {
+    //   if (node->children == 1) {
+    //     pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+    //   } else {
+    //     pn_encoder_writef8(encoder, 0);
+    //   }
+    // } else if (node->children == 0) {
+    //     pn_encoder_writef32(encoder, node->children);
+    // }
+
     pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
-    if (node->described)
+
+    if (node->described) {
       pn_encoder_writef8(encoder, 0);
+    }
+
+    // For zero-length arrays
+    if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
+      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+    }
+
     return 0;
   case PNE_LIST8:
   case PNE_MAP8:
@@ -361,19 +417,14 @@ write_value:
 static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
-  char *pos;
 
   switch (node->atom.type) {
   case PN_ARRAY:
-    // For zero-length arrays
-    if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-    }
-
-    // Falls through
+    pni_update_size_and_count(encoder, node);
+    return 0;
   case PN_LIST:
     // A special case for zero-length lists that are not an element in an array
-    if (node->atom.type == PN_LIST && node->children - encoder->null_count == 0) {
+    if (node->children - encoder->null_count == 0) {
       pni_node_t *parent = pn_data_node(data, node->parent);
 
       if (parent && parent->atom.type != PN_ARRAY) {
@@ -384,29 +435,11 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
       }
     }
 
-    // Falls through for non-zero length lists
+    pni_update_size_and_count(encoder, node);
+
+    return 0;
   case PN_MAP:
-    pos = encoder->position;
-    encoder->position = node->start;
-    if (node->small) {
-      // Backfill the size
-      size_t size = pos - node->start - 1;
-      pn_encoder_writef8(encoder, size);
-      // Adjust count
-      if (encoder->null_count) {
-        pn_encoder_writef8(encoder, node->children - encoder->null_count);
-      }
-    } else {
-      // Backfill the size
-      size_t size = pos - node->start - 4;
-      pn_encoder_writef32(encoder, size);
-      // Adjust count
-      if (encoder->null_count) {
-        pn_encoder_writef32(encoder, node->children - encoder->null_count);
-      }
-    }
-    encoder->position = pos;
-    encoder->null_count = 0;
+    pni_update_size_and_count(encoder, node);
     return 0;
   default:
     return 0;
