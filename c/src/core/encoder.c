@@ -235,21 +235,6 @@ static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node
     && !(parent->described && !node->prev); /* Not the descriptor */
 }
 
-// /** True if node is the first element of an array, not the descriptor.
-//  *@pre pn_is_in_array(data, parent, node)
-//  */
-// static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-//   if (!node->prev) return !parent->described; /* First node */
-//   return parent->described && (!pn_data_node(data, node->prev)->prev);
-// }
-
-// /** True if node is in a described list - not the descriptor.
-//  *  - In this case we can omit trailing nulls
-//  */
-// static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-//   return parent->atom.type == PN_LIST && parent->described;
-// }
-
 typedef union {
   uint32_t i;
   uint32_t a[2];
@@ -286,9 +271,11 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
       // the first
       if (parent->described) {
         if (node->prev == 0 || pn_data_node(data, node->prev)->prev == 0) {
+          // Write the type for the descriptor and the first element
           goto write_type;
         }
       } else if (node->prev == 0) {
+        // Write the type for the first element
         goto write_type;
       }
       goto write_value;
