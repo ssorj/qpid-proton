@@ -448,32 +448,31 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   int err;
 
   while (node) {
-    err = pni_encoder_enter(encoder, src, node); // XXX Consider a goto
+    err = pni_encoder_enter(encoder, src, node);
     if (err) return err;
 
     if (node->down) {
       next = node->down;
-    } else if (node->next) {
-      err = pni_encoder_exit(encoder, src, node); // XXX Consider a goto
-      if (err) return err;
-
-      next = node->next;
     } else {
       err = pni_encoder_exit(encoder, src, node);
       if (err) return err;
 
-      parent = pn_data_node(src, node->parent);
-      next = 0;
+      if (node->next) {
+        next = node->next;
+      } else {
+        parent = pn_data_node(src, node->parent);
+        next = 0;
 
-      while (parent) {
-        err = pni_encoder_exit(encoder, src, parent);
-        if (err) return err;
+        while (parent) {
+          err = pni_encoder_exit(encoder, src, parent);
+          if (err) return err;
 
-        if (parent->next) {
-          next = parent->next;
-          break;
-        } else {
-          parent = pn_data_node(src, parent->parent);
+          if (parent->next) {
+            next = parent->next;
+            break;
+          } else {
+            parent = pn_data_node(src, parent->parent);
+          }
         }
       }
     }
