@@ -369,12 +369,20 @@ write_value:
   case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
   case PNE_ARRAY32:
     node->start = encoder->position;
+
     // We'll backfill the size on exit
     encoder->position += 4;
 
     if (node->described) {
       pn_encoder_writef32(encoder, node->children - 1);
-      pn_encoder_writef8(encoder, 0);
+
+      // XXX
+      //
+      // What is this for?  The descriptor should come in the next
+      // node.  I tried testing it either way and got the same result,
+      // so there's likely a missing test for this case.
+      //
+      // pn_encoder_writef8(encoder, 0);
 
       // For zero-length arrays
       if (node->children == 1) {
