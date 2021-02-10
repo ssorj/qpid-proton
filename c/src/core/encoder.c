@@ -305,6 +305,7 @@ static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node
     } else if (parent_type == PN_ARRAY) {
       // If the current node is not an array descriptor, use the item
       // type stored on the parent
+      // XXX Can this move to the switch?
       if (!(parent->described && node->prev == 0)) {
         code = pn_type2code(encoder, parent->type);
       }

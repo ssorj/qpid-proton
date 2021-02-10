@@ -48,7 +48,6 @@ void pn_decoder_finalize(pn_decoder_t *decoder)
   pn_error_free(decoder->error);
 }
 
-__attribute__((always_inline))
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
 {
   uint8_t r = decoder->position[0];
@@ -56,7 +55,6 @@ static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
   return r;
 }
 
-__attribute__((always_inline))
 static inline uint16_t pn_decoder_readf16(pn_decoder_t *decoder)
 {
   uint16_t a = (uint8_t) decoder->position[0];
@@ -67,7 +65,6 @@ static inline uint16_t pn_decoder_readf16(pn_decoder_t *decoder)
   return r;
 }
 
-__attribute__((always_inline))
 static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
 {
   uint32_t a = (uint8_t) decoder->position[0];
@@ -82,7 +79,6 @@ static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
   return r;
 }
 
-__attribute__((always_inline))
 static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
 {
   uint64_t a = pn_decoder_readf32(decoder);
@@ -90,16 +86,15 @@ static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
   return a << 32 | b;
 }
 
-__attribute__((always_inline))
 static inline void pn_decoder_readf128(pn_decoder_t *decoder, void *dst)
 {
   memmove(dst, decoder->position, 16);
   decoder->position += 16;
 }
 
-__attribute__((always_inline))
 static inline size_t pn_decoder_remaining(pn_decoder_t *decoder)
 {
+  // XXX This side uses a size_t
   return decoder->input + decoder->size - decoder->position;
 }
 
@@ -111,7 +106,7 @@ typedef union {
   double d;
 } conv_t;
 
-static pn_type_t pn_code2type(uint8_t code)
+static inline pn_type_t pn_code2type(uint8_t code)
 {
   switch (code)
   {
@@ -190,7 +185,9 @@ static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
-static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+// XXX Recursion prevents this
+// __attribute__((always_inline))
+static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
   conv_t conv;
@@ -447,7 +444,9 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
 
 pn_type_t pni_data_parent_type(pn_data_t *data);
 
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+// XXX Fails because of recursion
+// __attribute__((always_inline))
+static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   int err;
 
