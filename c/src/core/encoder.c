@@ -459,12 +459,11 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
 
       next = node->next;
     } else {
-      next = 0;
-
       err = pni_encoder_exit(encoder, src, node);
       if (err) return err;
 
       parent = pn_data_node(src, node->parent);
+      next = 0;
 
       while (parent) {
         err = pni_encoder_exit(encoder, src, parent);
