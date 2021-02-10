@@ -363,42 +363,46 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   char *pos;
 
-  if (node->atom.type == PN_LIST && node->children - encoder->null_count == 0) {
-    // Special case 0 length list, but not as an element in an array
-    pni_node_t *parent = pn_data_node(data, node->parent);
-    if (parent && parent->atom.type != PN_ARRAY) {
-      encoder->position = node->start - 1; // Position of list opcode
-      pn_encoder_writef8(encoder, PNE_LIST0);
-      encoder->null_count = 0;
-      return 0;
-    }
-  }
-
   switch (node->atom.type) {
   case PN_ARRAY:
+    // For zero-length arrays
     if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
       pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
     }
-  // Fallthrough
+
+    // Falls through
   case PN_LIST:
+    // A special case for zero-length lists that are not an element in an array
+    if (node->atom.type == PN_LIST && node->children - encoder->null_count == 0) {
+      pni_node_t *parent = pn_data_node(data, node->parent);
+
+      if (parent && parent->atom.type != PN_ARRAY) {
+        encoder->position = node->start - 1; // Position of list opcode
+        pn_encoder_writef8(encoder, PNE_LIST0);
+        encoder->null_count = 0;
+        return 0;
+      }
+    }
+
+    // Falls through for non-zero length lists
   case PN_MAP:
     pos = encoder->position;
     encoder->position = node->start;
     if (node->small) {
-      // backfill size
+      // Backfill the size
       size_t size = pos - node->start - 1;
       pn_encoder_writef8(encoder, size);
       // Adjust count
       if (encoder->null_count) {
-        pn_encoder_writef8(encoder, node->children-encoder->null_count);
+        pn_encoder_writef8(encoder, node->children - encoder->null_count);
       }
     } else {
-      // backfill size
+      // Backfill the size
       size_t size = pos - node->start - 4;
       pn_encoder_writef32(encoder, size);
       // Adjust count
       if (encoder->null_count) {
-        pn_encoder_writef32(encoder, node->children-encoder->null_count);
+        pn_encoder_writef32(encoder, node->children - encoder->null_count);
       }
     }
     encoder->position = pos;
