@@ -267,23 +267,18 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
         encoder->null_count = 0;
       }
     } else if (parent_type == PN_ARRAY) {
-      // In an array we don't write the code before each element, only
-      // the first
+      // In an array we skip writing the type after the first element
       if (parent->described) {
-        if (node->prev == 0 || pn_data_node(data, node->prev)->prev == 0) {
-          // Write the type for the descriptor and the first element
-          goto write_type;
+        if (node->prev != 0 && pn_data_node(data, node->prev)->prev != 0) {
+          goto write_value;
         }
-      } else if (node->prev == 0) {
-        // Write the type for the first element
-        goto write_type;
+      } else if (node->prev != 0) {
+        goto write_value;
       }
-      goto write_value;
     }
   }
 
-write_type:
-
+  // Write the type code
   pn_encoder_writef8(encoder, code);
 
 write_value:
