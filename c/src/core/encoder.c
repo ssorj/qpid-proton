@@ -244,12 +244,6 @@ static void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
   encoder->position += value->size;
 }
 
-/* True if node is an element of an array - not the descriptor. */
-static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return parent->atom.type == PN_ARRAY /* In array */
-    && !(parent->described && !node->prev); /* Not the descriptor */
-}
-
 typedef union {
   uint32_t i;
   uint32_t a[2];
@@ -336,10 +330,8 @@ write_value:
   case PNE_STR32_UTF8: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
   case PNE_SYM8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
   case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  // PNE_ARRAY8
   case PNE_ARRAY32:
     node->start = encoder->position;
-    node->small = false;
     // We'll backfill the size on exit
     encoder->position += 4;
     pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
@@ -357,7 +349,6 @@ write_value:
   case PNE_LIST32:
   case PNE_MAP32:
     node->start = encoder->position;
-    node->small = false;
     // We'll backfill the size later
     encoder->position += 4;
     pn_encoder_writef32(encoder, node->children);
@@ -372,10 +363,10 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   char *pos;
 
-  pni_node_t *parent = pn_data_node(data, node->parent);
   if (node->atom.type == PN_LIST && node->children - encoder->null_count == 0) {
     // Special case 0 length list, but not as an element in an array
-    if (!(parent && pn_is_in_array(data, parent, node))) {
+    pni_node_t *parent = pn_data_node(data, node->parent);
+    if (parent && parent->atom.type != PN_ARRAY) {
       encoder->position = node->start - 1; // Position of list opcode
       pn_encoder_writef8(encoder, PNE_LIST0);
       encoder->null_count = 0;
