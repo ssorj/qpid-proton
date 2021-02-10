@@ -278,7 +278,8 @@ static inline void pni_update_size_and_count(pn_encoder_t *encoder, pni_node_t *
   encoder->null_count = 0;
 }
 
-static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+__attribute__((always_inline))
+static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
@@ -407,7 +408,8 @@ write_value:
   }
 }
 
-static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+__attribute__((always_inline))
+static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
 
