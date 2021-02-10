@@ -372,25 +372,21 @@ write_value:
     // We'll backfill the size on exit
     encoder->position += 4;
 
-    // if (node->described) {
-    //   if (node->children == 1) {
-    //     pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-    //   } else {
-    //     pn_encoder_writef8(encoder, 0);
-    //   }
-    // } else if (node->children == 0) {
-    //     pn_encoder_writef32(encoder, node->children);
-    // }
-
-    pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
-
     if (node->described) {
+      pn_encoder_writef32(encoder, node->children - 1);
       pn_encoder_writef8(encoder, 0);
-    }
 
-    // For zero-length arrays
-    if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+      // For zero-length arrays
+      if (node->children == 1) {
+        pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+      }
+    } else {
+      pn_encoder_writef32(encoder, node->children);
+
+      // For zero-length arrays
+      if (node->children == 0) {
+        pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+      }
     }
 
     return 0;
