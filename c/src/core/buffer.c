@@ -89,12 +89,14 @@ inline size_t pn_buffer_available(pn_buffer_t *buf)
   return buf->capacity - buf->size;
 }
 
-static size_t pni_buffer_head(pn_buffer_t *buf)
+__attribute__((always_inline))
+static inline size_t pni_buffer_head(pn_buffer_t *buf)
 {
   return buf->start;
 }
 
-static size_t pni_buffer_tail(pn_buffer_t *buf)
+__attribute__((always_inline))
+static inline size_t pni_buffer_tail(pn_buffer_t *buf)
 {
   size_t tail = buf->start + buf->size;
   if (tail >= buf->capacity)
@@ -102,12 +104,14 @@ static size_t pni_buffer_tail(pn_buffer_t *buf)
   return tail;
 }
 
-static bool pni_buffer_wrapped(pn_buffer_t *buf)
+__attribute__((always_inline))
+static inline bool pni_buffer_wrapped(pn_buffer_t *buf)
 {
   return buf->size && pni_buffer_head(buf) >= pni_buffer_tail(buf);
 }
 
-static size_t pni_buffer_tail_space(pn_buffer_t *buf)
+__attribute__((always_inline))
+static inline size_t pni_buffer_tail_space(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
     return pn_buffer_available(buf);
@@ -143,13 +147,8 @@ static size_t pni_buffer_tail_size(pn_buffer_t *buf)
   }
 }
 
-__attribute__((always_inline))
-inline int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
+int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
-  if (pn_buffer_available(buf) > size) {
-    return 0;
-  }
-
   size_t old_capacity = buf->capacity;
   size_t old_head = pni_buffer_head(buf);
   bool wrapped = pni_buffer_wrapped(buf);
@@ -176,9 +175,10 @@ inline int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
-  if (!size) return 0;
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
+  if (pn_buffer_available(buf) <= size) {
+    int err = pn_buffer_ensure(buf, size);
+    if (err) return err;
+  }
 
   size_t tail = pni_buffer_tail(buf);
   size_t tail_space = pni_buffer_tail_space(buf);
