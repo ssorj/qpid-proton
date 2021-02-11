@@ -1478,6 +1478,10 @@ void pn_data_dump(pn_data_t *data)
 // XXX
 //
 // Inlining and simplifying this is a substantial win.
+//
+// XXX There's a bug for this (untested) scenario:
+// pn_data_prev(msg->data);
+// pn_data_next(msg->data);
 __attribute__((always_inline))
 static inline pni_node_t *pni_data_add(pn_data_t *data)
 {

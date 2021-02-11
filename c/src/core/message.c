@@ -709,7 +709,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     size -= used;
     bytes += used;
 
-    pn_data_rewind(msg->data); // XXX Check position
+    pn_data_rewind(msg->data);
 
     int err = 0;
     size_t field_count;
@@ -718,7 +718,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     if (err) return err;
     pn_data_enter(msg->data);
 
-    // XXX Should be required? See switch default.
+    // XXX
+    //
+    // Should this be a required next field? See switch default.
     uint64_t descriptor = 0;
     if (pni_data_next_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
     if (err) return err;
@@ -734,10 +736,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (pni_data_next_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
       if (err) return err;
       if (field_count == 1) break;
-
-      // XXX
-      // pn_data_prev(msg->data);
-      // pn_data_next(msg->data);
 
       if (pni_data_next_field(msg->data, &err, PN_UBYTE, "priority")) msg->priority = pn_data_get_ubyte(msg->data);
       if (err) return err;
@@ -878,7 +876,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     case FOOTER:
       break;
     default:
-      // XXX We get here if descriptor == 0.  Correct?
+      // XXX
+      //
+      // We get here if descriptor == 0.  Correct?
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
       break;
@@ -886,6 +886,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   }
 
   pn_data_clear(msg->data);
+
   return 0;
 }
 
