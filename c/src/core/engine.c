@@ -1477,7 +1477,8 @@ static void pn_delivery_finalize(void *object)
       // I was seeing a lot of stacks in link and session_finalize
       // (which seemed odd, since my test has one link and session for
       // its lifetime), so I tried removing this, and they
-      // disappeared.  Memory remained stable.
+      // disappeared.  Memory remained stable (but I only have one
+      // link).  Removing this is a performance win.
       pn_decref(link);
       return;
     }
