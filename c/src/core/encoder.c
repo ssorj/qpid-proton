@@ -171,10 +171,6 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-// XXX
-//
-// Is this legit with an unsigned type?  The decoder is doing it, and
-// it is faster.
 static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   char * end = encoder->output + encoder->size;
   if (end > encoder->position)
