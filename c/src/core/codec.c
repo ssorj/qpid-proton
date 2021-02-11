@@ -1233,11 +1233,6 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
   }
 }
 
-// static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
-// {
-//   return node - data->nodes + 1;
-// }
-
 __attribute__((always_inline))
 inline void pn_data_rewind(pn_data_t *data)
 {
