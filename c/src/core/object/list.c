@@ -67,16 +67,20 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
   }
 }
 
-int pn_list_add(pn_list_t *list, void *value)
+__attribute__((always_inline))
+inline int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
-  pni_list_ensure(list, list->size + 1);
+  if (list->capacity < list->size + 1) {
+    pni_list_ensure(list, list->size + 1);
+  }
   list->elements[list->size++] = value;
   pn_class_incref(list->clazz, value);
   return 0;
 }
 
-void *pn_list_pop(pn_list_t *list)
+__attribute__((always_inline))
+inline void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
   if (list->size) {
