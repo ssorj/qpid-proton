@@ -71,7 +71,7 @@ __attribute__((always_inline))
 inline int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
-  if (list->capacity < list->size + 1) {
+  if (list->capacity <= list->size) {
     pni_list_ensure(list, list->size + 1);
   }
   list->elements[list->size++] = value;
