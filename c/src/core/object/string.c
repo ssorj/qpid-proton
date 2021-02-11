@@ -31,12 +31,11 @@
 #include <assert.h>
 #include <ctype.h>
 
-#define PNI_NULL_SIZE (-1)
-
 struct pn_string_t {
   char *bytes;
-  ssize_t size;       // PNI_NULL_SIZE (-1) means null
+  ssize_t size;
   size_t capacity;
+  bool is_null;
 };
 
 static void pn_string_finalize(void *object)
@@ -48,7 +47,7 @@ static void pn_string_finalize(void *object)
 static uintptr_t pn_string_hashcode(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return 0;
   }
 
@@ -67,7 +66,7 @@ static intptr_t pn_string_compare(void *oa, void *ob)
     return b->size - a->size;
   }
 
-  if (a->size == PNI_NULL_SIZE) {
+  if (a->is_null) {
     return 0;
   } else {
     return memcmp(a->bytes, b->bytes, a->size);
@@ -77,7 +76,7 @@ static intptr_t pn_string_compare(void *oa, void *ob)
 static int pn_string_inspect(void *obj, pn_string_t *dst)
 {
   pn_string_t *str = (pn_string_t *) obj;
-  if (str->size == PNI_NULL_SIZE) {
+  if (str->is_null) {
     return pn_string_addf(dst, "null");
   }
 
@@ -119,7 +118,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return NULL;
   } else {
     return string->bytes;
@@ -130,11 +129,7 @@ __attribute__((always_inline))
 inline size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
-  if (string->size == PNI_NULL_SIZE) {
-    return 0;
-  } else {
-    return string->size;
-  }
+  return string->size;
 }
 
 int pn_string_set(pn_string_t *string, const char *bytes)
@@ -171,8 +166,10 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
     memcpy(string->bytes, bytes, n*sizeof(char));
     string->bytes[n] = '\0';
     string->size = n;
+    string->is_null = false;
   } else {
-    string->size = PNI_NULL_SIZE;
+    string->size = 0;
+    string->is_null = true;
   }
 
   return 0;
@@ -183,7 +180,7 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
   assert(string);
   assert(dst);
 
-  if (string->size != PNI_NULL_SIZE) {
+  if (!string->is_null) {
     memcpy(dst, string->bytes, string->size + 1);
   }
 
@@ -196,7 +193,8 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
 __attribute__((always_inline))
 inline void pn_string_clear(pn_string_t *string)
 {
-  string->size = PNI_NULL_SIZE;
+  string->size = 0;
+  string->is_null = true;
 }
 
 int pn_string_format(pn_string_t *string, const char *format, ...)
@@ -229,7 +227,7 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 {
   va_list copy;
 
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return PN_ERR;
   }
 
