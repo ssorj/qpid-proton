@@ -94,7 +94,6 @@ static inline void pn_decoder_readf128(pn_decoder_t *decoder, void *dst)
 
 static inline size_t pn_decoder_remaining(pn_decoder_t *decoder)
 {
-  // XXX This side uses a size_t
   return decoder->input + decoder->size - decoder->position;
 }
 
