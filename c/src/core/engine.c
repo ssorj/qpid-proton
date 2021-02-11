@@ -1479,7 +1479,9 @@ static void pn_delivery_finalize(void *object)
       // its lifetime), so I tried removing this, and they
       // disappeared.  Memory remained stable (but I only have one
       // link).  Removing this is a performance win.
-      // pn_decref(link);
+      //
+      // The tests fail with this removed.
+      pn_decref(link);
       return;
     }
     referenced = delivery->referenced;
