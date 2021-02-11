@@ -89,8 +89,7 @@ static inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
   return i & 0x00000000FFFFFFFFUL;
 }
 
-
-static pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
+static inline pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
 {
   return (pn_delivery_t *) pn_hash_get(db->deliveries, pni_sequence_make_hash(id) );
 }
@@ -103,7 +102,7 @@ static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *deliv
   ds->init = true;
 }
 
-static pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *delivery)
+static inline pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   pn_delivery_state_t *ds = &delivery->state;
   pn_delivery_state_init(ds, delivery, db->next++);
@@ -111,7 +110,7 @@ static pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_deli
   return ds;
 }
 
-void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
+static inline void pni_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   if (delivery->state.init) {
     delivery->state.init = false;
@@ -121,7 +120,12 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
   }
 }
 
-static void pni_delivery_map_clear(pn_delivery_map_t *dm)
+void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
+{
+  pni_delivery_map_del(db, delivery);
+}
+
+static inline void pni_delivery_map_clear(pn_delivery_map_t *dm)
 {
   pn_hash_t *hash = dm->deliveries;
   for (pn_handle_t entry = pn_hash_head(hash);

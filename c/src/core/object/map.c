@@ -250,7 +250,8 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
   }
 }
 
-int pn_map_put(pn_map_t *map, void *key, void *value)
+__attribute__((always_inline))
+inline int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
@@ -261,7 +262,8 @@ int pn_map_put(pn_map_t *map, void *key, void *value)
   return 0;
 }
 
-void *pn_map_get(pn_map_t *map, void *key)
+__attribute__((always_inline))
+inline void *pn_map_get(pn_map_t *map, void *key)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, false);
@@ -356,7 +358,8 @@ pn_handle_t pn_map_head(pn_map_t *map)
   return 0;
 }
 
-pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
+__attribute__((always_inline))
+inline pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
 {
   for (size_t i = (size_t)entry; i < map->capacity; i++) {
     if (map->entries[i].state != PNI_ENTRY_FREE) {
@@ -385,12 +388,12 @@ struct pn_hash_t {
   pn_map_t map;
 };
 
-static uintptr_t pni_identity_hashcode(void *obj)
+static inline uintptr_t pni_identity_hashcode(void *obj)
 {
   return (uintptr_t ) obj;
 }
 
-static bool pni_identity_equals(void *a, void *b)
+static inline bool pni_identity_equals(void *a, void *b)
 {
   return a == b;
 }
@@ -423,42 +426,50 @@ pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
   return hash;
 }
 
-size_t pn_hash_size(pn_hash_t *hash)
+__attribute__((always_inline))
+inline size_t pn_hash_size(pn_hash_t *hash)
 {
   return pn_map_size(&hash->map);
 }
 
-int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
+__attribute__((always_inline))
+inline int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
 {
   return pn_map_put(&hash->map, (void *) key, value);
 }
 
-void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
+__attribute__((always_inline))
+inline void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
 {
   return pn_map_get(&hash->map, (void *) key);
 }
 
-void pn_hash_del(pn_hash_t *hash, uintptr_t key)
+__attribute__((always_inline))
+inline void pn_hash_del(pn_hash_t *hash, uintptr_t key)
 {
   pn_map_del(&hash->map, (void *) key);
 }
 
-pn_handle_t pn_hash_head(pn_hash_t *hash)
+__attribute__((always_inline))
+inline pn_handle_t pn_hash_head(pn_hash_t *hash)
 {
   return pn_map_head(&hash->map);
 }
 
-pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
+__attribute__((always_inline))
+inline pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_next(&hash->map, entry);
 }
 
-uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
+__attribute__((always_inline))
+inline uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
 {
   return (uintptr_t) pn_map_key(&hash->map, entry);
 }
 
-void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
+__attribute__((always_inline))
+inline void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_value(&hash->map, entry);
 }
