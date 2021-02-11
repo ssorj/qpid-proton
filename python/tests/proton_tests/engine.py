@@ -26,7 +26,7 @@ from proton import *
 from proton.reactor import Container
 from . import common
 from .common import pump, Skipped
-
+from .amqpdata import *
 
 # older versions of gc do not provide the garbage list
 if not hasattr(gc, "garbage"):
@@ -922,7 +922,7 @@ class TransferTest(Test):
         # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
         # We want:
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00\x22\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x12\x00\x00\x00\nCC\xa0\x03tagCA@@@@A"
+        wanted = amqp_frame(20, LIST8, 15, 10, UINT0, UINT0, VBIN8, 3, "tag", UINT0, TRUE, NULL, NULL, NULL, NULL, TRUE)
         t = self.snd.transport
         wire_bytes = t.peek(1024)
         assert wanted == wire_bytes, (wanted, wire_bytes)
@@ -1318,7 +1318,7 @@ class MaxFrameTransferTest(Test):
         assert sd.aborted
         # Expect a single abort transfer frame with no content.  One credit is consumed.
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00\x24\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x14\x00\x00\x00\nCC\xa0\x05tag_1CA@@@@A"
+        wanted = amqp_frame(20, LIST8, 17, 10, UINT0, UINT0, VBIN8, 5, "tag_1", UINT0, TRUE, NULL, NULL, NULL, NULL, TRUE)
         t = self.snd.transport
         wire_bytes = t.peek(2048)
         assert wanted == wire_bytes, (wanted, wire_bytes)
@@ -1329,7 +1329,7 @@ class MaxFrameTransferTest(Test):
         self.snd.close()
         # Expect just the detach frame.
         # @detach(22) [handle=0, closed=true]
-        wanted = b"\x00\x00\x00\x16\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x06\x00\x00\x00\x02CA"
+        wanted = amqp_frame(22, LIST8, 3, 2, UINT0, TRUE)
         wire_bytes = t.peek(2048)
         assert wanted == wire_bytes, (wanted, wire_bytes)
 

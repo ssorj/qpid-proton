@@ -369,11 +369,8 @@ write_value:
 
       // XXX
       //
-      // What is this for?  The descriptor should come in the next
-      // node.  I tried testing it either way and got the same result,
-      // so there's likely a missing test for this case.
-      //
-      // pn_encoder_writef8(encoder, 0);
+      // What is this for?
+      pn_encoder_writef8(encoder, 0);
 
       // For zero-length arrays
       if (node->children == 1) {
