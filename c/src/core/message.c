@@ -330,11 +330,11 @@ static pn_message_t *pni_message_new(size_t size)
   msg->reply_to_group_id = pn_string(NULL);
 
   msg->inferred = false;
-  msg->data = pni_data(32, false);
-  msg->instructions = pn_data(16);
-  msg->annotations = pn_data(16);
-  msg->properties = pn_data(16);
-  msg->body = pn_data(16);
+  msg->data = pni_data(16, false);
+  msg->instructions = pn_data(0);
+  msg->annotations = pn_data(0);
+  msg->properties = pn_data(0);
+  msg->body = pn_data(0);
 
   msg->error = pn_error();
   return msg;
