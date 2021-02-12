@@ -257,32 +257,6 @@ typedef union {
   double d;
 } conv_t;
 
-static inline void pni_update_size_and_count(pn_encoder_t *encoder, pni_node_t *node) {
-  char *pos = encoder->position;
-  encoder->position = node->start;
-
-  if (node->small) {
-    // Backfill the size
-    size_t size = pos - node->start - 1;
-    pn_encoder_writef8(encoder, size);
-    // Adjust the count
-    if (encoder->null_count) {
-      pn_encoder_writef8(encoder, node->children - encoder->null_count);
-    }
-  } else {
-    // Backfill the size
-    size_t size = pos - node->start - 4;
-    pn_encoder_writef32(encoder, size);
-    // Adjust the count
-    if (encoder->null_count) {
-      pn_encoder_writef32(encoder, node->children - encoder->null_count);
-    }
-  }
-
-  encoder->position = pos;
-  encoder->null_count = 0;
-}
-
 __attribute__((always_inline))
 static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
@@ -311,9 +285,10 @@ static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node
       if (parent->described && node->prev == 0) {
         // Write the descriptor
       } else if (parent->described && node->prev == 2) {
+        // The first element.  Write the format code.
+
         // The *array* format code.  This overrides the element node's format.
         code = pn_type2code(encoder, parent->type);
-        // Write the code
       } else {
         // The *array* format code.  This overrides the element node's format.
         code = pn_type2code(encoder, parent->type);
@@ -418,7 +393,29 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_type_t type = node->atom.type;
 
   if ((type == PN_LIST && node->children) || type == PN_MAP || type == PN_ARRAY) {
-    pni_update_size_and_count(encoder, node);
+    char *pos = encoder->position;
+    encoder->position = node->start;
+
+    if (node->small) {
+      // Backfill the size
+      size_t size = pos - node->start - 1;
+      pn_encoder_writef8(encoder, size);
+      // Adjust the count
+      if (encoder->null_count) {
+        pn_encoder_writef8(encoder, node->children - encoder->null_count);
+      }
+    } else {
+      // Backfill the size
+      size_t size = pos - node->start - 4;
+      pn_encoder_writef32(encoder, size);
+      // Adjust the count
+      if (encoder->null_count) {
+        pn_encoder_writef32(encoder, node->children - encoder->null_count);
+      }
+    }
+
+    encoder->position = pos;
+    encoder->null_count = 0;
   }
 
   return 0;
