@@ -140,7 +140,9 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
       return PNE_VBIN32;
     }
   case PN_LIST:
-    if (node->children < 256) {
+    if (node->children == 0) {
+      return PNE_LIST0;
+    } else if (node->children < 256) {
       return PNE_LIST8;
     } else {
       return PNE_LIST32;
@@ -336,7 +338,8 @@ skip_format_code:
   case PNE_TRUE:
   case PNE_FALSE:
   case PNE_UINT0:
-  case PNE_ULONG0: return 0;
+  case PNE_ULONG0:
+  case PNE_LIST0: return 0;
   case PNE_BOOLEAN: pn_encoder_writef8(encoder, atom->u.as_bool); return 0;
   case PNE_UBYTE: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
   case PNE_BYTE: pn_encoder_writef8(encoder, atom->u.as_byte); return 0;
@@ -412,24 +415,9 @@ __attribute__((always_inline))
 static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
+  pn_type_t type = node->atom.type;
 
-  // if (node->atom.type == PN_LIST) {
-  //   // A special case for zero-length lists that are not an element in an array
-  //   if (node->children - encoder->null_count == 0) {
-  //     pni_node_t *parent = pn_data_node(data, node->parent);
-
-  //     if (!parent || (parent && parent->atom.type != PN_ARRAY)) {
-  //       encoder->position = node->start - 1; // Position of list opcode
-  //       pn_encoder_writef8(encoder, PNE_LIST0);
-  //       encoder->null_count = 0;
-  //       return 0;
-  //     }
-  //   }
-
-  //   pni_update_size_and_count(encoder, node);
-  // } else
-
-  if (node->atom.type == PN_LIST || node->atom.type == PN_MAP || node->atom.type == PN_ARRAY) {
+  if ((type == PN_LIST && node->children) || type == PN_MAP || type == PN_ARRAY) {
     pni_update_size_and_count(encoder, node);
   }
 
