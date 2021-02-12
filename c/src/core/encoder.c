@@ -282,19 +282,25 @@ static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node
         encoder->null_count = 0;
       }
     } else if (parent_type == PN_ARRAY) {
-      if (parent->described && node->prev == 0) {
-        // Write the descriptor
-      } else if (parent->described && node->prev == 2) {
-        // The first element.  Write the format code.
+      if (parent->described) {
+        if (node->prev == 0) {
+          // Write the descriptor using the normal procedure
+        } else {
+          // The *array* format code.  This overrides the element node's format.
+          code = pn_type2code(encoder, parent->type);
 
-        // The *array* format code.  This overrides the element node's format.
-        code = pn_type2code(encoder, parent->type);
+          if (node->prev == 2) {
+            // The first element.  Write the format code.
+          } else {
+            goto skip_format_code;
+          }
+        }
       } else {
         // The *array* format code.  This overrides the element node's format.
         code = pn_type2code(encoder, parent->type);
 
         if (node->prev == 0) {
-          // Write the code
+          // The first element.  Write the format code.
         } else {
           goto skip_format_code;
         }
