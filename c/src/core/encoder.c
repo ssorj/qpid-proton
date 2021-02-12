@@ -348,6 +348,7 @@ skip_format_code:
   case PNE_STR32_UTF8: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
   case PNE_SYM8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
   case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
+  // PNE_ARRAY8
   case PNE_ARRAY32:
     node->start = encoder->position;
 
@@ -398,6 +399,16 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pn_type_t type = node->atom.type;
 
+  // XXX
+  //
+  // In my testing, I encounter the following case very infrequently
+  // now that I generate the LIST0 encoding at the outset and I
+  // produce transport frames more carefully.
+  //
+  // if (type == PN_LIST && node->children && node->children - encoder->null_count == 0) {
+  //   fprintf(stderr, "I coulda!\n");
+  // }
+
   if ((type == PN_LIST && node->children) || type == PN_MAP || type == PN_ARRAY) {
     char *pos = encoder->position;
     encoder->position = node->start;
@@ -406,6 +417,7 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
       // Backfill the size
       size_t size = pos - node->start - 1;
       pn_encoder_writef8(encoder, size);
+
       // Adjust the count
       if (encoder->null_count) {
         pn_encoder_writef8(encoder, node->children - encoder->null_count);
@@ -414,6 +426,7 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
       // Backfill the size
       size_t size = pos - node->start - 4;
       pn_encoder_writef32(encoder, size);
+
       // Adjust the count
       if (encoder->null_count) {
         pn_encoder_writef32(encoder, node->children - encoder->null_count);
