@@ -172,11 +172,12 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 }
 
 static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
-  char * end = encoder->output + encoder->size;
-  if (end > encoder->position)
+  char *end = encoder->output + encoder->size;
+  if (end > encoder->position) {
     return end - encoder->position;
-  else
+  } else {
     return 0;
+  }
 }
 
 static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
@@ -231,16 +232,18 @@ static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
 static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef8(encoder, value->size);
-  if (pn_encoder_remaining(encoder) >= value->size)
+  if (pn_encoder_remaining(encoder) >= value->size) {
     memmove(encoder->position, value->start, value->size);
+  }
   encoder->position += value->size;
 }
 
 static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef32(encoder, value->size);
-  if (pn_encoder_remaining(encoder) >= value->size)
+  if (pn_encoder_remaining(encoder) >= value->size) {
     memmove(encoder->position, value->start, value->size);
+  }
   encoder->position += value->size;
 }
 
@@ -410,21 +413,23 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
 
-  if (node->atom.type == PN_LIST) {
-    // A special case for zero-length lists that are not an element in an array
-    if (node->children - encoder->null_count == 0) {
-      pni_node_t *parent = pn_data_node(data, node->parent);
+  // if (node->atom.type == PN_LIST) {
+  //   // A special case for zero-length lists that are not an element in an array
+  //   if (node->children - encoder->null_count == 0) {
+  //     pni_node_t *parent = pn_data_node(data, node->parent);
 
-      if (!parent || (parent && parent->atom.type != PN_ARRAY)) {
-        encoder->position = node->start - 1; // Position of list opcode
-        pn_encoder_writef8(encoder, PNE_LIST0);
-        encoder->null_count = 0;
-        return 0;
-      }
-    }
+  //     if (!parent || (parent && parent->atom.type != PN_ARRAY)) {
+  //       encoder->position = node->start - 1; // Position of list opcode
+  //       pn_encoder_writef8(encoder, PNE_LIST0);
+  //       encoder->null_count = 0;
+  //       return 0;
+  //     }
+  //   }
 
-    pni_update_size_and_count(encoder, node);
-  } else if (node->atom.type == PN_MAP || node->atom.type == PN_ARRAY) {
+  //   pni_update_size_and_count(encoder, node);
+  // } else
+
+  if (node->atom.type == PN_LIST || node->atom.type == PN_MAP || node->atom.type == PN_ARRAY) {
     pni_update_size_and_count(encoder, node);
   }
 
