@@ -303,26 +303,29 @@ static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node
         encoder->null_count = 0;
       }
     } else if (parent_type == PN_ARRAY) {
-      // If the current node is not an array descriptor, use the item
-      // type stored on the parent
-      // XXX Can this move to the switch?
-      if (!(parent->described && node->prev == 0)) {
+      if (parent->described && node->prev == 0) {
+        // Write the descriptor
+      } else if (parent->described && node->prev == 2) {
+        // The *array* format code.  This overrides the element node's format.
         code = pn_type2code(encoder, parent->type);
-      }
+        // Write the code
+      } else {
+        // The *array* format code.  This overrides the element node's format.
+        code = pn_type2code(encoder, parent->type);
 
-      // In an array we skip writing the type after the first element
-      if (parent->described && node->prev != 0 && pn_data_node(data, node->prev)->prev != 0) {
-        goto write_value;
-      } else if (node->prev != 0) {
-        goto write_value;
+        if (node->prev == 0) {
+          // Write the code
+        } else {
+          goto skip_format_code;
+        }
       }
     }
   }
 
-  // Write the type code
+  // Write the format code
   pn_encoder_writef8(encoder, code);
 
-write_value:
+skip_format_code:
 
   switch (code) {
   case PNE_DESCRIPTOR:
@@ -366,10 +369,6 @@ write_value:
 
     if (node->described) {
       pn_encoder_writef32(encoder, node->children - 1);
-
-      // XXX
-      //
-      // What is this for?
       pn_encoder_writef8(encoder, 0);
 
       // For zero-length arrays
@@ -416,7 +415,7 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     if (node->children - encoder->null_count == 0) {
       pni_node_t *parent = pn_data_node(data, node->parent);
 
-      if (parent && parent->atom.type != PN_ARRAY) {
+      if (!parent || (parent && parent->atom.type != PN_ARRAY)) {
         encoder->position = node->start - 1; // Position of list opcode
         pn_encoder_writef8(encoder, PNE_LIST0);
         encoder->null_count = 0;
