@@ -17,6 +17,8 @@
 # under the License.
 #
 
+import sys as _sys
+
 NULL   = 0x40 # @
 TRUE   = 0x41 # A
 FALSE  = 0x42
@@ -24,22 +26,39 @@ UINT0  = 0x43 # C
 ULONG0 = 0x44
 LIST0  = 0x45 # E
 UBYTE  = 0x50
-UINT8  = 0x52
+UINT8  = 0x52 # R
 ULONG8 = 0x53 # S
 USHORT = 0x60
 VBIN8  = 0xa0
 LIST8  = 0xc0
 LIST32 = 0xd0
 
+if _sys.version_info[0] == 2:
+    # Python 2
+
+    _text_type = unicode
+    _binary_type = str
+
+    def bchr(s):
+        return chr(s)
+else:
+    # Python 3
+
+    _text_type = str
+    _binary_type = bytes
+
+    def bchr(s):
+        return bytes([s])
+
 def amqp_bytes(*items):
     out = list()
 
     for item in items:
         if type(item) is int:
-            out.append(bytes([item]))
-        elif type(item) is str:
-            out.append(item.encode("raw_unicode_escape"))
-        elif type(item) is bytes:
+            out.append(bchr(item))
+        elif type(item) is _text_type:
+            out.append(item.encode("latin-1")) # raw_unicode_escape"))
+        elif type(item) is _binary_type:
             out.append(item)
         else:
             raise Exception("Unhandled item type")
