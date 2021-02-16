@@ -398,6 +398,7 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pn_type_t type = node->atom.type;
+  pni_node_t *parent = pn_data_node(data, node->parent);
 
   // XXX
   //
@@ -409,17 +410,9 @@ static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   //   fprintf(stderr, "I coulda!\n");
   // }
 
-  if (type == PN_LIST && node->children == 0) {
-    pni_node_t *parent = pn_data_node(data, node->parent);
-
-    if (parent && parent->atom.type != PN_ARRAY) {
-      // This element was encoded as list0, so it has no count or size
-      // to update.
-      return 0;
-    }
-  }
-
-  if (type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
+  if ((type == PN_LIST && (node->children || (parent && parent->atom.type == PN_ARRAY)))
+      || type == PN_MAP
+      || type == PN_ARRAY) {
     char *pos = encoder->position;
     encoder->position = node->start;
 
