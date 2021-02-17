@@ -494,13 +494,11 @@ int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
   return pn_data_put_atom(msg->id, id);
 }
 
-__attribute__((always_inline))
 static inline pn_bytes_t pn_string_get_bytes(pn_string_t *string)
 {
   return pn_bytes(pn_string_size(string), (char *) pn_string_get(string));
 }
 
-__attribute__((always_inline))
 static inline int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 {
   return pn_string_setn(string, bytes.start, bytes.size);
@@ -911,7 +909,6 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   return 0;
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_message_id_or_null(pn_data_t* data, pn_data_t* value)
 {
   if (pn_data_size(value)) {
@@ -921,7 +918,6 @@ static inline void pni_data_put_message_id_or_null(pn_data_t* data, pn_data_t* v
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
 {
   if (value) {
@@ -931,7 +927,6 @@ static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
@@ -941,7 +936,6 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
@@ -953,7 +947,6 @@ static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* val
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
@@ -965,7 +958,6 @@ static inline void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* val
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_symbol_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
@@ -977,7 +969,6 @@ static inline void pni_data_put_symbol_or_null(pn_data_t* data, pn_string_t* val
   }
 }
 
-__attribute__((always_inline))
 static inline void pni_data_put_timestamp_or_null(pn_data_t* data, pn_timestamp_t value)
 {
   if (value) {
