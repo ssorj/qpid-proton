@@ -517,7 +517,7 @@ static inline bool pni_allowed_descriptor_code(uint8_t code)
     code != PNE_MAP8 && code != PNE_MAP32;
 }
 
-static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
+static inline int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
 {
   if (!pn_decoder_remaining(decoder)) {
     return PN_UNDERFLOW;
@@ -525,9 +525,13 @@ static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
 
   uint8_t code = *decoder->position++;;
 
-  if (!pni_allowed_descriptor_code(code)) {
-    return PN_ARG_ERR;
-  }
+  // XXX
+  //
+  // This is in a hot path
+  //
+  // if (!pni_allowed_descriptor_code(code)) {
+  //   return PN_ARG_ERR;
+  // }
 
   int err = pni_decoder_decode_value(decoder, data, code);
   if (err) return err;
