@@ -267,18 +267,12 @@ void pni_fini_memory(void) {}
 
 void pni_mem_setup_logging(void) {}
 
-__attribute__((always_inline))
 inline void *pni_mem_allocate(const pn_class_t *clazz, size_t size) { return malloc(size); }
-__attribute__((always_inline))
 inline void *pni_mem_zallocate(const pn_class_t *clazz, size_t size) { return calloc(1, size); }
-__attribute__((always_inline))
 inline void pni_mem_deallocate(const pn_class_t *clazz, void *object) { free(object); }
 
-__attribute__((always_inline))
 inline void *pni_mem_suballocate(const pn_class_t *clazz, void *object, size_t size) { return malloc(size); }
-__attribute__((always_inline))
 inline void *pni_mem_subreallocate(const pn_class_t *clazz, void *object, void *buffer, size_t size) { return realloc(buffer, size); }
-__attribute__((always_inline))
 inline void pni_mem_subdeallocate(const pn_class_t *clazz, void *object, void *buffer) { free(buffer); }
 
 #endif
