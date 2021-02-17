@@ -29,6 +29,14 @@
 
 #include <string.h>
 
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, size_t count);
+static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
+static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data);
+static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data);
+void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
+pn_type_t pni_data_parent_type(pn_data_t *data);
+size_t pn_data_siblings(pn_data_t *data);
+
 static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
 {
   if (!decoder->error) decoder->error = pn_error();
@@ -179,13 +187,7 @@ static inline pn_type_t pn_code2type(uint8_t code)
   }
 }
 
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
-static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data);
-void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
-
-// XXX Recursion prevents this
-// __attribute__((always_inline))
+__attribute__((always_inline))
 static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
@@ -362,7 +364,7 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
     case PNE_LIST8:
     case PNE_MAP8:
       min_expected_size += 1; // All these types have a count
-      if (pn_decoder_remaining(decoder) < min_expected_size+1) return PN_UNDERFLOW;
+      if (pn_decoder_remaining(decoder) < min_expected_size + 1) return PN_UNDERFLOW;
       size = pn_decoder_readf8(decoder);
       // size must be at least big enough for count or count+constructor
       if (size < min_expected_size) return PN_ARG_ERR;
@@ -374,9 +376,9 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
     case PNE_LIST32:
     case PNE_MAP32:
       min_expected_size += 4; // All these types have a count
-      if (pn_decoder_remaining(decoder) < min_expected_size+4) return PN_UNDERFLOW;
+      if (pn_decoder_remaining(decoder) < min_expected_size + 4) return PN_UNDERFLOW;
       size = pn_decoder_readf32(decoder);
-      // size must be at least big enough for count or count+constructor
+      // size must be at least big enough for count or count + constructor
       if (size < min_expected_size) return PN_ARG_ERR;
       if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
       count = pn_decoder_readf32(decoder);
@@ -389,28 +391,7 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
     {
     case PNE_ARRAY8:
     case PNE_ARRAY32:
-      {
-        uint8_t next = *decoder->position;
-        bool described = (next == PNE_DESCRIPTOR);
-        err = pn_data_put_array(data, described, (pn_type_t) 0);
-        if (err) return err;
-
-        pn_data_enter(data);
-        uint8_t acode;
-        int e = pni_decoder_decode_type(decoder, data, &acode);
-        if (e) return e;
-        pn_type_t type = pn_code2type(acode);
-        if ((int)type < 0) return (int)type;
-        for (size_t i = 0; i < count; i++)
-        {
-          e = pni_decoder_decode_value(decoder, data, acode);
-          if (e) return e;
-        }
-        pn_data_exit(data);
-
-        pni_data_set_array_type(data, type);
-      }
-      return 0;
+      return pni_decoder_decode_array(decoder, data, count);
     case PNE_LIST8:
     case PNE_LIST32:
       err = pn_data_put_list(data);
@@ -441,10 +422,7 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
   return err;
 }
 
-pn_type_t pni_data_parent_type(pn_data_t *data);
-
-// XXX Fails because of recursion
-// __attribute__((always_inline))
+__attribute__((always_inline))
 static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   int err;
@@ -455,29 +433,62 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
 
   uint8_t next = *decoder->position++;
 
-  if (next != PNE_DESCRIPTOR) {
-    *code = next;
-    return 0;
-  }
+  if (next == PNE_DESCRIPTOR) {
+    if (pni_data_parent_type(data) != PN_ARRAY) {
+      err = pn_data_put_described(data);
+      if (err) return err;
 
-  if (pni_data_parent_type(data) != PN_ARRAY) {
-    err = pn_data_put_described(data);
+      // pni_decoder_single has the corresponding exit
+      pn_data_enter(data);
+    }
+
+    err = pni_decoder_single_described(decoder, data);
     if (err) return err;
 
-    // pni_decoder_single has the corresponding exit
-    pn_data_enter(data);
+    if (!pn_decoder_remaining(decoder)) {
+        return PN_UNDERFLOW;
+    }
+
+    next = *decoder->position++;
+
+    if (next == PNE_DESCRIPTOR) {
+      return PN_ARG_ERR;
+    }
   }
 
-  err = pni_decoder_single_described(decoder, data);
-  if (err) return err;
-
-  err = pni_decoder_decode_type(decoder, data, code);
-  if (err) return err;
+  *code = next;
 
   return 0;
 }
 
-size_t pn_data_siblings(pn_data_t *data);
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, size_t count)
+{
+  int err;
+  uint8_t next = *decoder->position;
+  bool described = (next == PNE_DESCRIPTOR);
+  uint8_t code;
+
+  err = pn_data_put_array(data, described, (pn_type_t) 0);
+  if (err) return err;
+
+  pn_data_enter(data);
+
+  err = pni_decoder_decode_type(decoder, data, &code);
+  if (err) return err;
+
+  pn_type_t type = pn_code2type(code);
+  if ((int) type < 0) return (int) type;
+
+  for (size_t i = 0; i < count; i++) {
+    err = pni_decoder_decode_value(decoder, data, code);
+    if (err) return err;
+  }
+
+  pn_data_exit(data);
+  pni_data_set_array_type(data, type);
+
+  return 0;
+}
 
 // We disallow using any compound type as a described descriptor to avoid recursion
 // in decoding. Although these seem syntactically valid they don't seem to be of any
@@ -492,8 +503,7 @@ static inline bool pni_allowed_descriptor_code(uint8_t code)
     code != PNE_MAP8 && code != PNE_MAP32;
 }
 
-__attribute__((always_inline))
-static inline int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
+static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
 {
   if (!pn_decoder_remaining(decoder)) {
     return PN_UNDERFLOW;
@@ -511,20 +521,24 @@ static inline int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t 
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
     pn_data_exit(data);
   }
+
   return 0;
 }
 
-__attribute__((always_inline))
-static inline int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data)
+static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data)
 {
   uint8_t code;
+
   int err = pni_decoder_decode_type(decoder, data, &code);
   if (err) return err;
+
   err = pni_decoder_decode_value(decoder, data, code);
   if (err) return err;
+
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
     pn_data_exit(data);
   }
+
   return 0;
 }
 
@@ -536,8 +550,10 @@ ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, p
 
   int err = pni_decoder_single(decoder, dst);
 
-  if (err == PN_UNDERFLOW)
-      return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");
+  if (err == PN_UNDERFLOW) {
+    return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");
+  }
+
   if (err) return err;
 
   return decoder->position - decoder->input;
