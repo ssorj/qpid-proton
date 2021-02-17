@@ -34,8 +34,9 @@ size_t pn_data_siblings(pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_decode_described_item(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
+static int pni_decoder_decode_item_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
+static int pni_decoder_decode_item_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
@@ -191,12 +192,10 @@ static inline pn_type_t pn_code2type(uint8_t code)
 }
 
 __attribute__((always_inline))
-static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static inline int pni_decoder_decode_item_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
   conv_t conv;
-  pn_decimal128_t dec128;
-  pn_uuid_t uuid;
 
   switch (code) {
   case PNE_NULL:
@@ -294,16 +293,25 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
     err = pn_data_put_long(data, (int8_t) pn_decoder_readf8(decoder));
     break;
-  case PNE_DECIMAL128:
+  case PNE_DECIMAL128: {
+    pn_decimal128_t dec128;
+
     if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
     pn_decoder_readf128(decoder, &dec128);
+
     err = pn_data_put_decimal128(data, dec128);
     break;
-  case PNE_UUID:
+  }
+  case PNE_UUID: {
+    pn_uuid_t uuid;
+
     if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
     pn_decoder_readf128(decoder, &uuid);
+
     err = pn_data_put_uuid(data, uuid);
+
     break;
+  }
   case PNE_VBIN8:
   case PNE_STR8_UTF8:
   case PNE_SYM8:
@@ -330,7 +338,7 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
 }
 
 __attribute__((always_inline))
-static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+static inline int pni_decoder_decode_item_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   int err;
 
@@ -349,7 +357,7 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
       pn_data_enter(data);
     }
 
-    err = pni_decoder_decode_described_item(decoder, data);
+    err = pni_decoder_decode_described(decoder, data);
     if (err) return err;
 
     if (!pn_decoder_remaining(decoder)) {
@@ -445,14 +453,14 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
 
   pn_data_enter(data);
 
-  err = pni_decoder_decode_type(decoder, data, &array_code);
+  err = pni_decoder_decode_item_type(decoder, data, &array_code);
   if (err) return err;
 
   pn_type_t type = pn_code2type(array_code);
   if ((int) type < 0) return (int) type;
 
   for (size_t i = 0; i < count; i++) {
-    err = pni_decoder_decode_value(decoder, data, array_code);
+    err = pni_decoder_decode_item_value(decoder, data, array_code);
     if (err) return err;
   }
 
@@ -522,7 +530,7 @@ static inline bool pni_allowed_descriptor_code(uint8_t code)
     code != PNE_MAP8 && code != PNE_MAP32;
 }
 
-static int pni_decoder_decode_described_item(pn_decoder_t *decoder, pn_data_t *data)
+static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
 {
   if (!pn_decoder_remaining(decoder)) {
     return PN_UNDERFLOW;
@@ -534,7 +542,7 @@ static int pni_decoder_decode_described_item(pn_decoder_t *decoder, pn_data_t *d
     return PN_ARG_ERR;
   }
 
-  int err = pni_decoder_decode_value(decoder, data, code);
+  int err = pni_decoder_decode_item_value(decoder, data, code);
   if (err) return err;
 
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
@@ -548,10 +556,10 @@ static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data)
 {
   uint8_t code;
 
-  int err = pni_decoder_decode_type(decoder, data, &code);
+  int err = pni_decoder_decode_item_type(decoder, data, &code);
   if (err) return err;
 
-  err = pni_decoder_decode_value(decoder, data, code);
+  err = pni_decoder_decode_item_value(decoder, data, code);
   if (err) return err;
 
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
