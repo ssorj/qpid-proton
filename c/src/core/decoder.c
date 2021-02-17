@@ -63,33 +63,23 @@ void pn_decoder_finalize(pn_decoder_t *decoder)
 
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
 {
-  uint8_t r = decoder->position[0];
-  decoder->position++;
-  return r;
+  return *decoder->position++;
 }
 
 static inline uint16_t pn_decoder_readf16(pn_decoder_t *decoder)
 {
-  uint16_t a = (uint8_t) decoder->position[0];
-  uint16_t b = (uint8_t) decoder->position[1];
-  uint16_t r = a << 8
-    | b;
-  decoder->position += 2;
-  return r;
+  uint16_t a = (uint8_t) *decoder->position++;
+  uint16_t b = (uint8_t) *decoder->position++;
+  return a << 8 | b;
 }
 
 static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
 {
-  uint32_t a = (uint8_t) decoder->position[0];
-  uint32_t b = (uint8_t) decoder->position[1];
-  uint32_t c = (uint8_t) decoder->position[2];
-  uint32_t d = (uint8_t) decoder->position[3];
-  uint32_t r = a << 24
-    | b << 16
-    | c <<  8
-    | d;
-  decoder->position += 4;
-  return r;
+  uint32_t a = (uint8_t) *decoder->position++;
+  uint32_t b = (uint8_t) *decoder->position++;
+  uint32_t c = (uint8_t) *decoder->position++;
+  uint32_t d = (uint8_t) *decoder->position++;
+  return a << 24 | b << 16 | c <<  8 | d;
 }
 
 static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
@@ -195,7 +185,7 @@ static inline pn_type_t pn_code2type(uint8_t code)
 static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-  *code = *decoder->position++;
+  *code = pn_decoder_readf8(decoder);
   return 0;
 }
 
