@@ -373,17 +373,12 @@ static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, u
 {
   size_t size;
 
-  switch (code & 0xF0) {
-  case 0xA0:
+  if ((code & 0xF0) == 0xA0) {
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
     size = pn_decoder_readf8(decoder);
-    break;
-  case 0xB0:
+  } else {
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
     size = pn_decoder_readf32(decoder);
-    break;
-  default:
-    return PN_ARG_ERR;
   }
 
   if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
