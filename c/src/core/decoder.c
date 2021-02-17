@@ -191,7 +191,6 @@ static inline pn_type_t pn_code2type(uint8_t code)
   }
 }
 
-__attribute__((always_inline))
 static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
@@ -337,15 +336,13 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
   return err;
 }
 
-__attribute__((always_inline))
 static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
-  int err;
-
   if (!pn_decoder_remaining(decoder)) {
     return PN_UNDERFLOW;
   }
 
+  int err;
   uint8_t next = *decoder->position++;
 
   if (next == PNE_DESCRIPTOR) {
@@ -511,7 +508,6 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
 // We disallow using any compound type as a described descriptor to avoid recursion
 // in decoding. Although these seem syntactically valid they don't seem to be of any
 // conceivable use!
-__attribute__((always_inline))
 static inline bool pni_allowed_descriptor_code(uint8_t code)
 {
   return
