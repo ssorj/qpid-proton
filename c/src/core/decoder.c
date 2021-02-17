@@ -34,12 +34,12 @@ size_t pn_data_siblings(pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_decode_item_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
-static int pni_decoder_decode_item_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
+static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 
 static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
 {
@@ -192,7 +192,7 @@ static inline pn_type_t pn_code2type(uint8_t code)
 }
 
 __attribute__((always_inline))
-static inline int pni_decoder_decode_item_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
   conv_t conv;
@@ -338,7 +338,7 @@ static inline int pni_decoder_decode_item_value(pn_decoder_t *decoder, pn_data_t
 }
 
 __attribute__((always_inline))
-static inline int pni_decoder_decode_item_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   int err;
 
@@ -417,59 +417,6 @@ static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, u
   return 0;
 }
 
-static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
-{
-  size_t size;
-  size_t count;
-
-  if (code == PNE_ARRAY8) {
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
-    size = pn_decoder_readf8(decoder);
-
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
-    count = pn_decoder_readf8(decoder);
-
-    // Check that the size is big enough for the count and the array
-    // constructor
-    if (size < 1 + 1) return PN_ARG_ERR;
-  } else {
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    size = pn_decoder_readf32(decoder);
-
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    count = pn_decoder_readf32(decoder);
-
-    // Check that the size is big enough for the count and the array
-    // constructor
-    if (size < 1 + 4) return PN_ARG_ERR;
-  }
-
-  int err;
-  bool described = (*decoder->position == PNE_DESCRIPTOR);
-  uint8_t array_code;
-
-  err = pn_data_put_array(data, described, (pn_type_t) 0);
-  if (err) return err;
-
-  pn_data_enter(data);
-
-  err = pni_decoder_decode_item_type(decoder, data, &array_code);
-  if (err) return err;
-
-  pn_type_t type = pn_code2type(array_code);
-  if ((int) type < 0) return (int) type;
-
-  for (size_t i = 0; i < count; i++) {
-    err = pni_decoder_decode_item_value(decoder, data, array_code);
-    if (err) return err;
-  }
-
-  pn_data_exit(data);
-  pni_data_set_array_type(data, type);
-
-  return 0;
-}
-
 static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   size_t size;
@@ -517,6 +464,59 @@ static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, u
   return 0;
 }
 
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  size_t size;
+  size_t count;
+
+  if (code == PNE_ARRAY8) {
+    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    size = pn_decoder_readf8(decoder);
+
+    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    count = pn_decoder_readf8(decoder);
+
+    // Check that the size is big enough for the count and the array
+    // constructor
+    if (size < 1 + 1) return PN_ARG_ERR;
+  } else {
+    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    size = pn_decoder_readf32(decoder);
+
+    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    count = pn_decoder_readf32(decoder);
+
+    // Check that the size is big enough for the count and the array
+    // constructor
+    if (size < 4 + 1) return PN_ARG_ERR;
+  }
+
+  int err;
+  bool described = (*decoder->position == PNE_DESCRIPTOR);
+  uint8_t array_code;
+
+  err = pn_data_put_array(data, described, (pn_type_t) 0);
+  if (err) return err;
+
+  pn_data_enter(data);
+
+  err = pni_decoder_decode_type(decoder, data, &array_code);
+  if (err) return err;
+
+  pn_type_t type = pn_code2type(array_code);
+  if ((int) type < 0) return (int) type;
+
+  for (size_t i = 0; i < count; i++) {
+    err = pni_decoder_decode_value(decoder, data, array_code);
+    if (err) return err;
+  }
+
+  pn_data_exit(data);
+  pni_data_set_array_type(data, type);
+
+  return 0;
+}
+
 // We disallow using any compound type as a described descriptor to avoid recursion
 // in decoding. Although these seem syntactically valid they don't seem to be of any
 // conceivable use!
@@ -542,7 +542,7 @@ static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
     return PN_ARG_ERR;
   }
 
-  int err = pni_decoder_decode_item_value(decoder, data, code);
+  int err = pni_decoder_decode_value(decoder, data, code);
   if (err) return err;
 
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
@@ -556,10 +556,10 @@ static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data)
 {
   uint8_t code;
 
-  int err = pni_decoder_decode_item_type(decoder, data, &code);
+  int err = pni_decoder_decode_type(decoder, data, &code);
   if (err) return err;
 
-  err = pni_decoder_decode_item_value(decoder, data, code);
+  err = pni_decoder_decode_value(decoder, data, code);
   if (err) return err;
 
   if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
