@@ -1393,7 +1393,8 @@ inline pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-size_t pn_data_siblings(pn_data_t *data)
+__attribute__((always_inline))
+inline size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
   if (node) {

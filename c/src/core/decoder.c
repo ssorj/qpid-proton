@@ -336,6 +336,7 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
   return err;
 }
 
+__attribute__((always_inline))
 static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
   if (!pn_decoder_remaining(decoder)) {
