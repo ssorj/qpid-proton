@@ -419,30 +419,25 @@ static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, u
 
 static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
+  int err;
   size_t size;
   size_t count;
 
   if (code == PNE_LIST8 || code == PNE_MAP8) {
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
     size = pn_decoder_readf8(decoder);
-
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
     count = pn_decoder_readf8(decoder);
 
     // Check that the size is big enough for the count
     if (size < 1) return PN_ARG_ERR;
   } else {
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
     size = pn_decoder_readf32(decoder);
-
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
     count = pn_decoder_readf32(decoder);
 
     // Check that the size is big enough for the count
     if (size < 4) return PN_ARG_ERR;
   }
-
-  int err;
 
   if (code == PNE_LIST8 || code == PNE_LIST32) {
     err = pn_data_put_list(data);
@@ -470,20 +465,16 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
   size_t count;
 
   if (code == PNE_ARRAY8) {
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
     size = pn_decoder_readf8(decoder);
-
-    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
     count = pn_decoder_readf8(decoder);
 
     // Check that the size is big enough for the count and the array
     // constructor
     if (size < 1 + 1) return PN_ARG_ERR;
   } else {
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
     size = pn_decoder_readf32(decoder);
-
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
     count = pn_decoder_readf32(decoder);
 
     // Check that the size is big enough for the count and the array
@@ -554,9 +545,10 @@ static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
 
 static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data)
 {
+  int err;
   uint8_t code;
 
-  int err = pni_decoder_decode_type(decoder, data, &code);
+  err = pni_decoder_decode_type(decoder, data, &code);
   if (err) return err;
 
   err = pni_decoder_decode_value(decoder, data, code);
