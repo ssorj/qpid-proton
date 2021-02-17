@@ -29,7 +29,7 @@
 
 #include <string.h>
 
-static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, size_t count);
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, bool small);
 static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
 static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data);
@@ -351,7 +351,9 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
     err = pn_data_put_list(data);
     break;
   case PNE_ARRAY8:
+    return pni_decoder_decode_array(decoder, data, true);
   case PNE_ARRAY32:
+    return pni_decoder_decode_array(decoder, data, false);
   case PNE_LIST8:
   case PNE_LIST32:
   case PNE_MAP8:
@@ -461,26 +463,49 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
   return 0;
 }
 
-static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, size_t count)
+static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, bool small)
 {
+  size_t size;
+  size_t count;
+
+  if (small) {
+    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    size = pn_decoder_readf8(decoder);
+
+    // The size must be at least big enough for count + constructor
+    if (size < 2) return PN_ARG_ERR;
+
+    if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+    count = pn_decoder_readf8(decoder);
+  } else {
+    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    size = pn_decoder_readf32(decoder);
+
+    // The size must be at least big enough for count + constructor
+    if (size < 5) return PN_ARG_ERR;
+
+    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+    count = pn_decoder_readf32(decoder);
+  }
+
   int err;
   uint8_t next = *decoder->position;
   bool described = (next == PNE_DESCRIPTOR);
-  uint8_t code;
+  uint8_t array_code;
 
   err = pn_data_put_array(data, described, (pn_type_t) 0);
   if (err) return err;
 
   pn_data_enter(data);
 
-  err = pni_decoder_decode_type(decoder, data, &code);
+  err = pni_decoder_decode_type(decoder, data, &array_code);
   if (err) return err;
 
-  pn_type_t type = pn_code2type(code);
+  pn_type_t type = pn_code2type(array_code);
   if ((int) type < 0) return (int) type;
 
   for (size_t i = 0; i < count; i++) {
-    err = pni_decoder_decode_value(decoder, data, code);
+    err = pni_decoder_decode_value(decoder, data, array_code);
     if (err) return err;
   }
 
