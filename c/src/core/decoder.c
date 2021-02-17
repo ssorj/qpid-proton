@@ -350,16 +350,18 @@ static inline int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_da
   uint8_t next;
 
   // The descriptor type code
-  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-  next = *decoder->position++;
+  err = pni_decoder_decode_type(decoder, data, &next);
+  if (err) return err;
+
+  // XXX Check nesting here?
 
   // The descriptor value
   err = pni_decoder_decode_value(decoder, data, next);
   if (err) return err;
 
-  // The descriptor's primitive type code
-  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-  next = *decoder->position++;
+  // The descriptor primitive type code
+  err = pni_decoder_decode_type(decoder, data, &next);
+  if (err) return err;
 
   // No nested descriptors
   if (next == PNE_DESCRIPTOR) return PN_ARG_ERR;
@@ -505,9 +507,8 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
   pn_data_enter(data);
 
   // Get the array type code
-
-  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-  array_code = *decoder->position++;
+  err = pni_decoder_decode_type(decoder, data, &array_code);
+  if (err) return err;
 
   if (array_code == PNE_DESCRIPTOR) {
     err = pni_decoder_decode_described_type(decoder, data, &array_code);
