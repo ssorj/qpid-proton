@@ -392,7 +392,6 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   return data;
 }
 
-__attribute__((always_inline))
 inline void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
@@ -408,14 +407,12 @@ pn_error_t *pn_data_error(pn_data_t *data)
   return pni_data_error(data);
 }
 
-__attribute__((always_inline))
 inline size_t pn_data_size(pn_data_t *data)
 {
   assert(data);
   return data->size;
 }
 
-__attribute__((always_inline))
 inline void pn_data_clear(pn_data_t *data)
 {
   assert(data);
@@ -1233,34 +1230,29 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
   }
 }
 
-__attribute__((always_inline))
 inline void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
   data->current = data->base_current;
 }
 
-__attribute__((always_inline))
 static inline pni_node_t *pni_data_current(pn_data_t *data)
 {
   return pn_data_node(data, data->current);
 }
 
-__attribute__((always_inline))
 inline void pn_data_narrow(pn_data_t *data)
 {
   data->base_parent = data->parent;
   data->base_current = data->current;
 }
 
-__attribute__((always_inline))
 inline void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
 }
 
-__attribute__((always_inline))
 inline pn_handle_t pn_data_point(pn_data_t *data)
 {
   if (data->current) {
@@ -1270,7 +1262,6 @@ inline pn_handle_t pn_data_point(pn_data_t *data)
   }
 }
 
-__attribute__((always_inline))
 inline bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 {
   pn_shandle_t spoint = (pn_shandle_t) point;
@@ -1303,7 +1294,6 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
   return NULL;
 }
 
-__attribute__((always_inline))
 inline bool pn_data_next(pn_data_t *data)
 {
   pni_node_t* current = pni_data_current(data);
@@ -1382,7 +1372,6 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-__attribute__((always_inline))
 inline pn_type_t pn_data_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
@@ -1393,7 +1382,6 @@ inline pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-__attribute__((always_inline))
 inline size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
@@ -1404,7 +1392,6 @@ inline size_t pn_data_siblings(pn_data_t *data)
   }
 }
 
-__attribute__((always_inline))
 inline bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
@@ -1416,7 +1403,6 @@ inline bool pn_data_enter(pn_data_t *data)
   }
 }
 
-__attribute__((always_inline))
 inline bool pn_data_exit(pn_data_t *data)
 {
   if (data->parent) {
@@ -1483,7 +1469,6 @@ void pn_data_dump(pn_data_t *data)
 // XXX There's a bug for this (untested) scenario:
 // pn_data_prev(msg->data);
 // pn_data_next(msg->data);
-__attribute__((always_inline))
 static inline pni_node_t *pni_data_add(pn_data_t *data)
 {
   if (data->capacity <= data->size) {
