@@ -34,9 +34,10 @@ size_t pn_data_siblings(pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
+static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t* code);
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data);
+static int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t* code);
+static int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
@@ -191,7 +192,14 @@ static inline pn_type_t pn_code2type(uint8_t code)
   }
 }
 
-static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+{
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  *code = *decoder->position++;
+  return 0;
+}
+
+static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
   conv_t conv;
@@ -336,41 +344,48 @@ static inline int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *dat
   return err;
 }
 
-__attribute__((always_inline))
-static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+static inline int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
 {
-  if (!pn_decoder_remaining(decoder)) {
-    return PN_UNDERFLOW;
-  }
-
   int err;
-  uint8_t next = *decoder->position++;
+  uint8_t next;
 
-  if (next == PNE_DESCRIPTOR) {
-    if (pni_data_parent_type(data) != PN_ARRAY) {
-      err = pn_data_put_described(data);
-      if (err) return err;
+  // The descriptor type code
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  next = *decoder->position++;
 
-      // pni_decoder_decode_item has the corresponding exit
-      pn_data_enter(data);
-    }
+  // The descriptor value
+  err = pni_decoder_decode_value(decoder, data, next);
+  if (err) return err;
 
-    err = pni_decoder_decode_described(decoder, data);
-    if (err) return err;
+  // The descriptor's primitive type code
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  next = *decoder->position++;
 
-    if (!pn_decoder_remaining(decoder)) {
-        return PN_UNDERFLOW;
-    }
-
-    next = *decoder->position++;
-
-    if (next == PNE_DESCRIPTOR) {
-      // Nested descriptor
-      return PN_ARG_ERR;
-    }
-  }
+  // No nested descriptors
+  if (next == PNE_DESCRIPTOR) return PN_ARG_ERR;
 
   *code = next;
+
+  return 0;
+}
+
+static int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_data_t *data)
+{
+  int err;
+  uint8_t code;
+
+  err = pn_data_put_described(data);
+  if (err) return err;
+
+  pn_data_enter(data);
+
+  err = pni_decoder_decode_described_type(decoder, data, &code);
+  if (err) return err;
+
+  err = pni_decoder_decode_value(decoder, data, code);
+  if (err) return err;
+
+  pn_data_exit(data);
 
   return 0;
 }
@@ -489,8 +504,15 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
 
   pn_data_enter(data);
 
-  err = pni_decoder_decode_type(decoder, data, &array_code);
-  if (err) return err;
+  // Get the array type code
+
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  array_code = *decoder->position++;
+
+  if (array_code == PNE_DESCRIPTOR) {
+    err = pni_decoder_decode_described_type(decoder, data, &array_code);
+    if (err) return err;
+  }
 
   pn_type_t type = pn_code2type(array_code);
   if ((int) type < 0) return (int) type;
@@ -506,43 +528,17 @@ static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint
   return 0;
 }
 
-// We disallow using any compound type as a described descriptor to avoid recursion
-// in decoding. Although these seem syntactically valid they don't seem to be of any
-// conceivable use!
-static inline bool pni_allowed_descriptor_code(uint8_t code)
-{
-  return
-    code != PNE_DESCRIPTOR &&
-    code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
-    code != PNE_LIST8 && code != PNE_LIST32 &&
-    code != PNE_MAP8 && code != PNE_MAP32;
-}
-
-static inline int pni_decoder_decode_described(pn_decoder_t *decoder, pn_data_t *data)
-{
-  if (!pn_decoder_remaining(decoder)) {
-    return PN_UNDERFLOW;
-  }
-
-  uint8_t code = *decoder->position++;;
-
-  // XXX
-  //
-  // This is in a hot path
-  //
-  // if (!pni_allowed_descriptor_code(code)) {
-  //   return PN_ARG_ERR;
-  // }
-
-  int err = pni_decoder_decode_value(decoder, data, code);
-  if (err) return err;
-
-  if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
-    pn_data_exit(data);
-  }
-
-  return 0;
-}
+// // We disallow using any compound type as a described descriptor to avoid recursion
+// // in decoding. Although these seem syntactically valid they don't seem to be of any
+// // conceivable use!
+// static inline bool pni_allowed_descriptor_code(uint8_t code)
+// {
+//   return
+//     code != PNE_DESCRIPTOR &&
+//     code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
+//     code != PNE_LIST8 && code != PNE_LIST32 &&
+//     code != PNE_MAP8 && code != PNE_MAP32;
+// }
 
 static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data)
 {
@@ -552,14 +548,11 @@ static int pni_decoder_decode_item(pn_decoder_t *decoder, pn_data_t *data)
   err = pni_decoder_decode_type(decoder, data, &code);
   if (err) return err;
 
-  err = pni_decoder_decode_value(decoder, data, code);
-  if (err) return err;
-
-  if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
-    pn_data_exit(data);
+  if (code == PNE_DESCRIPTOR) {
+    return pni_decoder_decode_described_value(decoder, data);
+  } else {
+    return pni_decoder_decode_value(decoder, data, code);
   }
-
-  return 0;
 }
 
 ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, pn_data_t *dst)
