@@ -2116,15 +2116,6 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
 
   pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
 
-  if (!bytes) return 0;
-
-  // if (data->buf == NULL) {
-  //   // Heuristic to avoid growing small buffers too much
-  //   // size + 1 to allow for zero termination
-  //   size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
-  //   data->buf = pn_buffer(size);
-  // }
-
   if (data->buf == NULL) {
     if (src->buf) {
       data->buf = pn_buffer(pn_buffer_size(src->buf));
@@ -2132,9 +2123,6 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
       data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
     }
   }
-
-  // // size_t oldcap = pn_buffer_capacity(data->buf);
-  // ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
 
   size_t offset = pn_buffer_size(data->buf);
 
@@ -2153,11 +2141,6 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
   pn_rwbytes_t buf = pn_buffer_memory(data->buf);
 
   bytes->start = buf.start + offset;
-
-  // if (pn_buffer_capacity(data->buf) != oldcap) {
-  //   fprintf(stderr, "data rebase!\n");
-  //   pni_data_rebase(data, buf.start);
-  // }
 
   return 0;
 }
