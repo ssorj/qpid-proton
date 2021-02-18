@@ -2100,7 +2100,7 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
-static inline int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
+static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
 {
   assert(src->atom.type == type);
 
@@ -2112,11 +2112,54 @@ static inline int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t
   dst_node->atom.type = type;
   dst_node->atom.u.as_bytes = src_node->atom.u.as_bytes;
 
-  if (data->intern) {
-    return pni_data_intern_node(data, dst_node);
-  } else {
-    return 0;
+  if (!data->intern) return 0;
+
+  pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
+
+  if (!bytes) return 0;
+
+  // if (data->buf == NULL) {
+  //   // Heuristic to avoid growing small buffers too much
+  //   // size + 1 to allow for zero termination
+  //   size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
+  //   data->buf = pn_buffer(size);
+  // }
+
+  if (data->buf == NULL) {
+    if (src->buf) {
+      data->buf = pn_buffer(pn_buffer_size(src->buf));
+    } else {
+      data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+    }
   }
+
+  // // size_t oldcap = pn_buffer_capacity(data->buf);
+  // ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
+
+  size_t offset = pn_buffer_size(data->buf);
+
+  int err = pn_buffer_append(data->buf, bytes->start, bytes->size);
+  if (err) return err;
+
+  err = pn_buffer_append(data->buf, "\0", 1);
+  if (err) return err;
+
+  // if (offset < 0) return offset;
+
+  dst_node->data = true;
+  dst_node->data_offset = offset;
+  dst_node->data_size = bytes->size;
+
+  pn_rwbytes_t buf = pn_buffer_memory(data->buf);
+
+  bytes->start = buf.start + offset;
+
+  // if (pn_buffer_capacity(data->buf) != oldcap) {
+  //   fprintf(stderr, "data rebase!\n");
+  //   pni_data_rebase(data, buf.start);
+  // }
+
+  return 0;
 }
 
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
