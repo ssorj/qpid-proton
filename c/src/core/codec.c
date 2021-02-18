@@ -2115,13 +2115,15 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
   if (!data->intern) return 0;
 
   pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
+  size_t offset;
+  int err;
 
   if (data->buf == NULL) {
     data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+    offset = 0;
+  } else {
+    offset = pn_buffer_size(data->buf);
   }
-
-  size_t offset = pn_buffer_size(data->buf);
-  int err;
 
   err = pn_buffer_append(data->buf, bytes->start, bytes->size);
   if (err) return err;
