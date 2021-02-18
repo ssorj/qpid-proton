@@ -716,9 +716,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     if (err) return err;
     pn_data_enter(msg->data);
 
-    // XXX
-    //
-    // Should this be a required next field? See switch default.
     uint64_t descriptor = 0;
     if (pni_data_next_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
     if (err) return err;
@@ -874,9 +871,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     case FOOTER:
       break;
     default:
-      // XXX
-      //
-      // We get here if descriptor == 0.  Correct?
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
       break;

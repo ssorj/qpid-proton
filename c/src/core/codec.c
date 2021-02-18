@@ -2100,6 +2100,25 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
+static inline int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
+{
+  assert(src->atom.type == type);
+
+  pni_node_t *src_node = pni_data_current(src);
+  pni_node_t *dst_node = pni_data_add(data);
+
+  if (dst_node == NULL) return PN_OUT_OF_MEMORY;
+
+  dst_node->atom.type = type;
+  dst_node->atom.u.as_bytes = src_node->atom.u.as_bytes;
+
+  if (data->intern) {
+    return pni_data_intern_node(data, dst_node);
+  } else {
+    return 0;
+  }
+}
+
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
@@ -2203,15 +2222,15 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       if (level == 0) count++;
       break;
     case PN_BINARY:
-      err = pn_data_put_binary(data, pn_data_get_binary(src));
+      err = pni_data_copy_bytes(data, src, PN_BINARY);
       if (level == 0) count++;
       break;
     case PN_STRING:
-      err = pn_data_put_string(data, pn_data_get_string(src));
+      err = pni_data_copy_bytes(data, src, PN_STRING);
       if (level == 0) count++;
       break;
     case PN_SYMBOL:
-      err = pn_data_put_symbol(data, pn_data_get_symbol(src));
+      err = pni_data_copy_bytes(data, src, PN_SYMBOL);
       if (level == 0) count++;
       break;
     case PN_DESCRIBED:
