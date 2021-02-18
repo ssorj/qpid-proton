@@ -2155,6 +2155,7 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   int level = 0, count = 0;
   bool stop = false;
   pn_handle_t point = pn_data_point(src);
+
   pn_data_rewind(src);
 
   while (true) {
@@ -2169,13 +2170,12 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       if (!pn_data_next(src)) {
         stop = true;
       }
+
       break;
     }
 
     if (stop) break;
-
-    if (level == 0 && count == limit)
-      break;
+    if (level == 0 && count == limit) break;
 
     pn_type_t type = pn_data_type(src);
 
@@ -2212,33 +2212,32 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       break;
     case PN_DESCRIBED:
       err = pn_data_put_described(data);
+      if (err) break;
       if (level == 0) count++;
-      if (err) { pn_data_restore(src, point); return err; }
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
       break;
     case PN_ARRAY:
-      err = pn_data_put_array(data, pn_data_is_array_described(src),
-                              pn_data_get_array_type(src));
+      err = pn_data_put_array(data, pn_data_is_array_described(src), pn_data_get_array_type(src));
+      if (err) break;
       if (level == 0) count++;
-      if (err) { pn_data_restore(src, point); return err; }
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
       break;
     case PN_LIST:
       err = pn_data_put_list(data);
+      if (err) break;
       if (level == 0) count++;
-      if (err) { pn_data_restore(src, point); return err; }
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
       break;
     case PN_MAP:
       err = pn_data_put_map(data);
+      if (err) break;
       if (level == 0) count++;
-      if (err) { pn_data_restore(src, point); return err; }
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
@@ -2247,7 +2246,9 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       break;
     }
 
-    if (err) { pn_data_restore(src, point); return err; }
+    if (err) {
+      pn_data_restore(src, point); return err;
+    }
   }
 
   pn_data_restore(src, point);
