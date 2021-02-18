@@ -1294,6 +1294,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
   return NULL;
 }
 
+__attribute__((always_inline))
 inline bool pn_data_next(pn_data_t *data)
 {
   pni_node_t* current = pni_data_current(data);

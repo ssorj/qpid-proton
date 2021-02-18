@@ -363,7 +363,7 @@ void pn_message_free(pn_message_t *msg)
   pn_free(msg);
 }
 
-void pn_message_clear(pn_message_t *msg)
+inline void pn_message_clear(pn_message_t *msg)
 {
   msg->durable = false;
   msg->priority = HEADER_PRIORITY_DEFAULT;
