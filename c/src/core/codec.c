@@ -2102,6 +2102,15 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
 
 // int pni_data_copy_atom(pn_data_t *data, pn_data_t *src)
 
+static int pni_data_copy_atom(pn_data_t *data, pn_data_t *src) {
+  pni_node_t *src_node = pni_data_current(src);
+  pni_node_t *dst_node = pni_data_add(data);
+
+  dst_node->atom = src_node->atom;
+
+  return 0;
+}
+
 static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
 {
   pni_node_t *src_node = pni_data_current(src);
@@ -2169,77 +2178,30 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       break;
 
     pn_type_t type = pn_data_type(src);
+
     switch (type) {
     case PN_NULL:
       err = pn_data_put_null(data);
       if (level == 0) count++;
       break;
     case PN_BOOL:
-      err = pn_data_put_bool(data, pn_data_get_bool(src));
-      if (level == 0) count++;
-      break;
     case PN_UBYTE:
-      err = pn_data_put_ubyte(data, pn_data_get_ubyte(src));
-      if (level == 0) count++;
-      break;
     case PN_BYTE:
-      err = pn_data_put_byte(data, pn_data_get_byte(src));
-      if (level == 0) count++;
-      break;
     case PN_USHORT:
-      err = pn_data_put_ushort(data, pn_data_get_ushort(src));
-      if (level == 0) count++;
-      break;
     case PN_SHORT:
-      err = pn_data_put_short(data, pn_data_get_short(src));
-      if (level == 0) count++;
-      break;
     case PN_UINT:
-      err = pn_data_put_uint(data, pn_data_get_uint(src));
-      if (level == 0) count++;
-      break;
     case PN_INT:
-      err = pn_data_put_int(data, pn_data_get_int(src));
-      if (level == 0) count++;
-      break;
     case PN_CHAR:
-      err = pn_data_put_char(data, pn_data_get_char(src));
-      if (level == 0) count++;
-      break;
     case PN_ULONG:
-      err = pn_data_put_ulong(data, pn_data_get_ulong(src));
-      if (level == 0) count++;
-      break;
     case PN_LONG:
-      err = pn_data_put_long(data, pn_data_get_long(src));
-      if (level == 0) count++;
-      break;
     case PN_TIMESTAMP:
-      err = pn_data_put_timestamp(data, pn_data_get_timestamp(src));
-      if (level == 0) count++;
-      break;
     case PN_FLOAT:
-      err = pn_data_put_float(data, pn_data_get_float(src));
-      if (level == 0) count++;
-      break;
     case PN_DOUBLE:
-      err = pn_data_put_double(data, pn_data_get_double(src));
-      if (level == 0) count++;
-      break;
     case PN_DECIMAL32:
-      err = pn_data_put_decimal32(data, pn_data_get_decimal32(src));
-      if (level == 0) count++;
-      break;
     case PN_DECIMAL64:
-      err = pn_data_put_decimal64(data, pn_data_get_decimal64(src));
-      if (level == 0) count++;
-      break;
     case PN_DECIMAL128:
-      err = pn_data_put_decimal128(data, pn_data_get_decimal128(src));
-      if (level == 0) count++;
-      break;
     case PN_UUID:
-      err = pn_data_put_uuid(data, pn_data_get_uuid(src));
+      err = pni_data_copy_atom(data, src);
       if (level == 0) count++;
       break;
     case PN_BINARY:
