@@ -61,7 +61,7 @@ struct pn_data_t {
 };
 
 __attribute__((always_inline))
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t node_id)
+static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {
   if (node_id) {
     return data->nodes + node_id - 1;
