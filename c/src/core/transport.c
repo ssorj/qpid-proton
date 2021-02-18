@@ -2429,6 +2429,8 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
+// int acount = 0;
+
 static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
@@ -2448,9 +2450,15 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   pn_link_state_t *link_state = &link->state;
   bool transfer_posted = false;
 
+  // if (acount++ % 1000000 == 0) {
+  //   fprintf(stderr, "Window: %d\n", ssn_state->remote_incoming_window);
+  //   fprintf(stderr, "Credit: %d\n", link_state->link_credit);
+  // }
+
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
+
       if (!state->init) {
         state = pni_delivery_map_push(&ssn_state->outgoing, delivery);
       }
