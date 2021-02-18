@@ -42,6 +42,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+// XXX
+unsigned transfer_count = 0;
+unsigned disposition_count = 0;
+unsigned flow_count = 0;
+
 static ssize_t transport_consume(pn_transport_t *transport);
 
 // delivery buffers
@@ -678,6 +683,10 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->context);
   pn_buffer_free(transport->output_buffer);
   pni_logger_fini(&transport->logger);
+
+  // fprintf(stderr, "transfers:     %d\n", transfer_count);
+  // fprintf(stderr, "dispositions:  %d\n", disposition_count);
+  // fprintf(stderr, "flows:         %d\n", flow_count);
 }
 
 static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
@@ -2326,6 +2335,8 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
   ssn->state.outgoing_window = pni_session_outgoing_window(ssn);
   bool linkq = (bool) link;
   pn_link_state_t *state = &link->state;
+  // XXX
+  flow_count++;
   return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[?IIII?I?I?In?o]", FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
                        ssn->state.incoming_window,
@@ -2344,6 +2355,12 @@ static int pni_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *e
     pn_link_t *rcv = (pn_link_t *) endpoint;
     pn_session_t *ssn = rcv->session;
     pn_link_state_t *state = &rcv->state;
+
+    // if (flow_count % 1000 == 0) {
+    //   fprintf(stderr, "R: link_credit=%d rcv_credit=%d rcv_queued=%d incoming_window=%d\n",
+    //           state->link_credit, rcv->credit, rcv->queued, ssn->state.incoming_window);
+    // }
+
     if ((int16_t) ssn->state.local_channel >= 0 &&
         (int32_t) state->local_handle >= 0 &&
         ((rcv->drain || state->link_credit != rcv->credit - rcv->queued) || !ssn->state.incoming_window)) {
@@ -2360,12 +2377,15 @@ static int pni_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
   uint64_t code = ssn->state.disp_code;
   bool settled = ssn->state.disp_settled;
   if (ssn->state.disp) {
+    // XXX
+    disposition_count++;
     int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[oI?I?o?DL[]]", DISPOSITION,
                             ssn->state.disp_type,
                             ssn->state.disp_first,
                             ssn->state.disp_last!=ssn->state.disp_first, ssn->state.disp_last,
                             settled, settled,
                             (bool)code, code);
+
     if (err) return err;
     ssn->state.disp_type = 0;
     ssn->state.disp_code = 0;
@@ -2395,6 +2415,8 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   if (!pni_disposition_batchable(&delivery->local)) {
     pn_data_clear(transport->disp_data);
     PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
+    // XXX
+    disposition_count++;
     return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel,
       "DL[oIn?o?DLC]", DISPOSITION,
       role, state->id,
@@ -2429,8 +2451,6 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
-// int acount = 0;
-
 static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
@@ -2449,11 +2469,6 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
   bool transfer_posted = false;
-
-  // if (acount++ % 1000000 == 0) {
-  //   fprintf(stderr, "Window: %d\n", ssn_state->remote_incoming_window);
-  //   fprintf(stderr, "Credit: %d\n", link_state->link_credit);
-  // }
 
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
@@ -2504,6 +2519,14 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
         link->queued--;
         link->session->outgoing_deliveries--;
       }
+
+      // XXX
+      transfer_count++;
+
+      // if (transfer_count % 500000 == 0) {
+      //   fprintf(stderr, "S: link_credit=%d snd_queued=%d outgoing_bytes=%d outgoing_deliveries=%d\n",
+      //           link_state->link_credit, link->queued, link->session->outgoing_bytes, link->session->outgoing_deliveries);
+      // }
 
       pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_FLOW);
     }
