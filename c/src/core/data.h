@@ -42,13 +42,8 @@ typedef struct {
   pni_nid_t down;
   pni_nid_t parent;
   pni_nid_t children;
-  // for arrays
-  bool described;
+  bool described; // For arrays
   bool data;
-  // XXX
-  //
-  // Doesn't look like this is getting initialized.  I *think* that
-  // should happen in pni_data_add.
   bool small;
 } pni_node_t;
 
@@ -66,9 +61,13 @@ struct pn_data_t {
 };
 
 __attribute__((always_inline))
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
+static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {
-  return nd ? (data->nodes + nd - 1) : NULL;
+  if (node_id) {
+    return data->nodes + node_id - 1;
+  } else {
+    return NULL;
+  }
 }
 
 size_t pn_data_siblings(pn_data_t *data);
@@ -110,6 +109,7 @@ __attribute__((always_inline))
 static inline pn_type_t pni_data_parent_type(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
+
   if (node) {
     return node->atom.type;
   } else {
