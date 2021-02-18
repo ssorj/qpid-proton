@@ -2121,8 +2121,9 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src, pn_type_t type)
   }
 
   size_t offset = pn_buffer_size(data->buf);
+  int err;
 
-  int err = pn_buffer_append(data->buf, bytes->start, bytes->size);
+  err = pn_buffer_append(data->buf, bytes->start, bytes->size);
   if (err) return err;
 
   err = pn_buffer_append(data->buf, "\0", 1);
