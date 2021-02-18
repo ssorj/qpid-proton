@@ -1792,7 +1792,7 @@ int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
   }
 }
 
-size_t pn_data_get_list(pn_data_t *data)
+inline size_t pn_data_get_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_LIST) {
@@ -1802,7 +1802,7 @@ size_t pn_data_get_list(pn_data_t *data)
   }
 }
 
-size_t pn_data_get_map(pn_data_t *data)
+inline size_t pn_data_get_map(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_MAP) {
@@ -1812,7 +1812,7 @@ size_t pn_data_get_map(pn_data_t *data)
   }
 }
 
-size_t pn_data_get_array(pn_data_t *data)
+inline size_t pn_data_get_array(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
@@ -1826,7 +1826,7 @@ size_t pn_data_get_array(pn_data_t *data)
   }
 }
 
-bool pn_data_is_array_described(pn_data_t *data)
+inline bool pn_data_is_array_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
@@ -1836,7 +1836,7 @@ bool pn_data_is_array_described(pn_data_t *data)
   }
 }
 
-pn_type_t pn_data_get_array_type(pn_data_t *data)
+inline pn_type_t pn_data_get_array_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
@@ -1846,19 +1846,19 @@ pn_type_t pn_data_get_array_type(pn_data_t *data)
   }
 }
 
-bool pn_data_is_described(pn_data_t *data)
+inline bool pn_data_is_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   return node && node->atom.type == PN_DESCRIBED;
 }
 
-bool pn_data_is_null(pn_data_t *data)
+inline bool pn_data_is_null(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   return node && node->atom.type == PN_NULL;
 }
 
-bool pn_data_get_bool(pn_data_t *data)
+inline bool pn_data_get_bool(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_BOOL) {
@@ -1868,7 +1868,7 @@ bool pn_data_get_bool(pn_data_t *data)
   }
 }
 
-uint8_t pn_data_get_ubyte(pn_data_t *data)
+inline uint8_t pn_data_get_ubyte(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UBYTE) {
@@ -1878,7 +1878,7 @@ uint8_t pn_data_get_ubyte(pn_data_t *data)
   }
 }
 
-int8_t pn_data_get_byte(pn_data_t *data)
+inline int8_t pn_data_get_byte(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_BYTE) {
@@ -1888,7 +1888,7 @@ int8_t pn_data_get_byte(pn_data_t *data)
   }
 }
 
-uint16_t pn_data_get_ushort(pn_data_t *data)
+inline uint16_t pn_data_get_ushort(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_USHORT) {
@@ -1898,7 +1898,7 @@ uint16_t pn_data_get_ushort(pn_data_t *data)
   }
 }
 
-int16_t pn_data_get_short(pn_data_t *data)
+inline int16_t pn_data_get_short(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_SHORT) {
@@ -1908,7 +1908,7 @@ int16_t pn_data_get_short(pn_data_t *data)
   }
 }
 
-uint32_t pn_data_get_uint(pn_data_t *data)
+inline uint32_t pn_data_get_uint(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UINT) {
@@ -1918,7 +1918,7 @@ uint32_t pn_data_get_uint(pn_data_t *data)
   }
 }
 
-int32_t pn_data_get_int(pn_data_t *data)
+inline int32_t pn_data_get_int(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_INT) {
@@ -1928,7 +1928,7 @@ int32_t pn_data_get_int(pn_data_t *data)
   }
 }
 
-pn_char_t pn_data_get_char(pn_data_t *data)
+inline pn_char_t pn_data_get_char(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_CHAR) {
@@ -1938,7 +1938,7 @@ pn_char_t pn_data_get_char(pn_data_t *data)
   }
 }
 
-uint64_t pn_data_get_ulong(pn_data_t *data)
+inline uint64_t pn_data_get_ulong(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ULONG) {
@@ -1948,7 +1948,7 @@ uint64_t pn_data_get_ulong(pn_data_t *data)
   }
 }
 
-int64_t pn_data_get_long(pn_data_t *data)
+inline int64_t pn_data_get_long(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_LONG) {
@@ -1958,7 +1958,7 @@ int64_t pn_data_get_long(pn_data_t *data)
   }
 }
 
-pn_timestamp_t pn_data_get_timestamp(pn_data_t *data)
+inline pn_timestamp_t pn_data_get_timestamp(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_TIMESTAMP) {
@@ -1968,7 +1968,7 @@ pn_timestamp_t pn_data_get_timestamp(pn_data_t *data)
   }
 }
 
-float pn_data_get_float(pn_data_t *data)
+inline float pn_data_get_float(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_FLOAT) {
@@ -1978,7 +1978,7 @@ float pn_data_get_float(pn_data_t *data)
   }
 }
 
-double pn_data_get_double(pn_data_t *data)
+inline double pn_data_get_double(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DOUBLE) {
@@ -1988,7 +1988,7 @@ double pn_data_get_double(pn_data_t *data)
   }
 }
 
-pn_decimal32_t pn_data_get_decimal32(pn_data_t *data)
+inline pn_decimal32_t pn_data_get_decimal32(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL32) {
@@ -1998,7 +1998,7 @@ pn_decimal32_t pn_data_get_decimal32(pn_data_t *data)
   }
 }
 
-pn_decimal64_t pn_data_get_decimal64(pn_data_t *data)
+inline pn_decimal64_t pn_data_get_decimal64(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL64) {
@@ -2008,7 +2008,7 @@ pn_decimal64_t pn_data_get_decimal64(pn_data_t *data)
   }
 }
 
-pn_decimal128_t pn_data_get_decimal128(pn_data_t *data)
+inline pn_decimal128_t pn_data_get_decimal128(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL128) {
@@ -2019,7 +2019,7 @@ pn_decimal128_t pn_data_get_decimal128(pn_data_t *data)
   }
 }
 
-pn_uuid_t pn_data_get_uuid(pn_data_t *data)
+inline pn_uuid_t pn_data_get_uuid(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UUID) {
@@ -2030,7 +2030,7 @@ pn_uuid_t pn_data_get_uuid(pn_data_t *data)
   }
 }
 
-pn_bytes_t pn_data_get_binary(pn_data_t *data)
+inline pn_bytes_t pn_data_get_binary(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_BINARY) {
@@ -2041,7 +2041,7 @@ pn_bytes_t pn_data_get_binary(pn_data_t *data)
   }
 }
 
-pn_bytes_t pn_data_get_string(pn_data_t *data)
+inline inline pn_bytes_t pn_data_get_string(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_STRING) {
@@ -2052,7 +2052,7 @@ pn_bytes_t pn_data_get_string(pn_data_t *data)
   }
 }
 
-pn_bytes_t pn_data_get_symbol(pn_data_t *data)
+inline pn_bytes_t pn_data_get_symbol(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_SYMBOL) {
@@ -2063,7 +2063,7 @@ pn_bytes_t pn_data_get_symbol(pn_data_t *data)
   }
 }
 
-pn_bytes_t pn_data_get_bytes(pn_data_t *data)
+inline pn_bytes_t pn_data_get_bytes(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && (node->atom.type == PN_BINARY ||
@@ -2076,7 +2076,7 @@ pn_bytes_t pn_data_get_bytes(pn_data_t *data)
   }
 }
 
-pn_atom_t pn_data_get_atom(pn_data_t *data)
+inline pn_atom_t pn_data_get_atom(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node) {
@@ -2087,7 +2087,7 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
   }
 }
 
-int pn_data_copy(pn_data_t *data, pn_data_t *src)
+inline int pn_data_copy(pn_data_t *data, pn_data_t *src)
 {
   pn_data_clear(data);
   int err = pn_data_append(data, src);
@@ -2095,7 +2095,7 @@ int pn_data_copy(pn_data_t *data, pn_data_t *src)
   return err;
 }
 
-int pn_data_append(pn_data_t *data, pn_data_t *src)
+inline int pn_data_append(pn_data_t *data, pn_data_t *src)
 {
   return pn_data_appendn(data, src, -1);
 }
