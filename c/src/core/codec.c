@@ -2101,7 +2101,7 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
-static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
+static int pni_data_copy_node_data(pn_data_t *data, pn_data_t *src)
 {
   pni_node_t *dst_node = pni_data_current(data);
   pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
@@ -2132,7 +2132,7 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
   return 0;
 }
 
-static inline int pni_data_copy_node(pn_data_t *data, pn_data_t *src) {
+static inline void pni_data_copy_node_fields(pn_data_t *data, pn_data_t *src) {
   pni_node_t *src_node = pni_data_current(src);
   pni_node_t *dst_node = pni_data_add(data);
 
@@ -2140,15 +2140,6 @@ static inline int pni_data_copy_node(pn_data_t *data, pn_data_t *src) {
   dst_node->described = src_node->described;
   dst_node->type = src_node->type;
   dst_node->small = src_node->small;
-
-  pn_type_t type = pn_data_type(src);
-
-  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
-    int err = pni_data_copy_bytes(data, src);
-    if (err) return err;
-  }
-
-  return 0;
 }
 
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
@@ -2177,12 +2168,16 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       count++;
     }
 
-    err = pni_data_copy_node(data, src);
-    if (err) break;
+    pni_data_copy_node_fields(data, src);
 
     pn_type_t type = pn_data_type(src);
 
-    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
+    if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
+      if (data->intern) {
+        err = pni_data_copy_node_data(data, src);
+        if (err) break;
+      }
+    } else if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
@@ -2195,5 +2190,14 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 }
 
 int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src) {
-  return pni_data_copy_node(data, src);
+  int err = 0;
+  pn_type_t type = pn_data_type(src);
+
+  pni_data_copy_node_fields(data, src);
+
+  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
+    err = pni_data_copy_node_data(data, src);
+  }
+
+  return err;
 }
