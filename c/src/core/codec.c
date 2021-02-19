@@ -2190,10 +2190,6 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 
     switch (type) {
     case PN_NULL:
-      err = pn_data_put_null(data);
-      if (err) break;
-      if (level == 0) count++;
-      break;
     case PN_BOOL:
     case PN_UBYTE:
     case PN_BYTE:
