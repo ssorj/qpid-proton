@@ -2101,45 +2101,46 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
-static int pni_data_copy_node_data(pn_data_t *data, pn_data_t *src)
-{
-  pni_node_t *dst_node = pni_data_current(data);
-  pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
+static inline int pni_data_copy_node(pn_data_t *dst_data, pni_node_t *src) {
 
-  // fprintf(stderr, "%s\n", bytes->start);
+  int err = 0;
+  pn_type_t type = src->atom.type;
+  pni_node_t *dst = pni_data_add(dst_data);
 
-  if (data->buf == NULL) {
-    data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+  dst->atom = src->atom;
+  dst->described = src->described;
+  dst->type = src->type;
+  dst->small = src->small;
+
+  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && dst_data->intern) {
+    pn_bytes_t *bytes = &dst->atom.u.as_bytes;
+
+    // fprintf(stderr, "%s\n", bytes->start);
+
+    if (dst_data->buf == NULL) {
+      dst_data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+    }
+
+    size_t offset = pn_buffer_size(dst_data->buf);
+
+    err = pn_buffer_append(dst_data->buf, bytes->start, bytes->size);
+    if (err) return err;
+
+    err = pn_buffer_append(dst_data->buf, "\0", 1);
+    if (err) return err;
+
+    dst->data = true;
+    dst->data_offset = offset;
+    dst->data_size = bytes->size;
+
+    pn_bytes_t buf = pn_buffer_bytes(dst_data->buf);
+
+    bytes->start = buf.start + offset;
+
+    return 0;
   }
 
-  size_t offset = pn_buffer_size(data->buf);
-  int err;
-
-  err = pn_buffer_append(data->buf, bytes->start, bytes->size);
-  if (err) return err;
-
-  err = pn_buffer_append(data->buf, "\0", 1);
-  if (err) return err;
-
-  dst_node->data = true;
-  dst_node->data_offset = offset;
-  dst_node->data_size = bytes->size;
-
-  pn_bytes_t buf = pn_buffer_bytes(data->buf);
-
-  bytes->start = buf.start + offset;
-
-  return 0;
-}
-
-static inline void pni_data_copy_node_fields(pn_data_t *data, pn_data_t *src) {
-  pni_node_t *src_node = pni_data_current(src);
-  pni_node_t *dst_node = pni_data_add(data);
-
-  dst_node->atom = src_node->atom;
-  dst_node->described = src_node->described;
-  dst_node->type = src_node->type;
-  dst_node->small = src_node->small;
+  return err;
 }
 
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
@@ -2168,16 +2169,12 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       count++;
     }
 
-    pni_data_copy_node_fields(data, src);
+    err = pni_data_copy_node(data, pni_data_current(src));
+    if (err) break;
 
     pn_type_t type = pn_data_type(src);
 
-    if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
-      if (data->intern) {
-        err = pni_data_copy_node_data(data, src);
-        if (err) break;
-      }
-    } else if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
+    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
@@ -2190,14 +2187,5 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 }
 
 int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src) {
-  int err = 0;
-  pn_type_t type = pn_data_type(src);
-
-  pni_data_copy_node_fields(data, src);
-
-  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
-    err = pni_data_copy_node_data(data, src);
-  }
-
-  return err;
+  return pni_data_copy_node(data, pni_data_current(src));
 }
