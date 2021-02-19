@@ -1262,7 +1262,7 @@ inline pn_handle_t pn_data_point(pn_data_t *data)
   }
 }
 
-inline bool pn_data_restore(pn_data_t *data, pn_handle_t point)
+bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 {
   pn_shandle_t spoint = (pn_shandle_t) point;
   if (spoint <= 0 && ((size_t) (-spoint)) <= data->size) {
@@ -2101,8 +2101,6 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
-// int pni_data_copy_atom(pn_data_t *data, pn_data_t *src)
-
 static int pni_data_copy_atom(pn_data_t *data, pn_data_t *src) {
   pni_node_t *src_node = pni_data_current(src);
   pni_node_t *dst_node = pni_data_add(data);
@@ -2119,12 +2117,16 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
 
   if (dst_node == NULL) return PN_OUT_OF_MEMORY;
 
-  dst_node->atom.type = src_node->atom.type;
-  dst_node->atom.u.as_bytes = src_node->atom.u.as_bytes;
+  dst_node->atom = src_node->atom;
+
+  // dst_node->atom.type = src_node->atom.type;
+  // dst_node->atom.u.as_bytes = src_node->atom.u.as_bytes;
 
   if (!data->intern) return 0;
 
   pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
+
+  // fprintf(stderr, "%s\n", bytes->start);
 
   if (data->buf == NULL) {
     data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
@@ -2150,32 +2152,38 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
   return 0;
 }
 
+static int pni_data_copy_node(pn_data_t *data, pn_data_t *src) {
+  pni_node_t *src_node = pni_data_current(src);
+  pni_node_t *dst_node = pni_data_add(data);
+
+  dst_node->atom = src_node->atom;
+  dst_node->described = src_node->described;
+  dst_node->type = src_node->type;
+
+  return 0;
+}
+
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
-  int level = 0, count = 0;
-  bool stop = false;
+  int level = 0;
+  int count = 0;
   pn_handle_t point = pn_data_point(src);
 
   pn_data_rewind(src);
 
   while (true) {
-    while (!pn_data_next(src)) {
+    if (!pn_data_next(src)) {
       if (level > 0) {
         pn_data_exit(data);
         pn_data_exit(src);
         level--;
         continue;
+      } else {
+        break;
       }
-
-      if (!pn_data_next(src)) {
-        stop = true;
-      }
-
-      break;
     }
 
-    if (stop) break;
     if (level == 0 && count == limit) break;
 
     pn_type_t type = pn_data_type(src);
@@ -2183,6 +2191,7 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     switch (type) {
     case PN_NULL:
       err = pn_data_put_null(data);
+      if (err) break;
       if (level == 0) count++;
       break;
     case PN_BOOL:
@@ -2203,40 +2212,21 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     case PN_DECIMAL128:
     case PN_UUID:
       err = pni_data_copy_atom(data, src);
+      if (err) break;
       if (level == 0) count++;
       break;
     case PN_BINARY:
     case PN_STRING:
     case PN_SYMBOL:
       err = pni_data_copy_bytes(data, src);
+      if (err) break;
       if (level == 0) count++;
       break;
     case PN_DESCRIBED:
-      err = pn_data_put_described(data);
-      if (err) break;
-      if (level == 0) count++;
-      pn_data_enter(data);
-      pn_data_enter(src);
-      level++;
-      break;
     case PN_ARRAY:
-      err = pn_data_put_array(data, pn_data_is_array_described(src), pn_data_get_array_type(src));
-      if (err) break;
-      if (level == 0) count++;
-      pn_data_enter(data);
-      pn_data_enter(src);
-      level++;
-      break;
     case PN_LIST:
-      err = pn_data_put_list(data);
-      if (err) break;
-      if (level == 0) count++;
-      pn_data_enter(data);
-      pn_data_enter(src);
-      level++;
-      break;
     case PN_MAP:
-      err = pn_data_put_map(data);
+      err = pni_data_copy_node(data, src);
       if (err) break;
       if (level == 0) count++;
       pn_data_enter(data);
@@ -2246,13 +2236,9 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     default:
       break;
     }
-
-    if (err) {
-      pn_data_restore(src, point); return err;
-    }
   }
 
   pn_data_restore(src, point);
 
-  return 0;
+  return err;
 }
