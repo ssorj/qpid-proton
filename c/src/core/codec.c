@@ -2162,6 +2162,7 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     dst_node->atom = src_node->atom;
     dst_node->described = src_node->described;
     dst_node->type = src_node->type;
+    dst_node->small = src_node->small;
 
     if (level == 0) count++;
 
