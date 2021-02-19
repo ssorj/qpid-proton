@@ -2101,29 +2101,9 @@ inline int pn_data_append(pn_data_t *data, pn_data_t *src)
   return pn_data_appendn(data, src, -1);
 }
 
-static int pni_data_copy_atom(pn_data_t *data, pn_data_t *src) {
-  pni_node_t *src_node = pni_data_current(src);
-  pni_node_t *dst_node = pni_data_add(data);
-
-  dst_node->atom = src_node->atom;
-
-  return 0;
-}
-
 static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
 {
-  pni_node_t *src_node = pni_data_current(src);
-  pni_node_t *dst_node = pni_data_add(data);
-
-  if (dst_node == NULL) return PN_OUT_OF_MEMORY;
-
-  dst_node->atom = src_node->atom;
-
-  // dst_node->atom.type = src_node->atom.type;
-  // dst_node->atom.u.as_bytes = src_node->atom.u.as_bytes;
-
-  if (!data->intern) return 0;
-
+  pni_node_t *dst_node = pni_data_current(data);
   pn_bytes_t *bytes = &dst_node->atom.u.as_bytes;
 
   // fprintf(stderr, "%s\n", bytes->start);
@@ -2152,17 +2132,6 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
   return 0;
 }
 
-static int pni_data_copy_node(pn_data_t *data, pn_data_t *src) {
-  pni_node_t *src_node = pni_data_current(src);
-  pni_node_t *dst_node = pni_data_add(data);
-
-  dst_node->atom = src_node->atom;
-  dst_node->described = src_node->described;
-  dst_node->type = src_node->type;
-
-  return 0;
-}
-
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
@@ -2187,26 +2156,24 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     if (level == 0 && count == limit) break;
 
     pn_type_t type = pn_data_type(src);
+    pni_node_t *src_node = pni_data_current(src);
+    pni_node_t *dst_node = pni_data_add(data);
 
-    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
-      err = pni_data_copy_node(data, src);
-      if (err) goto restore;
-      if (level == 0) count++;
+    dst_node->atom = src_node->atom;
+    dst_node->described = src_node->described;
+    dst_node->type = src_node->type;
+
+    if (level == 0) count++;
+
+    if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
+      err = pni_data_copy_bytes(data, src);
+      if (err) break;
+    } else if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
-    } else if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
-      err = pni_data_copy_bytes(data, src);
-      if (err) goto restore;
-      if (level == 0) count++;
-    } else {
-      err = pni_data_copy_atom(data, src);
-      if (err) goto restore;
-      if (level == 0) count++;
     }
   }
-
-restore:
 
   pn_data_restore(src, point);
 
