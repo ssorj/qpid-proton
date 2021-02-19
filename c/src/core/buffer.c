@@ -173,7 +173,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
+inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   if (pn_buffer_available(buf) <= size) {
     int err = pn_buffer_ensure(buf, size);
@@ -273,7 +273,7 @@ inline void pn_buffer_clear(pn_buffer_t *buf)
   buf->size = 0;
 }
 
-static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {
+static void pn_buffer_rotate(pn_buffer_t *buf, size_t sz) {
   if (sz == 0) return;
 
   unsigned c = 0, v = 0;
