@@ -2188,51 +2188,25 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 
     pn_type_t type = pn_data_type(src);
 
-    switch (type) {
-    case PN_NULL:
-    case PN_BOOL:
-    case PN_UBYTE:
-    case PN_BYTE:
-    case PN_USHORT:
-    case PN_SHORT:
-    case PN_UINT:
-    case PN_INT:
-    case PN_CHAR:
-    case PN_ULONG:
-    case PN_LONG:
-    case PN_TIMESTAMP:
-    case PN_FLOAT:
-    case PN_DOUBLE:
-    case PN_DECIMAL32:
-    case PN_DECIMAL64:
-    case PN_DECIMAL128:
-    case PN_UUID:
-      err = pni_data_copy_atom(data, src);
-      if (err) break;
-      if (level == 0) count++;
-      break;
-    case PN_BINARY:
-    case PN_STRING:
-    case PN_SYMBOL:
-      err = pni_data_copy_bytes(data, src);
-      if (err) break;
-      if (level == 0) count++;
-      break;
-    case PN_DESCRIBED:
-    case PN_ARRAY:
-    case PN_LIST:
-    case PN_MAP:
+    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
       err = pni_data_copy_node(data, src);
-      if (err) break;
+      if (err) goto restore;
       if (level == 0) count++;
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
-      break;
-    default:
-      break;
+    } else if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
+      err = pni_data_copy_bytes(data, src);
+      if (err) goto restore;
+      if (level == 0) count++;
+    } else {
+      err = pni_data_copy_atom(data, src);
+      if (err) goto restore;
+      if (level == 0) count++;
     }
   }
+
+restore:
 
   pn_data_restore(src, point);
 
