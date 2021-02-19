@@ -2132,6 +2132,25 @@ static int pni_data_copy_bytes(pn_data_t *data, pn_data_t *src)
   return 0;
 }
 
+static inline int pni_data_copy_node(pn_data_t *data, pn_data_t *src) {
+  pni_node_t *src_node = pni_data_current(src);
+  pni_node_t *dst_node = pni_data_add(data);
+
+  dst_node->atom = src_node->atom;
+  dst_node->described = src_node->described;
+  dst_node->type = src_node->type;
+  dst_node->small = src_node->small;
+
+  pn_type_t type = pn_data_type(src);
+
+  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
+    int err = pni_data_copy_bytes(data, src);
+    if (err) return err;
+  }
+
+  return 0;
+}
+
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
@@ -2153,23 +2172,17 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       }
     }
 
-    if (level == 0 && count == limit) break;
+    if (level == 0) {
+      if (count == limit) break;
+      count++;
+    }
+
+    err = pni_data_copy_node(data, src);
+    if (err) break;
 
     pn_type_t type = pn_data_type(src);
-    pni_node_t *src_node = pni_data_current(src);
-    pni_node_t *dst_node = pni_data_add(data);
 
-    dst_node->atom = src_node->atom;
-    dst_node->described = src_node->described;
-    dst_node->type = src_node->type;
-    dst_node->small = src_node->small;
-
-    if (level == 0) count++;
-
-    if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
-      err = pni_data_copy_bytes(data, src);
-      if (err) break;
-    } else if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
+    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
       pn_data_enter(data);
       pn_data_enter(src);
       level++;
@@ -2179,4 +2192,8 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   pn_data_restore(src, point);
 
   return err;
+}
+
+int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src) {
+  return pni_data_copy_node(data, src);
 }

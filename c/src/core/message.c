@@ -645,48 +645,45 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
-static inline void pni_data_get_message_id(pn_data_t* data, int* err, const char* name, pn_data_t* var)
+int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src);
+
+// static inline void pni_data_get_message_id(pn_data_t *data, int *err, const char *name, pn_data_t *dst)
+// {
+//   pn_type_t type = pn_data_type(data);
+
+//   switch (type) {
+//   case PN_NULL:
+//     break;
+//   case PN_INT: {
+//     // XXX
+//     //
+//     // The C and Ruby examples produce signed int atoms for message
+//     // IDs.  Those aren't legal, so I'm converting them to unsigned
+//     // longs if I can.
+
+//     int value = pn_data_get_int(data);
+
+//     if (value < 0) {
+//       *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: negative integer ID: %s",
+//                              name, pn_type_name(type));
+//     }
+//   }
+//   case PN_BINARY:
+//   case PN_ULONG:
+//   case PN_STRING:
+//   case PN_UUID:
+//     *err = pni_data_copy_current_node(dst, data);
+//     break;
+//   default:
+//     *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: illegal ID type: %s",
+//                            name, pn_type_name(type));
+//     break;
+//   }
+// }
+
+static inline void pni_data_get_message_id(pn_data_t *data, int *err, const char *name, pn_data_t *dst)
 {
-  pn_type_t type = pn_data_type(data);
-
-  switch (type) {
-  case PN_NULL:
-    break;
-  case PN_BINARY:
-    pn_data_put_binary(var, pn_data_get_binary(data));
-    break;
-  case PN_ULONG:
-    pn_data_put_ulong(var, pn_data_get_ulong(data));
-    break;
-  case PN_STRING:
-    pn_data_put_string(var, pn_data_get_string(data));
-    break;
-  case PN_UUID:
-    pn_data_put_uuid(var, pn_data_get_uuid(data));
-    break;
-  case PN_INT: {
-    // XXX
-    //
-    // The C and Ruby examples produce signed int atoms for message
-    // IDs.  Those aren't legal, so I'm converting them to unsigned
-    // longs if I can.
-
-    int value = pn_data_get_int(data);
-
-    if (value >= 0) {
-      *err = pn_data_put_ulong(var, pn_data_get_int(data));
-    } else {
-      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: negative integer ID: %s",
-                             name, pn_type_name(type));
-    }
-
-    break;
-  }
-  default:
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: illegal ID type: %s",
-                           name, pn_type_name(type));
-    break;
-  }
+  *err = pni_data_copy_current_node(dst, data);
 }
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
