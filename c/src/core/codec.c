@@ -450,14 +450,12 @@ static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
   return offset;
 }
 
-static pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
+static inline pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
 {
-  switch (node->atom.type) {
-  case PN_BINARY:
-  case PN_STRING:
-  case PN_SYMBOL:
+  if (node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL) {
     return &node->atom.u.as_bytes;
-  default: return NULL;
+  } else {
+    return NULL;
   }
 }
 
@@ -475,19 +473,25 @@ static void pni_data_rebase(pn_data_t *data, char *base)
 static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   pn_bytes_t *bytes = pni_data_bytes(data, node);
+
   if (!bytes) return 0;
+
   if (data->buf == NULL) {
-    // Heuristic to avoid growing small buffers too much
-    // size + 1 to allow for zero termination
-    size_t size = pn_max(bytes->size+1, PNI_INTERN_MINSIZE);
+    // Heuristic to avoid growing small buffers too much.
+    // Set to size + 1 to allow for zero termination.
+    size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
     data->buf = pn_buffer(size);
   }
+
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
+
   if (offset < 0) return offset;
+
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
+
   pn_rwbytes_t buf = pn_buffer_memory(data->buf);
   bytes->start = buf.start + offset;
 
@@ -2096,51 +2100,28 @@ inline int pn_data_copy(pn_data_t *data, pn_data_t *src)
   return err;
 }
 
-inline int pn_data_append(pn_data_t *data, pn_data_t *src)
-{
-  return pn_data_appendn(data, src, -1);
-}
-
-static inline int pni_data_copy_node(pn_data_t *dst_data, pni_node_t *src) {
-
+static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   int err = 0;
   pn_type_t type = src->atom.type;
-  pni_node_t *dst = pni_data_add(dst_data);
+  pni_node_t *dst = pni_data_add(data);
+
+  if (dst == NULL) return PN_OUT_OF_MEMORY;
 
   dst->atom = src->atom;
   dst->described = src->described;
   dst->type = src->type;
   dst->small = src->small;
 
-  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && dst_data->intern) {
-    pn_bytes_t *bytes = &dst->atom.u.as_bytes;
-
-    // fprintf(stderr, "%s\n", bytes->start);
-
-    if (dst_data->buf == NULL) {
-      dst_data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
-    }
-
-    size_t offset = pn_buffer_size(dst_data->buf);
-
-    err = pn_buffer_append(dst_data->buf, bytes->start, bytes->size);
-    if (err) return err;
-
-    err = pn_buffer_append(dst_data->buf, "\0", 1);
-    if (err) return err;
-
-    dst->data = true;
-    dst->data_offset = offset;
-    dst->data_size = bytes->size;
-
-    pn_bytes_t buf = pn_buffer_bytes(dst_data->buf);
-
-    bytes->start = buf.start + offset;
-
-    return 0;
+  if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
+    err = pni_data_intern_node(data, dst);
   }
 
   return err;
+}
+
+inline int pn_data_append(pn_data_t *data, pn_data_t *src)
+{
+  return pn_data_appendn(data, src, -1);
 }
 
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
