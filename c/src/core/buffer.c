@@ -89,13 +89,11 @@ inline size_t pn_buffer_available(pn_buffer_t *buf)
   return buf->capacity - buf->size;
 }
 
-__attribute__((always_inline))
 static inline size_t pni_buffer_head(pn_buffer_t *buf)
 {
   return buf->start;
 }
 
-__attribute__((always_inline))
 static inline size_t pni_buffer_tail(pn_buffer_t *buf)
 {
   size_t tail = buf->start + buf->size;
@@ -104,13 +102,11 @@ static inline size_t pni_buffer_tail(pn_buffer_t *buf)
   return tail;
 }
 
-__attribute__((always_inline))
 static inline bool pni_buffer_wrapped(pn_buffer_t *buf)
 {
   return buf->size && pni_buffer_head(buf) >= pni_buffer_tail(buf);
 }
 
-__attribute__((always_inline))
 static inline size_t pni_buffer_tail_space(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
@@ -120,7 +116,7 @@ static inline size_t pni_buffer_tail_space(pn_buffer_t *buf)
   }
 }
 
-static size_t pni_buffer_head_space(pn_buffer_t *buf)
+static inline size_t pni_buffer_head_space(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
     return pn_buffer_available(buf);
@@ -129,7 +125,7 @@ static size_t pni_buffer_head_space(pn_buffer_t *buf)
   }
 }
 
-static size_t pni_buffer_head_size(pn_buffer_t *buf)
+static inline size_t pni_buffer_head_size(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
     return buf->capacity - pni_buffer_head(buf);
@@ -138,7 +134,7 @@ static size_t pni_buffer_head_size(pn_buffer_t *buf)
   }
 }
 
-static size_t pni_buffer_tail_size(pn_buffer_t *buf)
+static inline size_t pni_buffer_tail_size(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
     return pni_buffer_tail(buf);
@@ -222,7 +218,7 @@ static size_t pni_buffer_index(pn_buffer_t *buf, size_t index)
   return result;
 }
 
-size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
+inline size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
 {
   size = pn_min(size, buf->size);
   size_t start = pni_buffer_index(buf, offset);
@@ -247,7 +243,6 @@ size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
   return sz1 + sz2;
 }
 
-__attribute__((always_inline))
 inline int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
 {
   if (left + right > buf->size) return PN_ARG_ERR;
@@ -292,14 +287,14 @@ static void pn_buffer_rotate(pn_buffer_t *buf, size_t sz) {
   }
 }
 
-int pn_buffer_defrag(pn_buffer_t *buf)
+inline int pn_buffer_defrag(pn_buffer_t *buf)
 {
   pn_buffer_rotate(buf, buf->start);
   buf->start = 0;
   return 0;
 }
 
-pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
+inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
   if (buf) {
     pn_buffer_defrag(buf);
@@ -309,7 +304,7 @@ pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
   }
 }
 
-pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
+inline pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
   if (buf) {
     pn_buffer_defrag(buf);
