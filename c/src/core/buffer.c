@@ -178,7 +178,8 @@ inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
   size_t n = pn_min(tail_space, size);
 
   memmove(buf->bytes + tail, bytes, n);
-  memmove(buf->bytes, bytes + n, size - n);
+
+  if (size - n > 0) memmove(buf->bytes, bytes + n, size - n);
 
   buf->size += size;
 
@@ -197,7 +198,8 @@ inline int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   size_t n = pn_min(head_space, size);
 
   memmove(buf->bytes + head - n, bytes + size - n, n);
-  memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);
+
+  if (size - n > 0) memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);
 
   if (buf->start >= size) {
     buf->start -= size;
@@ -251,9 +253,10 @@ inline int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
     pn_buffer_clear(buf);
     return 0;
   }
+
   buf->start += left;
-  if (buf->start >= buf->capacity)
-    buf->start -= buf->capacity;
+
+  if (buf->start >= buf->capacity) buf->start -= buf->capacity;
 
   buf->size -= left + right;
 
