@@ -1302,6 +1302,9 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
   return NULL;
 }
 
+// XXX
+//
+// This always_inline seems to be worth it
 __attribute__((always_inline))
 inline bool pn_data_next(pn_data_t *data)
 {
