@@ -30,6 +30,8 @@
 
 #include "data.h"
 
+#define PN_FORCE_INLINE __attribute__((always_inline))
+
 static inline pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
 {
   if (!encoder->error) encoder->error = pn_error();
@@ -174,6 +176,7 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
+PN_FORCE_INLINE
 static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   char *end = encoder->output + encoder->size;
   if (end > encoder->position) {
@@ -183,6 +186,7 @@ static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   }
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
@@ -191,6 +195,8 @@ static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
   encoder->position++;
 }
 
+
+PN_FORCE_INLINE
 static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 {
   if (pn_encoder_remaining(encoder) >= 2) {
@@ -200,6 +206,7 @@ static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
   encoder->position += 2;
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 {
   if (pn_encoder_remaining(encoder) >= 4) {
@@ -211,6 +218,7 @@ static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
   encoder->position += 4;
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   if (pn_encoder_remaining(encoder) >= 8) {
     encoder->position[0] = 0xFF & (value >> 56);
@@ -225,6 +233,7 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   encoder->position += 8;
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) >= 16) {
     memmove(encoder->position, value, 16);
@@ -232,6 +241,7 @@ static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   encoder->position += 16;
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef8(encoder, value->size);
@@ -241,6 +251,7 @@ static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *v
   encoder->position += value->size;
 }
 
+PN_FORCE_INLINE
 static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef32(encoder, value->size);

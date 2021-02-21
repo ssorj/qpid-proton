@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#define PN_FORCE_INLINE __attribute__((always_inline))
+
 // message
 
 struct pn_message_t {
@@ -915,6 +917,7 @@ static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* val
   }
 }
 
+PN_FORCE_INLINE
 static inline void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);

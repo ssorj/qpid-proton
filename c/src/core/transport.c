@@ -42,6 +42,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#define PN_FORCE_INLINE __attribute__((always_inline))
+
 // XXX
 unsigned transfer_count = 0;
 unsigned disposition_count = 0;
@@ -3205,7 +3207,7 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
 }
 
 // input
-inline ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -3262,7 +3264,7 @@ inline ssize_t pn_transport_push(pn_transport_t *transport, const char *src, siz
   }
 }
 
-inline int pn_transport_process(pn_transport_t *transport, size_t size)
+int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
   size = pn_min( size, (transport->input_size - transport->input_pending) );
@@ -3322,7 +3324,7 @@ inline ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t si
   return size;
 }
 
-inline void pn_transport_pop(pn_transport_t *transport, size_t size)
+void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
   if (transport) {
     assert( transport->output_pending >= size );

@@ -33,6 +33,8 @@
 #include "memory.h"
 #include "util.h"
 
+#define PN_FORCE_INLINE __attribute__((always_inline))
+
 struct pn_buffer_t {
   size_t capacity;
   size_t start;
@@ -166,6 +168,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
+PN_FORCE_INLINE
 inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   if (pn_buffer_available(buf) <= size) {
@@ -289,13 +292,14 @@ static void pn_buffer_rotate(pn_buffer_t *buf, size_t sz) {
   }
 }
 
-inline int pn_buffer_defrag(pn_buffer_t *buf)
+int pn_buffer_defrag(pn_buffer_t *buf)
 {
   pn_buffer_rotate(buf, buf->start);
   buf->start = 0;
   return 0;
 }
 
+PN_FORCE_INLINE
 inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
   if (buf) {
@@ -306,6 +310,7 @@ inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
   }
 }
 
+PN_FORCE_INLINE
 inline pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
   if (buf) {

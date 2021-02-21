@@ -29,6 +29,8 @@
 
 #include <string.h>
 
+#define PN_FORCE_INLINE __attribute__((always_inline))
+
 pn_type_t pni_data_parent_type(pn_data_t *data);
 size_t pn_data_siblings(pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
@@ -61,11 +63,13 @@ void pn_decoder_finalize(pn_decoder_t *decoder)
   pn_error_free(decoder->error);
 }
 
+PN_FORCE_INLINE
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
 {
   return *decoder->position++;
 }
 
+PN_FORCE_INLINE
 static inline uint16_t pn_decoder_readf16(pn_decoder_t *decoder)
 {
   uint16_t a = (uint8_t) *decoder->position++;
@@ -73,6 +77,7 @@ static inline uint16_t pn_decoder_readf16(pn_decoder_t *decoder)
   return a << 8 | b;
 }
 
+PN_FORCE_INLINE
 static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
 {
   uint32_t a = (uint8_t) *decoder->position++;
@@ -82,6 +87,7 @@ static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
   return a << 24 | b << 16 | c <<  8 | d;
 }
 
+PN_FORCE_INLINE
 static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
 {
   uint64_t a = pn_decoder_readf32(decoder);
@@ -89,12 +95,14 @@ static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
   return a << 32 | b;
 }
 
+PN_FORCE_INLINE
 static inline void pn_decoder_readf128(pn_decoder_t *decoder, void *dst)
 {
   memmove(dst, decoder->position, 16);
   decoder->position += 16;
 }
 
+PN_FORCE_INLINE
 static inline size_t pn_decoder_remaining(pn_decoder_t *decoder)
 {
   return decoder->input + decoder->size - decoder->position;
