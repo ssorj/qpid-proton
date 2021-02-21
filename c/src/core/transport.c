@@ -961,9 +961,11 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   frame.channel = ch;
   frame.payload = buf.start;
   frame.size = wr;
-  pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
+
   pn_write_frame(transport->output_buffer, frame);
+
   transport->output_frames_ct += 1;
+
   if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
     pn_string_set(transport->scratch, "RAW: \"");
     pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
@@ -1120,7 +1122,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
     pn_do_trace(transport, ch, OUT, transport->output_args, payload->start, available);
 
-    memmove( buf.start + buf.size, payload->start, available);
+    memmove(buf.start + buf.size, payload->start, available);
     payload->start += available;
     payload->size -= available;
     buf.size += available;
@@ -1130,10 +1132,11 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     frame.payload = buf.start;
     frame.size = buf.size;
 
-    pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
     pn_write_frame(transport->output_buffer, frame);
+
     transport->output_frames_ct += 1;
     framecount++;
+
     if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
       pn_string_set(transport->scratch, "RAW: \"");
       pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
