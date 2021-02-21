@@ -384,25 +384,36 @@ pn_handle_t pn_map_head(pn_map_t *map)
   return 0;
 }
 
-inline pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
+static pn_handle_t pni_map_find_next(pn_map_t *map, pn_handle_t entry, size_t start)
 {
-  for (size_t i = (size_t)entry; i < map->capacity; i++) {
+  for (size_t i = (size_t) entry + start; i < map->capacity; i++) {
     if (map->entries[i].state != PNI_ENTRY_FREE) {
-      return (pn_handle_t)(i + 1);
+      return (pn_handle_t) (i + 1);
     }
   }
 
   return 0;
 }
 
-void *pn_map_key(pn_map_t *map, pn_handle_t entry)
+inline pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
+{
+  size_t index = (size_t) entry;
+
+  if (index < map->capacity && map->entries[index].state != PNI_ENTRY_FREE) {
+    return (pn_handle_t) (index + 1);
+  } else {
+    return pni_map_find_next(map, entry, 1);
+  }
+}
+
+inline void *pn_map_key(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
   return map->entries[(size_t)entry - 1].key;
 }
 
-void *pn_map_value(pn_map_t *map, pn_handle_t entry)
+inline void *pn_map_value(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
