@@ -190,7 +190,7 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
   return true;
 }
 
-static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev, bool create)
+static inline pni_entry_t *pni_map_entry_get(pn_map_t *map, void *key, pni_entry_t **pprev)
 {
   uintptr_t hashcode = map->hashcode(key);
 
@@ -198,15 +198,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
   pni_entry_t *prev = NULL;
 
   if (entry->state == PNI_ENTRY_FREE) {
-    if (create) {
-      entry->state = PNI_ENTRY_TAIL;
-      entry->key = key;
-      pn_class_incref(map->key, key);
-      map->size++;
-      return entry;
-    } else {
-      return NULL;
-    }
+    return NULL;
   }
 
   while (true) {
@@ -223,38 +215,73 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     }
   }
 
-  if (create) {
-    if (pni_map_ensure(map, map->size + 1)) {
-      // if we had to grow the table we need to start over
-      return pni_map_entry(map, key, pprev, create);
-    }
-
-    size_t empty = 0;
-    for (size_t i = 0; i < map->capacity; i++) {
-      size_t idx = map->capacity - i - 1;
-      if (map->entries[idx].state == PNI_ENTRY_FREE) {
-        empty = idx;
-        break;
-      }
-    }
-    entry->next = empty;
-    entry->state = PNI_ENTRY_LINK;
-    map->entries[empty].state = PNI_ENTRY_TAIL;
-    map->entries[empty].key = key;
-    pn_class_incref(map->key, key);
-    if (pprev) *pprev = entry;
-    map->size++;
-    return &map->entries[empty];
-  } else {
-    return NULL;
-  }
+  return NULL;
 }
 
-__attribute__((always_inline))
-inline int pn_map_put(pn_map_t *map, void *key, void *value)
+static inline pni_entry_t *pni_map_entry_create(pn_map_t *map, void *key, pni_entry_t **pprev)
+{
+start: ;
+
+  uintptr_t hashcode = map->hashcode(key);
+
+  pni_entry_t *entry = &map->entries[hashcode % map->addressable];
+  pni_entry_t *prev = NULL;
+
+  if (entry->state == PNI_ENTRY_FREE) {
+    entry->state = PNI_ENTRY_TAIL;
+    entry->key = key;
+    pn_class_incref(map->key, key);
+    map->size++;
+    return entry;
+  }
+
+  while (true) {
+    if (map->equals(entry->key, key)) {
+      if (pprev) *pprev = prev;
+      return entry;
+    }
+
+    if (entry->state == PNI_ENTRY_TAIL) {
+      break;
+    } else {
+      prev = entry;
+      entry = &map->entries[entry->next];
+    }
+  }
+
+  if (pni_map_ensure(map, map->size + 1)) {
+    // if we had to grow the table we need to start over
+    goto start;
+    // return pni_map_entry_create(map, key, pprev);
+  }
+
+  size_t empty = 0;
+
+  for (size_t i = 0; i < map->capacity; i++) {
+    size_t idx = map->capacity - i - 1;
+    if (map->entries[idx].state == PNI_ENTRY_FREE) {
+      empty = idx;
+      break;
+    }
+  }
+
+  entry->next = empty;
+  entry->state = PNI_ENTRY_LINK;
+  if (pprev) *pprev = entry;
+
+  map->entries[empty].state = PNI_ENTRY_TAIL;
+  map->entries[empty].key = key;
+  pn_class_incref(map->key, key);
+
+  map->size++;
+
+  return &map->entries[empty];
+}
+
+int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
-  pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
+  pni_entry_t *entry = pni_map_entry_create(map, key, NULL);
   void *dref_val = entry->value;
   entry->value = value;
   pn_class_incref(map->value, value);
@@ -262,11 +289,10 @@ inline int pn_map_put(pn_map_t *map, void *key, void *value)
   return 0;
 }
 
-__attribute__((always_inline))
-inline void *pn_map_get(pn_map_t *map, void *key)
+void *pn_map_get(pn_map_t *map, void *key)
 {
   assert(map);
-  pni_entry_t *entry = pni_map_entry(map, key, NULL, false);
+  pni_entry_t *entry = pni_map_entry_get(map, key, NULL);
   return entry ? entry->value : NULL;
 }
 
@@ -318,7 +344,7 @@ void pn_map_del(pn_map_t *map, void *key)
 {
   assert(map);
   pni_entry_t *prev = NULL;
-  pni_entry_t *entry = pni_map_entry(map, key, &prev, false);
+  pni_entry_t *entry = pni_map_entry_get(map, key, &prev);
   if (entry) {
     uint8_t orig_state = entry->state;
     size_t orig_next = entry->next;
@@ -358,7 +384,6 @@ pn_handle_t pn_map_head(pn_map_t *map)
   return 0;
 }
 
-__attribute__((always_inline))
 inline pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
 {
   for (size_t i = (size_t)entry; i < map->capacity; i++) {
@@ -388,12 +413,12 @@ struct pn_hash_t {
   pn_map_t map;
 };
 
-static inline uintptr_t pni_identity_hashcode(void *obj)
+static uintptr_t pni_identity_hashcode(void *obj)
 {
   return (uintptr_t ) obj;
 }
 
-static inline bool pni_identity_equals(void *a, void *b)
+static bool pni_identity_equals(void *a, void *b)
 {
   return a == b;
 }
@@ -426,49 +451,41 @@ pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
   return hash;
 }
 
-__attribute__((always_inline))
 inline size_t pn_hash_size(pn_hash_t *hash)
 {
   return pn_map_size(&hash->map);
 }
 
-__attribute__((always_inline))
 inline int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
 {
   return pn_map_put(&hash->map, (void *) key, value);
 }
 
-__attribute__((always_inline))
 inline void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
 {
   return pn_map_get(&hash->map, (void *) key);
 }
 
-__attribute__((always_inline))
 inline void pn_hash_del(pn_hash_t *hash, uintptr_t key)
 {
   pn_map_del(&hash->map, (void *) key);
 }
 
-__attribute__((always_inline))
 inline pn_handle_t pn_hash_head(pn_hash_t *hash)
 {
   return pn_map_head(&hash->map);
 }
 
-__attribute__((always_inline))
 inline pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_next(&hash->map, entry);
 }
 
-__attribute__((always_inline))
 inline uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
 {
   return (uintptr_t) pn_map_key(&hash->map, entry);
 }
 
-__attribute__((always_inline))
 inline void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_value(&hash->map, entry);
