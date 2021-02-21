@@ -44,7 +44,7 @@ static inline uint16_t pni_read16(const char *bytes)
 {
   uint16_t a = (uint8_t) bytes[0];
   uint16_t b = (uint8_t) bytes[1];
-  return a << 8  | b;
+  return a << 8 | b;
 }
 
 static inline uint32_t pni_read32(const char *bytes)
