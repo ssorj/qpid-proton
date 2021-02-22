@@ -53,7 +53,7 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline pn_cid_t pn_class_id(const pn_class_t *clazz)
 {
   return clazz->cid;
@@ -69,7 +69,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -80,7 +80,7 @@ inline void *pn_class_incref(const pn_class_t *clazz, void *object)
   return object;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -88,7 +88,7 @@ inline int pn_class_refcount(const pn_class_t *clazz, void *object)
   return clazz->refcount(object);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -116,7 +116,7 @@ inline int pn_class_decref(const pn_class_t *clazz, void *object)
   return 0;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -136,7 +136,7 @@ inline void pn_class_free(const pn_class_t *clazz, void *object)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -220,7 +220,7 @@ void *pn_object_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline const pn_class_t *pn_object_reify(void *object)
 {
   if (object) {
@@ -230,7 +230,7 @@ inline const pn_class_t *pn_object_reify(void *object)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_object_incref(void *object)
 {
   if (object) {
@@ -238,14 +238,14 @@ inline void pn_object_incref(void *object)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_object_refcount(void *object)
 {
   assert(object);
   return pni_head(object)->refcount;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_object_decref(void *object)
 {
   pni_head_t *head = pni_head(object);
@@ -253,38 +253,38 @@ inline void pn_object_decref(void *object)
   head->refcount--;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_object_free(void *object)
 {
   pni_head_t *head = pni_head(object);
   pni_mem_deallocate(head->clazz, head);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void *pn_incref(void *object)
 {
   return pn_class_incref(PN_OBJECT, object);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_decref(void *object)
 {
   return pn_class_decref(PN_OBJECT, object);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_refcount(void *object)
 {
   return pn_class_refcount(PN_OBJECT, object);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_free(void *object)
 {
   pn_class_free(PN_OBJECT, object);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline const pn_class_t *pn_class(void *object)
 {
   return pn_class_reify(PN_OBJECT, object);
