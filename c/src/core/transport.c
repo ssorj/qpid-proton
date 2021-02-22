@@ -23,7 +23,6 @@
 #include "engine-internal.h"
 #include "framing.h"
 #include "memory.h"
-#include "platform/platform.h"
 #include "platform/platform_fmt.h"
 #include "sasl/sasl-internal.h"
 #include "ssl/ssl-internal.h"
@@ -41,8 +40,6 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-#define PN_FORCE_INLINE __attribute__((always_inline))
 
 // XXX
 unsigned transfer_count = 0;

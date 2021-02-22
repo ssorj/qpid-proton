@@ -82,6 +82,18 @@
 #  define  PN_DEPRECATED(message)
 #endif
 
+// XXX
+//
+// This doesn't seem like the right place for this.  Nor does it seem
+// right for PN_DEPRECATED above.
+//
+// Perhaps in a compiler/compiler.h?  A root-level config.h?
+#if defined(__GNUC__)
+#  define PN_FORCE_INLINE __attribute__((always_inline))
+#else
+#  define PN_FORCE_INLINE
+#endif
+
 /**
  * @endcond
  */

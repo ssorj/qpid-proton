@@ -33,8 +33,6 @@
 #include "memory.h"
 #include "util.h"
 
-#define PN_FORCE_INLINE __attribute__((always_inline))
-
 struct pn_buffer_t {
   size_t capacity;
   size_t start;

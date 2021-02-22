@@ -31,6 +31,7 @@
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
+#include "platform/platform.h"
 #include "platform/platform_fmt.h"
 #include "util.h"
 #include "decoder.h"
@@ -38,8 +39,6 @@
 #include "data.h"
 #include "logger_private.h"
 #include "memory.h"
-
-#define PN_FORCE_INLINE __attribute__((always_inline))
 
 const char *pn_type_name(pn_type_t type)
 {
@@ -1308,7 +1307,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 // XXX
 //
 // This always_inline seems to be worth it
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline bool pn_data_next(pn_data_t *data)
 {
   pni_node_t* current = pni_data_current(data);

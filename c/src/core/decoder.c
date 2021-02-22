@@ -29,8 +29,6 @@
 
 #include <string.h>
 
-#define PN_FORCE_INLINE __attribute__((always_inline))
-
 pn_type_t pni_data_parent_type(pn_data_t *data);
 size_t pn_data_siblings(pn_data_t *data);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);

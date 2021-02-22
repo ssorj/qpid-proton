@@ -30,8 +30,6 @@
 
 #include "data.h"
 
-#define PN_FORCE_INLINE __attribute__((always_inline))
-
 static inline pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
 {
   if (!encoder->error) encoder->error = pn_error();

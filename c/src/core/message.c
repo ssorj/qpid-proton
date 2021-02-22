@@ -36,8 +36,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define PN_FORCE_INLINE __attribute__((always_inline))
-
 // message
 
 struct pn_message_t {
