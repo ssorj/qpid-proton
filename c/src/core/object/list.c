@@ -33,7 +33,6 @@ struct pn_list_t {
   void **elements;
 };
 
-__attribute__((always_inline))
 inline size_t pn_list_size(pn_list_t *list)
 {
   assert(list);
@@ -67,7 +66,7 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
@@ -79,7 +78,6 @@ inline int pn_list_add(pn_list_t *list, void *value)
   return 0;
 }
 
-__attribute__((always_inline))
 inline void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
@@ -132,7 +130,6 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-__attribute__((always_inline))
 inline void pn_list_clear(pn_list_t *list)
 {
   assert(list);
@@ -182,7 +179,6 @@ typedef struct {
   size_t index;
 } pni_list_iter_t;
 
-__attribute__((always_inline))
 inline static void *pni_list_next(void *ctx)
 {
   pni_list_iter_t *iter = (pni_list_iter_t *) ctx;
