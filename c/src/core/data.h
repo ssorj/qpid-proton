@@ -60,7 +60,6 @@ struct pn_data_t {
   bool intern;
 };
 
-__attribute__((always_inline))
 static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {
   if (node_id) {
@@ -74,12 +73,23 @@ size_t pn_data_siblings(pn_data_t *data);
 
 pn_data_t* pni_data(size_t capacity, bool intern);
 
+static inline pn_type_t pni_data_parent_type(pn_data_t *data)
+{
+  pni_node_t *node = pn_data_node(data, data->parent);
+
+  if (node) {
+    return node->atom.type;
+  } else {
+    return PN_INVALID;
+  }
+}
+
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   if (!pn_data_next(data) || pn_data_type(data) == PN_NULL) {
@@ -93,7 +103,7 @@ static inline bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline void pni_data_require_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   bool found = pni_data_next_field(data, err, type, name);
@@ -102,18 +112,6 @@ static inline void pni_data_require_field(pn_data_t* data, int* err, pn_type_t t
 
   if (!found) {
     *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
-  }
-}
-
-__attribute__((always_inline))
-static inline pn_type_t pni_data_parent_type(pn_data_t *data)
-{
-  pni_node_t *node = pn_data_node(data, data->parent);
-
-  if (node) {
-    return node->atom.type;
-  } else {
-    return PN_INVALID;
   }
 }
 
