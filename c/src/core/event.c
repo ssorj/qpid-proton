@@ -167,17 +167,16 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   return event;
 }
 
-pn_event_t *pn_collector_peek(pn_collector_t *collector)
+PN_FORCE_INLINE
+inline pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   return collector->head;
 }
 
-// XXX
-//
-// Interning this is a loser.
-
 // Advance head pointer for pop or next, return the old head.
-static pn_event_t *pop_internal(pn_collector_t *collector) {
+
+PN_FORCE_INLINE
+static inline pn_event_t *pop_internal(pn_collector_t *collector) {
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
@@ -188,7 +187,8 @@ static pn_event_t *pop_internal(pn_collector_t *collector) {
   return event;
 }
 
-bool pn_collector_pop(pn_collector_t *collector) {
+PN_FORCE_INLINE
+inline bool pn_collector_pop(pn_collector_t *collector) {
   pn_event_t *event = pop_internal(collector);
   if (event) {
     pn_decref(event);
@@ -196,6 +196,7 @@ bool pn_collector_pop(pn_collector_t *collector) {
   return event;
 }
 
+PN_FORCE_INLINE
 inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
     pn_decref(collector->prev);
@@ -204,6 +205,7 @@ inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
+PN_FORCE_INLINE
 inline pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
@@ -279,24 +281,28 @@ pn_event_t *pn_event(void)
   return pn_event_new();
 }
 
-pn_event_type_t pn_event_type(pn_event_t *event)
+PN_FORCE_INLINE
+inline pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event ? event->type : PN_EVENT_NONE;
 }
 
-const pn_class_t *pn_event_class(pn_event_t *event)
+PN_FORCE_INLINE
+inline const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
   return event->clazz;
 }
 
-void *pn_event_context(pn_event_t *event)
+PN_FORCE_INLINE
+inline void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
 }
 
-pn_record_t *pn_event_attachments(pn_event_t *event)
+PN_FORCE_INLINE
+inline pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
   return event->attachments;
