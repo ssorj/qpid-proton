@@ -84,7 +84,7 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
@@ -267,7 +267,7 @@ typedef union {
   double d;
 } conv_t;
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
@@ -403,8 +403,7 @@ skip_format_code:
   }
 }
 
-__attribute__((always_inline))
-static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pn_type_t type = node->atom.type;
