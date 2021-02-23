@@ -106,10 +106,16 @@ static inline bool pni_buffer_wrapped(pn_buffer_t *buf)
 
 static inline size_t pni_buffer_tail_space(pn_buffer_t *buf)
 {
-  if (pni_buffer_wrapped(buf)) {
-    return pn_buffer_available(buf);
+  size_t head = buf->start;
+  size_t tail = buf->start + buf->size;
+
+  if (tail >= buf->capacity) tail -= buf->capacity;
+
+  if (head >= tail) {
+    // Wrapped
+    return buf->capacity - buf->size;
   } else {
-    return buf->capacity - pni_buffer_tail(buf);
+    return buf->capacity - tail;
   }
 }
 
@@ -146,7 +152,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   size_t old_head = pni_buffer_head(buf);
   bool wrapped = pni_buffer_wrapped(buf);
 
-  while (pn_buffer_available(buf) < size) {
+  while (buf->capacity - buf->size < size) {
     buf->capacity = 2*(buf->capacity ? buf->capacity : 16);
   }
 
@@ -168,7 +174,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 
 PN_FORCE_INLINE int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
-  if (pn_buffer_available(buf) <= size) {
+  if (buf->capacity - buf->size < size) {
     int err = pn_buffer_ensure(buf, size);
     if (err) return err;
   }
@@ -188,7 +194,7 @@ PN_FORCE_INLINE int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t
 
 int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
 {
-  if (pn_buffer_available(buf) <= size) {
+  if (buf->capacity - buf->size < size) {
     int err = pn_buffer_ensure(buf, size);
     if (err) return err;
   }
