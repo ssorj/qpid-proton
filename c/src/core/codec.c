@@ -75,12 +75,6 @@ const char *pn_type_name(pn_type_t type)
   return "<UNKNOWN>";
 }
 
-static inline void pni_atom_init(pn_atom_t *atom, pn_type_t type)
-{
-  memset(atom, 0, sizeof(pn_atom_t));
-  atom->type = type;
-}
-
 // data
 
 static void pn_data_finalize(void *object)
@@ -1602,7 +1596,7 @@ int pn_data_put_null(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
-  pni_atom_init(&node->atom, PN_NULL);
+  node->atom.type = PN_NULL;
   return 0;
 }
 
