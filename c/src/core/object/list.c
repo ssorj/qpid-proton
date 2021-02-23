@@ -33,7 +33,7 @@ struct pn_list_t {
   void **elements;
 };
 
-inline size_t pn_list_size(pn_list_t *list)
+PN_INLINE size_t pn_list_size(pn_list_t *list)
 {
   assert(list);
   return list->size;
@@ -66,8 +66,7 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
   }
 }
 
-PN_FORCE_INLINE
-inline int pn_list_add(pn_list_t *list, void *value)
+PN_FORCE_INLINE int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
   if (list->capacity <= list->size) {
@@ -78,7 +77,7 @@ inline int pn_list_add(pn_list_t *list, void *value)
   return 0;
 }
 
-inline void *pn_list_pop(pn_list_t *list)
+PN_INLINE void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
   if (list->size) {
@@ -130,7 +129,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-inline void pn_list_clear(pn_list_t *list)
+PN_INLINE void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);
@@ -179,7 +178,7 @@ typedef struct {
   size_t index;
 } pni_list_iter_t;
 
-inline static void *pni_list_next(void *ctx)
+static inline void *pni_list_next(void *ctx)
 {
   pni_list_iter_t *iter = (pni_list_iter_t *) ctx;
   if (iter->index < pn_list_size(iter->list)) {

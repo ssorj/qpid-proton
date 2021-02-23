@@ -167,16 +167,14 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   return event;
 }
 
-PN_FORCE_INLINE
-inline pn_event_t *pn_collector_peek(pn_collector_t *collector)
+PN_FORCE_INLINE pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   return collector->head;
 }
 
 // Advance head pointer for pop or next, return the old head.
 
-PN_FORCE_INLINE
-static inline pn_event_t *pop_internal(pn_collector_t *collector) {
+PN_FORCE_INLINE static pn_event_t *pop_internal(pn_collector_t *collector) {
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
@@ -187,8 +185,7 @@ static inline pn_event_t *pop_internal(pn_collector_t *collector) {
   return event;
 }
 
-PN_FORCE_INLINE
-inline bool pn_collector_pop(pn_collector_t *collector) {
+PN_FORCE_INLINE bool pn_collector_pop(pn_collector_t *collector) {
   pn_event_t *event = pop_internal(collector);
   if (event) {
     pn_decref(event);
@@ -196,8 +193,7 @@ inline bool pn_collector_pop(pn_collector_t *collector) {
   return event;
 }
 
-PN_FORCE_INLINE
-inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
+PN_FORCE_INLINE pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
     pn_decref(collector->prev);
   }
@@ -205,12 +201,11 @@ inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
-PN_FORCE_INLINE
-inline pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+PN_FORCE_INLINE pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
-inline bool pn_collector_more(pn_collector_t *collector)
+PN_INLINE bool pn_collector_more(pn_collector_t *collector)
 {
   assert(collector);
   return collector->head && collector->head->next;
@@ -226,7 +221,7 @@ static void pn_event_initialize(pn_event_t *event)
   event->attachments = pn_record();
 }
 
-inline static void pn_event_finalize(pn_event_t *event) {
+PN_INLINE static void pn_event_finalize(pn_event_t *event) {
   // decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);
@@ -281,28 +276,24 @@ pn_event_t *pn_event(void)
   return pn_event_new();
 }
 
-PN_FORCE_INLINE
-inline pn_event_type_t pn_event_type(pn_event_t *event)
+PN_FORCE_INLINE pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event ? event->type : PN_EVENT_NONE;
 }
 
-PN_FORCE_INLINE
-inline const pn_class_t *pn_event_class(pn_event_t *event)
+PN_FORCE_INLINE const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
   return event->clazz;
 }
 
-PN_FORCE_INLINE
-inline void *pn_event_context(pn_event_t *event)
+PN_FORCE_INLINE void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
 }
 
-PN_FORCE_INLINE
-inline pn_record_t *pn_event_attachments(pn_event_t *event)
+PN_FORCE_INLINE pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
   return event->attachments;

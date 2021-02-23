@@ -1299,7 +1299,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 
 // XXX
 //
-// This always_inline seems to be worth it
+// This forced inline seems to be worth it
 PN_FORCE_INLINE bool pn_data_next(pn_data_t *data)
 {
   pni_node_t* current = pni_data_current(data);

@@ -3230,7 +3230,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
   return capacity;
 }
 
-inline char *pn_transport_tail(pn_transport_t *transport)
+PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -3238,7 +3238,7 @@ inline char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-inline ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+PN_INLINE ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3287,13 +3287,13 @@ int pn_transport_close_tail(pn_transport_t *transport)
 }
 
 // output
-inline ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
+PN_INLINE ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
   return transport_produce( transport );
 }
 
-inline const char *pn_transport_head(pn_transport_t *transport)
+PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3301,7 +3301,7 @@ inline const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-inline ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+PN_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -3366,15 +3366,15 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   return true;
 }
 
-inline bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
+PN_INLINE bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
 
-inline bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
+PN_INLINE bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
 
-inline bool pn_transport_closed(pn_transport_t *transport) {
+PN_INLINE bool pn_transport_closed(pn_transport_t *transport) {
   return transport->head_closed && transport->tail_closed;
 }
 
-inline pn_connection_t *pn_transport_connection(pn_transport_t *transport)
+PN_INLINE pn_connection_t *pn_transport_connection(pn_transport_t *transport)
 {
   assert(transport);
   return transport->connection;
