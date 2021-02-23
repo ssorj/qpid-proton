@@ -758,7 +758,7 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
 // Wish I knew if the incref/decref was well motivated.
 // With it removed, it passes the tests and memory is stable.
 // There is a perf boost from it.
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   if (delivery->tpwork)
@@ -786,7 +786,7 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
@@ -918,22 +918,22 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_connection_live(pn_connection_t *conn) {
   return pn_refcount(conn) > 1;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_session_live(pn_session_t *ssn) {
   return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_link_live(pn_link_t *link) {
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   switch (endpoint->type) {
   case CONNECTION:
@@ -949,7 +949,7 @@ static inline bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline bool pni_preserve_child(pn_endpoint_t *endpoint)
 {
   pn_endpoint_t *parent = pn_ep_parent(endpoint);
@@ -1121,7 +1121,7 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(0);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline void pn_link_incref(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
@@ -1416,13 +1416,13 @@ const char *pn_link_name(pn_link_t *link)
   return pn_string_get(link->name);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline bool pn_link_is_sender(pn_link_t *link)
 {
   return link->endpoint.type == SENDER;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline bool pn_link_is_receiver(pn_link_t *link)
 {
   return link->endpoint.type == RECEIVER;
@@ -1441,7 +1441,7 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline void pn_delivery_incref(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
@@ -1527,7 +1527,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   pn_condition_init(&ds->condition);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline void pn_disposition_clear(pn_disposition_t *ds)
 {
   ds->type = 0;
@@ -1632,7 +1632,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
@@ -1791,7 +1791,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline pn_delivery_t *pn_link_current(pn_link_t *link)
 {
   if (!link) return NULL;
