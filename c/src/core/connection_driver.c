@@ -25,7 +25,7 @@
 #include <proton/transport.h>
 #include <string.h>
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 static inline pn_event_t *batch_next(pn_connection_driver_t *d) {
   if (!d->collector) return NULL;
   // XXX
@@ -94,13 +94,13 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
   memset(d, 0, sizeof(*d));
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
   ssize_t cap = pn_transport_capacity(d->transport);
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
   if (n > 0) pn_transport_process(d->transport, n);
 }
@@ -115,14 +115,14 @@ void pn_connection_driver_read_close(pn_connection_driver_t *d) {
   }
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
   ssize_t pending = pn_transport_pending(d->transport);
   return (pending > 0) ?
     pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline void pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
   pn_transport_pop(d->transport, n);
 }
@@ -142,11 +142,12 @@ void pn_connection_driver_close(pn_connection_driver_t *d) {
   pn_connection_driver_write_close(d);
 }
 
-pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
+PN_FORCE_INLINE
+inline pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
   return batch_next(d);
 }
 
-__attribute__((always_inline))
+PN_FORCE_INLINE
 inline bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
   return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
 }
