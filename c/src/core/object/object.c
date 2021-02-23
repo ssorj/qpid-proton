@@ -143,7 +143,8 @@ inline const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
   return clazz->reify(object);
 }
 
-uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
+PN_FORCE_INLINE
+inline uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
 
@@ -158,7 +159,8 @@ uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
   }
 }
 
-intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
+PN_FORCE_INLINE
+inline intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
 {
   assert(clazz);
 
@@ -173,7 +175,8 @@ intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
   }
 }
 
-bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
+PN_FORCE_INLINE
+inline bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
 {
   return pn_class_compare(clazz, a, b) == 0;
 }
@@ -205,9 +208,6 @@ typedef struct {
 #define pni_head(PTR) \
   (((pni_head_t *) (PTR)) - 1)
 
-// XXX
-//
-// Inlining this is a performance loss
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
   void *object = NULL;
@@ -290,17 +290,20 @@ inline const pn_class_t *pn_class(void *object)
   return pn_class_reify(PN_OBJECT, object);
 }
 
-uintptr_t pn_hashcode(void *object)
+PN_FORCE_INLINE
+inline uintptr_t pn_hashcode(void *object)
 {
   return pn_class_hashcode(PN_OBJECT, object);
 }
 
-intptr_t pn_compare(void *a, void *b)
+PN_FORCE_INLINE
+inline intptr_t pn_compare(void *a, void *b)
 {
   return pn_class_compare(PN_OBJECT, a, b);
 }
 
-bool pn_equals(void *a, void *b)
+PN_FORCE_INLINE
+inline bool pn_equals(void *a, void *b)
 {
   return !pn_compare(a, b);
 }
@@ -315,19 +318,19 @@ int pn_inspect(void *object, pn_string_t *dst)
 #define pn_weakref_finalize NULL
 #define pn_weakref_free NULL
 
-static void pn_weakref_incref(void *object) {}
-static void pn_weakref_decref(void *object) {}
-static int pn_weakref_refcount(void *object) { return -1; }
-static const pn_class_t *pn_weakref_reify(void *object) {
+static inline void pn_weakref_incref(void *object) {}
+static inline void pn_weakref_decref(void *object) {}
+static inline int pn_weakref_refcount(void *object) { return -1; }
+static inline const pn_class_t *pn_weakref_reify(void *object) {
   return PN_WEAKREF;
 }
-static uintptr_t pn_weakref_hashcode(void *object) {
+static inline uintptr_t pn_weakref_hashcode(void *object) {
   return pn_hashcode(object);
 }
-static intptr_t pn_weakref_compare(void *a, void *b) {
+static inline intptr_t pn_weakref_compare(void *a, void *b) {
   return pn_compare(a, b);
 }
-static int pn_weakref_inspect(void *object, pn_string_t *dst) {
+static inline int pn_weakref_inspect(void *object, pn_string_t *dst) {
   return pn_inspect(object, dst);
 }
 
