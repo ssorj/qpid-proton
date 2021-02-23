@@ -387,7 +387,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   return data;
 }
 
-inline void pn_data_free(pn_data_t *data)
+PN_INLINE void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
 }
@@ -402,14 +402,13 @@ pn_error_t *pn_data_error(pn_data_t *data)
   return pni_data_error(data);
 }
 
-inline size_t pn_data_size(pn_data_t *data)
+PN_INLINE size_t pn_data_size(pn_data_t *data)
 {
   assert(data);
   return data->size;
 }
 
-PN_FORCE_INLINE
-inline void pn_data_clear(pn_data_t *data)
+PN_FORCE_INLINE void pn_data_clear(pn_data_t *data)
 {
   assert(data);
 
@@ -1234,7 +1233,7 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
   }
 }
 
-inline void pn_data_rewind(pn_data_t *data)
+PN_INLINE void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
   data->current = data->base_current;
@@ -1245,19 +1244,19 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
   return pn_data_node(data, data->current);
 }
 
-inline void pn_data_narrow(pn_data_t *data)
+PN_INLINE void pn_data_narrow(pn_data_t *data)
 {
   data->base_parent = data->parent;
   data->base_current = data->current;
 }
 
-inline void pn_data_widen(pn_data_t *data)
+PN_INLINE void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
 }
 
-inline pn_handle_t pn_data_point(pn_data_t *data)
+PN_INLINE pn_handle_t pn_data_point(pn_data_t *data)
 {
   if (data->current) {
     return (pn_handle_t)(uintptr_t)data->current;
@@ -1301,8 +1300,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 // XXX
 //
 // This always_inline seems to be worth it
-PN_FORCE_INLINE
-inline bool pn_data_next(pn_data_t *data)
+PN_FORCE_INLINE bool pn_data_next(pn_data_t *data)
 {
   pni_node_t* current = pni_data_current(data);
 
@@ -1380,8 +1378,7 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-PN_FORCE_INLINE
-inline pn_type_t pn_data_type(pn_data_t *data)
+PN_FORCE_INLINE pn_type_t pn_data_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node) {
@@ -1391,7 +1388,7 @@ inline pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-inline size_t pn_data_siblings(pn_data_t *data)
+PN_INLINE size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
   if (node) {
@@ -1401,8 +1398,7 @@ inline size_t pn_data_siblings(pn_data_t *data)
   }
 }
 
-PN_FORCE_INLINE
-inline bool pn_data_enter(pn_data_t *data)
+PN_FORCE_INLINE bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
     data->parent = data->current;
@@ -1413,8 +1409,7 @@ inline bool pn_data_enter(pn_data_t *data)
   }
 }
 
-PN_FORCE_INLINE
-inline bool pn_data_exit(pn_data_t *data)
+PN_FORCE_INLINE bool pn_data_exit(pn_data_t *data)
 {
   if (data->parent) {
     pni_node_t *parent = pn_data_node(data, data->parent);
@@ -1480,8 +1475,7 @@ void pn_data_dump(pn_data_t *data)
 // XXX There's a bug for this (untested) scenario:
 // pn_data_prev(msg->data);
 // pn_data_next(msg->data);
-PN_FORCE_INLINE
-static inline pni_node_t *pni_data_add(pn_data_t *data)
+PN_FORCE_INLINE static pni_node_t *pni_data_add(pn_data_t *data)
 {
   if (data->capacity <= data->size) {
     int err = pni_data_grow(data);
@@ -2107,8 +2101,7 @@ int pn_data_copy(pn_data_t *data, pn_data_t *src)
   return err;
 }
 
-PN_FORCE_INLINE
-static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
+PN_FORCE_INLINE static int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   int err = 0;
   pn_type_t type = src->atom.type;
   pni_node_t *dst = pni_data_add(data);
@@ -2127,14 +2120,12 @@ static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   return err;
 }
 
-PN_FORCE_INLINE
-inline int pn_data_append(pn_data_t *data, pn_data_t *src)
+PN_FORCE_INLINE int pn_data_append(pn_data_t *data, pn_data_t *src)
 {
   return pn_data_appendn(data, src, -1);
 }
 
-PN_FORCE_INLINE
-inline int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+PN_FORCE_INLINE int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
   int level = 0;
