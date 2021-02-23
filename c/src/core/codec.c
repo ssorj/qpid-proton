@@ -1,4 +1,4 @@
-/*
+*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -81,7 +81,7 @@ static void pn_data_finalize(void *object)
 {
   pn_data_t *data = (pn_data_t *) object;
   pni_mem_subdeallocate(pn_class(data), data, data->nodes);
-  pn_buffer_free(data->buf);
+  free(data->buf.start);
   pn_error_free(data->error);
 }
 
@@ -378,7 +378,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
   data->intern = intern; // For disabling interning when it's not required
-  data->buf = NULL;
+  data->buf = pn_rwbytes_null;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -418,7 +418,10 @@ PN_FORCE_INLINE void pn_data_clear(pn_data_t *data)
   data->base_parent = 0;
   data->base_current = 0;
 
-  if (data->buf) pn_buffer_clear(data->buf);
+  if (data->buf.start) {
+    free(data->buf.start);
+    data->buf = pn_rwbytes_null;
+  }
 }
 
 static int pni_data_grow(pn_data_t *data)
@@ -433,20 +436,6 @@ static int pni_data_grow(pn_data_t *data)
   data->capacity = capacity;
   data->nodes = new_nodes;
   return 0;
-}
-
-static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
-{
-  size_t offset = pn_buffer_size(data->buf);
-  int err;
-
-  err = pn_buffer_append(data->buf, start, size);
-  if (err) return err;
-
-  err = pn_buffer_append(data->buf, "\0", 1);
-  if (err) return err;
-
-  return offset;
 }
 
 static inline pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
@@ -471,32 +460,38 @@ static void pni_data_rebase(pn_data_t *data, char *base)
 
 static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
+  // Pointers to someone elses memory
   pn_bytes_t *bytes = pni_data_bytes(data, node);
 
-  if (!bytes) return 0;
+  if (!bytes) return 0; // XXX Need this?
 
-  if (data->buf == NULL) {
-    // Heuristic to avoid growing small buffers too much.
-    // Set to size + 1 to allow for zero termination.
-    size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
-    data->buf = pn_buffer(size);
+  if (data->buf.start == NULL) {
+    // // Heuristic to avoid growing small buffers too much.
+    // // Set to size + 1 to allow for zero termination.
+    // size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
+    data->buf = pn_rwbytes(bytes->size + 1, malloc(bytes->size + 1));
   }
 
-  size_t oldcap = pn_buffer_capacity(data->buf);
-  ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
+  size_t old_size = data->buf.size;
+  size_t new_size = old_size + bytes->size + 1;
 
-  if (offset < 0) return offset;
+  data->buf.start = realloc(data->buf.start, new_size);
+  data->buf.size = new_size;
+
+  assert(data->buf.start);
+
+  memmove(data->buf.start + old_size, bytes->start, bytes->size);
+  data->buf.start[new_size - 1] = '\0';
 
   node->data = true;
-  node->data_offset = offset;
+  node->data_offset = old_size;
   node->data_size = bytes->size;
 
-  pn_rwbytes_t buf = pn_buffer_memory(data->buf);
-  bytes->start = buf.start + offset;
+  bytes->start = data->buf.start + old_size;
 
-  if (pn_buffer_capacity(data->buf) != oldcap) {
-    pni_data_rebase(data, buf.start);
-  }
+  // if (pn_buffer2_capacity(data->buf) != oldcap) {
+  pni_data_rebase(data, data->buf.start);
+  // }
 
   return 0;
 }

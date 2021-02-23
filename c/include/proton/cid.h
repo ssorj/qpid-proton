@@ -41,6 +41,7 @@ typedef enum {
   CID_pn_event,
 
   CID_pn_buffer,
+  CID_pn_buffer2,
   CID_pn_error,
   CID_pn_data,
 

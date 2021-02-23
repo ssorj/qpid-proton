@@ -238,6 +238,7 @@ set (qpid-proton-core
   src/core/util.c
   src/core/error.c
   src/core/buffer.c
+  src/core/buffer2.c
   src/core/types.c
 
   src/core/framing.c
