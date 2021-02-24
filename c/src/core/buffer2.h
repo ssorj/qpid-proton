@@ -30,23 +30,42 @@
 extern "C" {
 #endif
 
-typedef struct pn_buffer2_t pn_buffer2_t;
+typedef struct pn_buffer2_t {
+  char *bytes;
+  size_t capacity;
+  size_t size;
+} pn_buffer2_t;
+
+// typedef struct pn_buffer2_t pn_buffer2_t;
 
 pn_buffer2_t *pn_buffer2(size_t capacity);
 void pn_buffer2_free(pn_buffer2_t *buf);
-size_t pn_buffer2_size(pn_buffer2_t *buf);
-size_t pn_buffer2_capacity(pn_buffer2_t *buf);
-size_t pn_buffer2_available(pn_buffer2_t *buf);
-int pn_buffer2_ensure(pn_buffer2_t *buf, size_t size);
-int pn_buffer2_append(pn_buffer2_t *buf, const char *bytes, size_t size);
-int pn_buffer2_prepend(pn_buffer2_t *buf, const char *bytes, size_t size);
-size_t pn_buffer2_get(pn_buffer2_t *buf, size_t offset, size_t size, char *dst);
-int pn_buffer2_trim(pn_buffer2_t *buf, size_t left, size_t right);
-void pn_buffer2_clear(pn_buffer2_t *buf);
-int pn_buffer2_defrag(pn_buffer2_t *buf);
-pn_bytes_t pn_buffer2_bytes(pn_buffer2_t *buf);
-pn_rwbytes_t pn_buffer2_memory(pn_buffer2_t *buf);
-int pn_buffer2_quote(pn_buffer2_t *buf, pn_string_t *string, size_t n);
+
+static inline size_t pn_buffer2_size(pn_buffer2_t *buf)
+{
+  return buf->size;
+}
+
+static inline void pn_buffer2_clear(pn_buffer2_t *buf)
+{
+  buf->size = 0;
+}
+
+int pn_buffer2_append_string(pn_buffer2_t *buf, const char *bytes, size_t size);
+
+// size_t pn_buffer2_size(pn_buffer2_t *buf);
+// size_t pn_buffer2_capacity(pn_buffer2_t *buf);
+// size_t pn_buffer2_available(pn_buffer2_t *buf);
+// int pn_buffer2_ensure(pn_buffer2_t *buf, size_t size);
+// int pn_buffer2_append(pn_buffer2_t *buf, const char *bytes, size_t size);
+// int pn_buffer2_prepend(pn_buffer2_t *buf, const char *bytes, size_t size);
+// size_t pn_buffer2_get(pn_buffer2_t *buf, size_t offset, size_t size, char *dst);
+// int pn_buffer2_trim(pn_buffer2_t *buf, size_t left, size_t right);
+// void pn_buffer2_clear(pn_buffer2_t *buf);
+// int pn_buffer2_defrag(pn_buffer2_t *buf);
+// pn_bytes_t pn_buffer2_bytes(pn_buffer2_t *buf);
+// pn_rwbytes_t pn_buffer2_memory(pn_buffer2_t *buf);
+// int pn_buffer2_quote(pn_buffer2_t *buf, pn_string_t *string, size_t n);
 
 #ifdef __cplusplus
 }
