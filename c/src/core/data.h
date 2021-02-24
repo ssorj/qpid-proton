@@ -23,6 +23,8 @@
  */
 
 #include <proton/codec.h>
+
+#include "buffer2.h"
 #include "decoder.h"
 #include "encoder.h"
 
@@ -49,8 +51,7 @@ typedef struct {
 struct pn_data_t {
   pni_node_t *nodes;
   pn_error_t *error;
-  size_t buf_data_size;
-  pn_rwbytes_t buf;
+  pni_buffer2_t *intern_buf;
   pni_nid_t capacity;
   pni_nid_t size;
   pni_nid_t parent;

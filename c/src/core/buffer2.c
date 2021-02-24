@@ -33,21 +33,21 @@
 #include "memory.h"
 #include "util.h"
 
-PN_STRUCT_CLASSDEF(pn_buffer2)
+PN_STRUCT_CLASSDEF(pni_buffer2)
 
-pn_buffer2_t *pn_buffer2(size_t capacity)
+pni_buffer2_t *pni_buffer2(size_t capacity)
 {
-  pn_buffer2_t *buf = (pn_buffer2_t *) pni_mem_allocate(PN_CLASSCLASS(pn_buffer2), sizeof(pn_buffer2_t));
+  pni_buffer2_t *buf = (pni_buffer2_t *) pni_mem_allocate(PN_CLASSCLASS(pni_buffer2), sizeof(pni_buffer2_t));
 
   if (buf != NULL) {
     buf->capacity = capacity;
     buf->size = 0;
 
     if (capacity > 0) {
-        buf->bytes = (char *) pni_mem_suballocate(PN_CLASSCLASS(pn_buffer2), buf, capacity);
+        buf->bytes = (char *) pni_mem_suballocate(PN_CLASSCLASS(pni_buffer2), buf, capacity);
 
         if (buf->bytes == NULL) {
-            pni_mem_deallocate(PN_CLASSCLASS(pn_buffer2), buf);
+            pni_mem_deallocate(PN_CLASSCLASS(pni_buffer2), buf);
             buf = NULL;
         }
     } else {
@@ -58,71 +58,62 @@ pn_buffer2_t *pn_buffer2(size_t capacity)
   return buf;
 }
 
-void pn_buffer2_free(pn_buffer2_t *buf)
+void pni_buffer2_free(pni_buffer2_t *buf)
 {
   if (buf) {
-    pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer2), buf, buf->bytes);
-    pni_mem_deallocate(PN_CLASSCLASS(pn_buffer2), buf);
+    pni_mem_subdeallocate(PN_CLASSCLASS(pni_buffer2), buf, pni_buffer2_bytes(buf));
+    pni_mem_deallocate(PN_CLASSCLASS(pni_buffer2), buf);
   }
 }
 
-int pni_buffer2_ensure(pn_buffer2_t *buf, size_t size)
+static int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
 {
-  // assert(buf->bytes); XXX
-
-  size_t old_capacity = buf->capacity;
-  size_t old_size = buf->size;
+  size_t old_capacity = pni_buffer2_capacity(buf);
+  size_t old_size = pni_buffer2_size(buf);
   size_t new_capacity = old_capacity;
   size_t new_size = old_size + size;
 
-  if (new_size > old_capacity) { // Nix this XXX
-    while (new_capacity < new_size) new_capacity = 2 * new_capacity;
+  while (new_capacity < new_size) new_capacity = 2 * new_capacity;
 
-    buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer2), buf, buf->bytes, new_capacity);
-    if (!buf->bytes) return PN_OUT_OF_MEMORY;
+  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pni_buffer2), buf, pni_buffer2_bytes(buf), new_capacity);
+  if (!buf->bytes) return PN_OUT_OF_MEMORY;
 
-    buf->capacity = new_capacity; // Store the new capacity
-  }
+  buf->capacity = new_capacity;
 
   return 0;
 }
 
-int pni_buffer2_append_string(pn_buffer2_t *buf, const char *bytes, size_t size)
+PN_INLINE int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size)
 {
-  size_t old_size = buf->size;
-  size_t new_size = old_size + size + 1;
+  size_t old_capacity = pni_buffer2_capacity(buf);
+  size_t old_size = pni_buffer2_size(buf);
+  size_t new_size = old_size + size;
 
-  if (buf->capacity < size) {
+  if (new_size > old_capacity) {
     int err = pni_buffer2_ensure(buf, new_size);
     if (err) return err;
   }
 
-  buf->size = new_size;
-
   memmove(buf->bytes + old_size, bytes, size);
-  buf->bytes[new_size - 1] = '\0';
+  buf->size = new_size;
 
   return 0;
 }
 
-// PN_FORCE_INLINE pn_bytes_t pn_buffer2_bytes(pn_buffer2_t *buf)
-// {
-//   if (buf) {
-//     pn_buffer2_defrag(buf);
-//     return pn_bytes(buf->size, buf->bytes);
-//   } else {
-//     return pn_bytes(0, NULL);
-//   }
-// }
+PN_INLINE int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size)
+{
+  size_t old_capacity = pni_buffer2_capacity(buf);
+  size_t old_size = pni_buffer2_size(buf);
+  size_t new_size = old_size + size + 1;
 
-// PN_FORCE_INLINE pn_rwbytes_t pn_buffer2_memory(pn_buffer2_t *buf)
-// {
-//   if (buf) {
-//     pn_buffer2_defrag(buf);
-//     pn_rwbytes_t r = {buf->size, buf->bytes};
-//     return r;
-//   } else {
-//     pn_rwbytes_t r = {0, NULL};
-//     return r;
-//   }
-// }
+  if (new_size > old_capacity) {
+    int err = pni_buffer2_ensure(buf, new_size);
+    if (err) return err;
+  }
+
+  memmove(buf->bytes + old_size, bytes, size);
+  buf->bytes[new_size - 1] = '\0';
+  buf->size = new_size;
+
+  return 0;
+}

@@ -28,6 +28,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <ctype.h>
+
+#include "buffer2.h"
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
@@ -81,7 +83,7 @@ static void pn_data_finalize(void *object)
 {
   pn_data_t *data = (pn_data_t *) object;
   pni_mem_subdeallocate(pn_class(data), data, data->nodes);
-  free(data->buf.start);
+  pni_buffer2_free(data->intern_buf);
   pn_error_free(data->error);
 }
 
@@ -378,8 +380,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
   data->intern = intern; // For disabling interning when it's not required
-  data->buf = pn_rwbytes_null;
-  data->buf_data_size = 0;
+  data->intern_buf = NULL;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -418,7 +419,8 @@ PN_INLINE void pn_data_clear(pn_data_t *data)
   data->current = 0;
   data->base_parent = 0;
   data->base_current = 0;
-  data->buf_data_size = 0;
+
+  if (data->intern_buf) pni_buffer2_clear(data->intern_buf);
 }
 
 static int pni_data_grow(pn_data_t *data)
@@ -454,42 +456,31 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 
   if (!bytes) return 0;
 
-  if (data->buf.start == NULL) {
-    // Heuristic to avoid growing small buffers too much.
-    // Set to size + 1 to allow for zero termination.
-    size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
-    data->buf = pn_rwbytes(size, malloc(size));
+  if (!data->intern_buf) {
+    // A heuristic to avoid growing small buffers too much.  Set to
+    // size + 1 to allow for zero termination.
+    data->intern_buf = pni_buffer2(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+    if (!data->intern_buf) return PN_OUT_OF_MEMORY;
   }
 
-  assert(data->buf.start);
+  size_t old_capacity = pni_buffer2_capacity(data->intern_buf);
+  size_t old_size = pni_buffer2_size(data->intern_buf);
 
-  size_t old_capacity = data->buf.size;
-  size_t old_size = data->buf_data_size;
-  size_t new_capacity = old_capacity;
-  size_t new_size = old_size + bytes->size + 1;
-
-  if (new_size > old_capacity) {
-    while (new_capacity < new_size) new_capacity = 2 * new_capacity;
-
-    data->buf.start = realloc(data->buf.start, new_capacity);
-    data->buf.size = new_capacity; // Store the new capacity
-  }
-
-  assert(data->buf.start);
-
-  data->buf_data_size = new_size;
-
-  memmove(data->buf.start + old_size, bytes->start, bytes->size);
-  data->buf.start[new_size - 1] = '\0';
+  // XXX
+  //
+  // This uses append_string for the null termination, but I don't yet
+  // know why that null termination is necessary.
+  pni_buffer2_append_string(data->intern_buf, bytes->start, bytes->size);
 
   node->data = true;
   node->data_offset = old_size;
   node->data_size = bytes->size;
 
-  bytes->start = data->buf.start + old_size;
+  // Set the atom pointer to the interned string
+  bytes->start = pni_buffer2_bytes(data->intern_buf) + old_size;
 
-  if (new_capacity > old_capacity) {
-    pni_data_rebase(data, data->buf.start);
+  if (pni_buffer2_capacity(data->intern_buf) != old_capacity) {
+    pni_data_rebase(data, pni_buffer2_bytes(data->intern_buf));
   }
 
   return 0;
