@@ -61,7 +61,7 @@ pni_buffer2_t *pni_buffer2(size_t capacity)
 void pni_buffer2_free(pni_buffer2_t *buf)
 {
   if (buf) {
-    pni_mem_subdeallocate(PN_CLASSCLASS(pni_buffer2), buf, pni_buffer2_bytes(buf));
+    pni_mem_subdeallocate(PN_CLASSCLASS(pni_buffer2), buf, buf->bytes);
     pni_mem_deallocate(PN_CLASSCLASS(pni_buffer2), buf);
   }
 }
@@ -75,7 +75,7 @@ static int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
 
   while (new_capacity < new_size) new_capacity = 2 * new_capacity;
 
-  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pni_buffer2), buf, pni_buffer2_bytes(buf), new_capacity);
+  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pni_buffer2), buf, buf->bytes, new_capacity);
   if (!buf->bytes) return PN_OUT_OF_MEMORY;
 
   buf->capacity = new_capacity;

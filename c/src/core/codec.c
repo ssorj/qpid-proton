@@ -437,7 +437,7 @@ static int pni_data_grow(pn_data_t *data)
   return 0;
 }
 
-static void pni_data_rebase(pn_data_t *data, char *base)
+static void pni_data_rebase(pn_data_t *data, const char *base)
 {
   for (unsigned i = 0; i < data->size; i++) {
     pni_node_t *node = &data->nodes[i];
@@ -452,6 +452,7 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   assert(node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL);
 
+  // XXX Need the pointer here?
   pn_bytes_t *bytes = &node->atom.u.as_bytes;
 
   if (!bytes) return 0;
@@ -476,11 +477,13 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   node->data_offset = old_size;
   node->data_size = bytes->size;
 
+  pn_bytes_t interned_bytes = pni_buffer2_bytes(data->intern_buf);
+
   // Set the atom pointer to the interned string
-  bytes->start = pni_buffer2_bytes(data->intern_buf) + old_size;
+  bytes->start = interned_bytes.start + old_size;
 
   if (pni_buffer2_capacity(data->intern_buf) != old_capacity) {
-    pni_data_rebase(data, pni_buffer2_bytes(data->intern_buf));
+    pni_data_rebase(data, interned_bytes.start);
   }
 
   return 0;

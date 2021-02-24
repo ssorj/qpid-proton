@@ -56,9 +56,9 @@ static inline void pni_buffer2_clear(pni_buffer2_t *buf)
   buf->size = 0;
 }
 
-static inline char *pni_buffer2_bytes(pni_buffer2_t *buf)
+static inline pn_bytes_t pni_buffer2_bytes(pni_buffer2_t *buf)
 {
-  return buf->bytes;
+  return pn_bytes(pni_buffer2_size(buf), buf->bytes);
 }
 
 #ifdef __cplusplus
