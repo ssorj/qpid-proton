@@ -409,7 +409,7 @@ PN_INLINE size_t pn_data_size(pn_data_t *data)
   return data->size;
 }
 
-PN_FORCE_INLINE void pn_data_clear(pn_data_t *data)
+PN_INLINE void pn_data_clear(pn_data_t *data)
 {
   assert(data);
 
@@ -418,12 +418,7 @@ PN_FORCE_INLINE void pn_data_clear(pn_data_t *data)
   data->current = 0;
   data->base_parent = 0;
   data->base_current = 0;
-
-  if (data->buf.start) {
-    free(data->buf.start);
-    data->buf = pn_rwbytes_null;
-    data->buf_data_size = 0;
-  }
+  data->buf_data_size = 0;
 }
 
 static int pni_data_grow(pn_data_t *data)
@@ -499,7 +494,6 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 
   return 0;
 }
-
 
 // XXX
 //
