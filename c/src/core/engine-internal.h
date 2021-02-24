@@ -27,6 +27,7 @@
 #include <proton/types.h>
 
 #include "buffer.h"
+#include "buffer2.h"
 #include "dispatcher.h"
 #include "logger_private.h"
 #include "util.h"
@@ -337,7 +338,7 @@ struct pn_delivery_t {
   pn_disposition_t local;
   pn_disposition_t remote;
   pn_link_t *link;  // reference counted
-  pn_buffer_t *tag;
+  pni_buffer2_t *tag;
   pn_delivery_t *unsettled_next;
   pn_delivery_t *unsettled_prev;
   pn_delivery_t *work_next;

@@ -2482,7 +2482,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
 
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       size_t full_size = bytes.size;
-      pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+      pn_bytes_t tag = pni_buffer2_bytes(delivery->tag);
 
       pn_data_clear(transport->disp_data);
 

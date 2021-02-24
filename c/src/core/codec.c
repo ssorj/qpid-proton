@@ -452,10 +452,9 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   assert(node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL);
 
-  // XXX Need the pointer here?
   pn_bytes_t *bytes = &node->atom.u.as_bytes;
 
-  if (!bytes) return 0;
+  assert(bytes);
 
   if (!data->intern_buf) {
     // A heuristic to avoid growing small buffers too much.  Set to
