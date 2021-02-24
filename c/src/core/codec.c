@@ -1,4 +1,4 @@
-*
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -379,6 +379,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
   data->intern = intern; // For disabling interning when it's not required
   data->buf = pn_rwbytes_null;
+  data->buf_data_size = 0;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -421,6 +422,7 @@ PN_FORCE_INLINE void pn_data_clear(pn_data_t *data)
   if (data->buf.start) {
     free(data->buf.start);
     data->buf = pn_rwbytes_null;
+    data->buf_data_size = 0;
   }
 }
 
@@ -438,21 +440,12 @@ static int pni_data_grow(pn_data_t *data)
   return 0;
 }
 
-static inline pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
-{
-  if (node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL) {
-    return &node->atom.u.as_bytes;
-  } else {
-    return NULL;
-  }
-}
-
 static void pni_data_rebase(pn_data_t *data, char *base)
 {
   for (unsigned i = 0; i < data->size; i++) {
     pni_node_t *node = &data->nodes[i];
     if (node->data) {
-      pn_bytes_t *bytes = pni_data_bytes(data, node);
+      pn_bytes_t *bytes = &node->atom.u.as_bytes;
       bytes->start = base + node->data_offset;
     }
   }
@@ -460,25 +453,36 @@ static void pni_data_rebase(pn_data_t *data, char *base)
 
 static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
-  // Pointers to someone elses memory
-  pn_bytes_t *bytes = pni_data_bytes(data, node);
+  assert(node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL);
 
-  if (!bytes) return 0; // XXX Need this?
+  pn_bytes_t *bytes = &node->atom.u.as_bytes;
+
+  if (!bytes) return 0;
 
   if (data->buf.start == NULL) {
-    // // Heuristic to avoid growing small buffers too much.
-    // // Set to size + 1 to allow for zero termination.
-    // size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
-    data->buf = pn_rwbytes(bytes->size + 1, malloc(bytes->size + 1));
+    // Heuristic to avoid growing small buffers too much.
+    // Set to size + 1 to allow for zero termination.
+    size_t size = pn_max(bytes->size + 1, PNI_INTERN_MINSIZE);
+    data->buf = pn_rwbytes(size, malloc(size));
   }
 
-  size_t old_size = data->buf.size;
+  assert(data->buf.start);
+
+  size_t old_capacity = data->buf.size;
+  size_t old_size = data->buf_data_size;
+  size_t new_capacity = old_capacity;
   size_t new_size = old_size + bytes->size + 1;
 
-  data->buf.start = realloc(data->buf.start, new_size);
-  data->buf.size = new_size;
+  if (new_size > old_capacity) {
+    while (new_capacity < new_size) new_capacity = 2 * new_capacity;
+
+    data->buf.start = realloc(data->buf.start, new_capacity);
+    data->buf.size = new_capacity; // Store the new capacity
+  }
 
   assert(data->buf.start);
+
+  data->buf_data_size = new_size;
 
   memmove(data->buf.start + old_size, bytes->start, bytes->size);
   data->buf.start[new_size - 1] = '\0';
@@ -489,9 +493,9 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 
   bytes->start = data->buf.start + old_size;
 
-  // if (pn_buffer2_capacity(data->buf) != oldcap) {
-  pni_data_rebase(data, data->buf.start);
-  // }
+  if (new_capacity > old_capacity) {
+    pni_data_rebase(data, data->buf.start);
+  }
 
   return 0;
 }
@@ -1786,7 +1790,7 @@ int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom = atom;
-  if (data->intern) {
+  if ((node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL) && data->intern) {
     return pni_data_intern_node(data, node);
   } else {
     return 0;
