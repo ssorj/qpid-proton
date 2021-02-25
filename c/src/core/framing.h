@@ -22,7 +22,7 @@
  *
  */
 
-#include "buffer.h"
+#include "buffer2.h"
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
@@ -42,6 +42,6 @@ typedef struct {
 } pn_frame_t;
 
 ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
-size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame);
+size_t pn_write_frame(pni_buffer2_t* buffer, pn_frame_t frame);
 
 #endif /* framing.h */

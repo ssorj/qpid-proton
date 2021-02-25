@@ -692,7 +692,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   pni_post_sasl_frame(transport);
 
-  if (pn_buffer_size(transport->output_buffer) != 0 || !pni_sasl_is_final_output_state(sasl)) {
+  if (pni_buffer2_size(transport->output_buffer) != 0 || !pni_sasl_is_final_output_state(sasl)) {
     return pn_dispatcher_output(transport, bytes, available);
   }
 
@@ -1034,4 +1034,3 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   pnx_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_SUCCESS : SASL_RECVED_FAILURE);
   return 0;
 }
-

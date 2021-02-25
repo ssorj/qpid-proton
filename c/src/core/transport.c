@@ -578,7 +578,7 @@ pn_transport_t *pn_transport(void)
     return NULL;
   }
 
-  transport->output_buffer = pn_buffer(4*1024);
+  transport->output_buffer = pni_buffer2(4*1024);
   if (!transport->output_buffer) {
     pn_transport_free(transport);
     return NULL;
@@ -680,7 +680,7 @@ static void pn_transport_finalize(void *object)
   pn_data_free(transport->output_args);
   pn_buffer_free(transport->frame);
   pn_free(transport->context);
-  pn_buffer_free(transport->output_buffer);
+  pni_buffer2_free(transport->output_buffer);
   pni_logger_fini(&transport->logger);
 
   // fprintf(stderr, "transfers:     %d\n", transfer_count);
@@ -967,7 +967,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
 
   if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
     pn_string_set(transport->scratch, "RAW: \"");
-    pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
+    pni_buffer2_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE + frame.ex_size + frame.size);
     pn_string_addf(transport->scratch, "\"");
     pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
   }
@@ -1138,7 +1138,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
     if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
       pn_string_set(transport->scratch, "RAW: \"");
-      pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
+      pni_buffer2_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE + frame.ex_size + frame.size);
       pn_string_addf(transport->scratch, "\"");
       pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
     }
@@ -2915,10 +2915,10 @@ static int64_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, int64
       transport->last_bytes_output = transport->bytes_output;
     } else if (transport->keepalive_deadline <= now) {
       transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
-      if (pn_buffer_size(transport->output_buffer) == 0) {    // no outbound data pending
+      if (pni_buffer2_size(transport->output_buffer) == 0) {    // no outbound data pending
         // so send empty frame (and account for it!)
         pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "");
-        transport->last_bytes_output += pn_buffer_size(transport->output_buffer);
+        transport->last_bytes_output += pni_buffer2_size(transport->output_buffer);
       }
     }
     timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
@@ -2959,7 +2959,7 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   // write out any buffered data _before_ returning PN_EOS, else we
   // could truncate an outgoing Close frame containing a useful error
   // status
-  if (!pn_buffer_size(transport->output_buffer) && transport->close_sent) {
+  if (!pni_buffer2_size(transport->output_buffer) && transport->close_sent) {
     return PN_EOS;
   }
 

@@ -172,7 +172,7 @@ struct pn_transport_t {
   pn_buffer_t *frame;  // frame under construction
 
   // Temporary - ??
-  pn_buffer_t *output_buffer;
+  pni_buffer2_t *output_buffer;
 
   /* statistics */
   uint64_t bytes_input;

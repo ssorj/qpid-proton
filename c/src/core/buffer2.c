@@ -118,14 +118,14 @@ PN_INLINE int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, s
   return 0;
 }
 
-PN_INLINE size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dest)
+PN_INLINE size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst)
 {
   size_t old_size = pni_buffer2_size(buf);
   size = pn_min(size, old_size);
   size_t new_size = old_size - size;
 
-  if (dest) {
-    memcpy(dest, buf->bytes, size);
+  if (dst) {
+    memcpy(dst, buf->bytes, size);
   }
 
   if (new_size) {
@@ -135,4 +135,9 @@ PN_INLINE size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *des
   buf->size = new_size;
 
   return size;
+}
+
+int pni_buffer2_quote(pni_buffer2_t *buf, pn_string_t *str, size_t n)
+{
+  return pn_quote(str, buf->bytes, pn_min(n, pni_buffer2_size(buf)));
 }
