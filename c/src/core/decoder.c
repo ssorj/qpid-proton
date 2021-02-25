@@ -39,8 +39,16 @@ static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t* code);
 static int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_variable8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_compound8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_compound32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 
 static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
@@ -207,120 +215,19 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
 
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
-  if (code == PNE_SMALLULONG) {
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
-  } else if (code == PNE_STR8_UTF8) {
-    return pni_decoder_decode_variable(decoder, data, code);
-  }
-
-  conv_t conv;
-
-  switch (code) {
-  case PNE_NULL:
-    return pn_data_put_null(data);
-  case PNE_TRUE:
-    return pn_data_put_bool(data, true);
-  case PNE_FALSE:
-    return pn_data_put_bool(data, false);
-  case PNE_BOOLEAN:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_bool(data, pn_decoder_readf8(decoder) != 0);
-  case PNE_UBYTE:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_ubyte(data, pn_decoder_readf8(decoder));
-  case PNE_BYTE:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_byte(data, pn_decoder_readf8(decoder));
-  case PNE_USHORT:
-    if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
-    return pn_data_put_ushort(data, pn_decoder_readf16(decoder));
-  case PNE_SHORT:
-    if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
-    return pn_data_put_short(data, pn_decoder_readf16(decoder));
-  case PNE_UINT:
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    return pn_data_put_uint(data, pn_decoder_readf32(decoder));
-  case PNE_UINT0:
-    return pn_data_put_uint(data, 0);
-  case PNE_SMALLUINT:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_uint(data, pn_decoder_readf8(decoder));
-  case PNE_SMALLINT:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_int(data, (int8_t) pn_decoder_readf8(decoder));
-  case PNE_INT:
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    return pn_data_put_int(data, pn_decoder_readf32(decoder));
-  case PNE_UTF32:
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    return pn_data_put_char(data, pn_decoder_readf32(decoder));
-  case PNE_FLOAT:
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    // XXX: this assumes the platform uses IEEE floats
-    conv.i = pn_decoder_readf32(decoder);
-    return pn_data_put_float(data, conv.f);
-  case PNE_DECIMAL32:
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    return pn_data_put_decimal32(data, pn_decoder_readf32(decoder));
-  case PNE_ULONG:
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    return pn_data_put_ulong(data, pn_decoder_readf64(decoder));
-  case PNE_LONG:
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    return pn_data_put_long(data, pn_decoder_readf64(decoder));
-  case PNE_MS64:
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    return pn_data_put_timestamp(data, pn_decoder_readf64(decoder));
-  case PNE_DOUBLE:
-    // XXX: this assumes the platform uses IEEE floats
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    conv.l = pn_decoder_readf64(decoder);
-    return pn_data_put_double(data, conv.d);
-  case PNE_DECIMAL64:
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    return pn_data_put_decimal64(data, pn_decoder_readf64(decoder));
-  case PNE_ULONG0:
-    return pn_data_put_ulong(data, 0);
-  case PNE_SMALLULONG:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
-  case PNE_SMALLLONG:
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    return pn_data_put_long(data, (int8_t) pn_decoder_readf8(decoder));
-  case PNE_DECIMAL128: {
-    pn_decimal128_t dec128;
-
-    if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
-    pn_decoder_readf128(decoder, &dec128);
-
-    return pn_data_put_decimal128(data, dec128);
-  }
-  case PNE_UUID: {
-    pn_uuid_t uuid;
-
-    if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
-    pn_decoder_readf128(decoder, &uuid);
-
-    return pn_data_put_uuid(data, uuid);
-  }
-  case PNE_VBIN8:
-  case PNE_STR8_UTF8:
-  case PNE_SYM8:
-  case PNE_VBIN32:
-  case PNE_STR32_UTF8:
-  case PNE_SYM32:
-    return pni_decoder_decode_variable(decoder, data, code);
-  case PNE_ARRAY8:
-  case PNE_ARRAY32:
-    return pni_decoder_decode_array(decoder, data, code);
-  case PNE_LIST0:
-    return pn_data_put_list(data);
-  case PNE_LIST8:
-  case PNE_LIST32:
-  case PNE_MAP8:
-  case PNE_MAP32:
-    return pni_decoder_decode_compound(decoder, data, code);
+  switch (code & 0xF0) {
+  case 0x40: return pni_decoder_decode_fixed0(decoder, data, code);
+  case 0x50: return pni_decoder_decode_fixed1(decoder, data, code);
+  case 0x60: return pni_decoder_decode_fixed2(decoder, data, code);
+  case 0x70: return pni_decoder_decode_fixed4(decoder, data, code);
+  case 0x80: return pni_decoder_decode_fixed8(decoder, data, code);
+  case 0x90: return pni_decoder_decode_fixed16(decoder, data, code);
+  case 0xA0: return pni_decoder_decode_variable8(decoder, data, code);
+  case 0xB0: return pni_decoder_decode_variable32(decoder, data, code);
+  case 0xC0: return pni_decoder_decode_compound8(decoder, data, code);
+  case 0xD0: return pni_decoder_decode_compound32(decoder, data, code);
+  case 0xE0:
+  case 0xF0: return pni_decoder_decode_array(decoder, data, code);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
@@ -374,77 +281,177 @@ static int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_data_t *
   return 0;
 }
 
-static int pni_decoder_decode_variable(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
-  size_t size;
-
-  if ((code & 0xF0) == 0xA0) {
-    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    size = pn_decoder_readf8(decoder);
-  } else {
-    if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    size = pn_decoder_readf32(decoder);
+  switch (code) {
+  case PNE_NULL: return pn_data_put_null(data);
+  case PNE_TRUE: return pn_data_put_bool(data, true);
+  case PNE_FALSE: return pn_data_put_bool(data, false);
+  case PNE_UINT0: return pn_data_put_uint(data, 0);
+  case PNE_ULONG0: return pn_data_put_ulong(data, 0);
+  case PNE_LIST0: return pn_data_put_list(data);
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
+}
 
-  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
 
+  uint8_t value = pn_decoder_readf8(decoder);
+
+  switch (code) {
+  case PNE_BOOLEAN: return pn_data_put_bool(data, value != 0);
+  case PNE_UBYTE: return pn_data_put_ubyte(data, value);
+  case PNE_BYTE: return pn_data_put_byte(data, value);
+  case PNE_SMALLUINT: return pn_data_put_uint(data, value);
+  case PNE_SMALLINT: return pn_data_put_int(data, (int8_t) value);
+  case PNE_SMALLULONG: return pn_data_put_ulong(data, value);
+  case PNE_SMALLLONG: return pn_data_put_long(data, (int8_t) value);
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  }
+}
+
+static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
+
+  uint16_t value = pn_decoder_readf16(decoder);
+
+  switch (code) {
+  case PNE_USHORT: return pn_data_put_ushort(data, value);
+  case PNE_SHORT: return pn_data_put_short(data, value);
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  }
+}
+
+static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+
+  uint32_t value = pn_decoder_readf32(decoder);
+
+  switch (code) {
+  case PNE_UINT: return pn_data_put_uint(data, value);
+  case PNE_INT: return pn_data_put_int(data, value);
+  case PNE_UTF32: return pn_data_put_char(data, value);
+  case PNE_FLOAT: {
+    // XXX: this assumes the platform uses IEEE floats
+    conv_t conv;
+    conv.i = value;
+    return pn_data_put_float(data, conv.f);
+  }
+  case PNE_DECIMAL32:
+    return pn_data_put_decimal32(data, value);
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  }
+}
+
+
+static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
+
+  uint64_t value = pn_decoder_readf64(decoder);
+
+  switch (code) {
+  case PNE_ULONG: return pn_data_put_ulong(data, value);
+  case PNE_LONG: return pn_data_put_long(data, value);
+  case PNE_MS64: return pn_data_put_timestamp(data, value);
+  case PNE_DOUBLE: {
+    // XXX: this assumes the platform uses IEEE floats
+    conv_t conv; // XXX initializer syntax
+    conv.l = value;
+    return pn_data_put_double(data, conv.d);
+  }
+  case PNE_DECIMAL64: return pn_data_put_decimal64(data, value);
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  }
+}
+
+static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
+
+  switch (code) {
+  case PNE_DECIMAL128: {
+    pn_decimal128_t dec128;
+    pn_decoder_readf128(decoder, &dec128);
+    return pn_data_put_decimal128(data, dec128);
+  }
+  case PNE_UUID: {
+    pn_uuid_t uuid;
+    pn_decoder_readf128(decoder, &uuid);
+    return pn_data_put_uuid(data, uuid);
+  }
+  default:
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  }
+}
+
+static inline int pni_decoder_decode_variable_values(pn_decoder_t *decoder, pn_data_t *data, uint8_t code, size_t size)
+{
   int err;
   char *start = (char *) decoder->position;
   pn_bytes_t bytes = {size, start};
 
-  switch (code & 0x0F) {
-  case 0x0:
-    err = pn_data_put_binary(data, bytes);
-    if (err) return err;
-    break;
-  case 0x1:
+  if ((code & 0x0F) == 0x1) {
     err = pn_data_put_string(data, bytes);
-    if (err) return err;
-    break;
-  case 0x3:
+  } else if ((code & 0x0F) == 0x0) {
+    err = pn_data_put_binary(data, bytes);
+  } else if ((code & 0x0F) == 0x3) {
     err = pn_data_put_symbol(data, bytes);
-    if (err) return err;
-    break;
-  default:
-    return PN_ARG_ERR;
+  } else {
+    err = PN_ARG_ERR;
   }
+
+  if (err) return err;
 
   decoder->position += size;
 
   return 0;
 }
 
-static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_variable8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+
+  size_t size = pn_decoder_readf8(decoder);
+
+  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+
+  return pni_decoder_decode_variable_values(decoder, data, code, size);
+}
+
+static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+
+  size_t size = pn_decoder_readf32(decoder);
+
+  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+
+  return pni_decoder_decode_variable_values(decoder, data, code, size);
+}
+
+static inline int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data, uint8_t code, size_t count)
 {
   int err;
-  size_t size;
-  size_t count;
 
-  if (code == PNE_LIST8 || code == PNE_MAP8) {
-    if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
-
-    size = pn_decoder_readf8(decoder);
-    count = pn_decoder_readf8(decoder);
-
-    // Check that the size is big enough for the count
-    if (size < 1) return PN_ARG_ERR;
-  } else {
-    if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-
-    size = pn_decoder_readf32(decoder);
-    count = pn_decoder_readf32(decoder);
-
-    // Check that the size is big enough for the count
-    if (size < 4) return PN_ARG_ERR;
-  }
-
-  if (code == PNE_LIST8 || code == PNE_LIST32) {
+  if ((code & 0x0F) == 0x00) {
     err = pn_data_put_list(data);
-    if (err) return err;
-  } else {
+  } else  if ((code & 0x0F) == 0x01) {
     err = pn_data_put_map(data);
-    if (err) return err;
+  } else {
+    err = PN_ARG_ERR;
   }
+
+  if (err) return err;
 
   pn_data_enter(data);
 
@@ -456,6 +463,32 @@ static int pni_decoder_decode_compound(pn_decoder_t *decoder, pn_data_t *data, u
   pn_data_exit(data);
 
   return 0;
+}
+
+static int pni_decoder_decode_compound8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
+
+  size_t size = pn_decoder_readf8(decoder);
+  size_t count = pn_decoder_readf8(decoder);
+
+  // Check that the size is big enough for the count
+  if (size < 1) return PN_ARG_ERR;
+
+  return pni_decoder_decode_compound_values(decoder, data, code, count);
+}
+
+static int pni_decoder_decode_compound32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+{
+  if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
+
+  size_t size = pn_decoder_readf32(decoder);
+  size_t count = pn_decoder_readf32(decoder);
+
+  // Check that the size is big enough for the count
+  if (size < 4) return PN_ARG_ERR;
+
+  return pni_decoder_decode_compound_values(decoder, data, code, count);
 }
 
 static int pni_decoder_decode_array(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
