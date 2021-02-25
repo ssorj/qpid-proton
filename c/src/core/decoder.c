@@ -207,113 +207,94 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
 
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
-  int err;
+  if (code == PNE_SMALLULONG) {
+    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
+  } else if (code == PNE_STR8_UTF8) {
+    return pni_decoder_decode_variable(decoder, data, code);
+  }
+
   conv_t conv;
 
   switch (code) {
   case PNE_NULL:
-    err = pn_data_put_null(data);
-    break;
+    return pn_data_put_null(data);
   case PNE_TRUE:
-    err = pn_data_put_bool(data, true);
-    break;
+    return pn_data_put_bool(data, true);
   case PNE_FALSE:
-    err = pn_data_put_bool(data, false);
-    break;
+    return pn_data_put_bool(data, false);
   case PNE_BOOLEAN:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_bool(data, pn_decoder_readf8(decoder) != 0);
-    break;
+    return pn_data_put_bool(data, pn_decoder_readf8(decoder) != 0);
   case PNE_UBYTE:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_ubyte(data, pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_ubyte(data, pn_decoder_readf8(decoder));
   case PNE_BYTE:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_byte(data, pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_byte(data, pn_decoder_readf8(decoder));
   case PNE_USHORT:
     if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
-    err = pn_data_put_ushort(data, pn_decoder_readf16(decoder));
-    break;
+    return pn_data_put_ushort(data, pn_decoder_readf16(decoder));
   case PNE_SHORT:
     if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
-    err = pn_data_put_short(data, pn_decoder_readf16(decoder));
-    break;
+    return pn_data_put_short(data, pn_decoder_readf16(decoder));
   case PNE_UINT:
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    err = pn_data_put_uint(data, pn_decoder_readf32(decoder));
-    break;
+    return pn_data_put_uint(data, pn_decoder_readf32(decoder));
   case PNE_UINT0:
-    err = pn_data_put_uint(data, 0);
-    break;
+    return pn_data_put_uint(data, 0);
   case PNE_SMALLUINT:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_uint(data, pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_uint(data, pn_decoder_readf8(decoder));
   case PNE_SMALLINT:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_int(data, (int8_t) pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_int(data, (int8_t) pn_decoder_readf8(decoder));
   case PNE_INT:
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    err = pn_data_put_int(data, pn_decoder_readf32(decoder));
-    break;
+    return pn_data_put_int(data, pn_decoder_readf32(decoder));
   case PNE_UTF32:
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    err = pn_data_put_char(data, pn_decoder_readf32(decoder));
-    break;
+    return pn_data_put_char(data, pn_decoder_readf32(decoder));
   case PNE_FLOAT:
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
     // XXX: this assumes the platform uses IEEE floats
     conv.i = pn_decoder_readf32(decoder);
-    err = pn_data_put_float(data, conv.f);
-    break;
+    return pn_data_put_float(data, conv.f);
   case PNE_DECIMAL32:
     if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
-    err = pn_data_put_decimal32(data, pn_decoder_readf32(decoder));
-    break;
+    return pn_data_put_decimal32(data, pn_decoder_readf32(decoder));
   case PNE_ULONG:
     if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    err = pn_data_put_ulong(data, pn_decoder_readf64(decoder));
-    break;
+    return pn_data_put_ulong(data, pn_decoder_readf64(decoder));
   case PNE_LONG:
     if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    err = pn_data_put_long(data, pn_decoder_readf64(decoder));
-    break;
+    return pn_data_put_long(data, pn_decoder_readf64(decoder));
   case PNE_MS64:
     if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    err = pn_data_put_timestamp(data, pn_decoder_readf64(decoder));
-    break;
+    return pn_data_put_timestamp(data, pn_decoder_readf64(decoder));
   case PNE_DOUBLE:
     // XXX: this assumes the platform uses IEEE floats
     if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
     conv.l = pn_decoder_readf64(decoder);
-    err = pn_data_put_double(data, conv.d);
-    break;
+    return pn_data_put_double(data, conv.d);
   case PNE_DECIMAL64:
     if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-    err = pn_data_put_decimal64(data, pn_decoder_readf64(decoder));
-    break;
+    return pn_data_put_decimal64(data, pn_decoder_readf64(decoder));
   case PNE_ULONG0:
-    err = pn_data_put_ulong(data, 0);
-    break;
+    return pn_data_put_ulong(data, 0);
   case PNE_SMALLULONG:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_ulong(data, pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
   case PNE_SMALLLONG:
     if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
-    err = pn_data_put_long(data, (int8_t) pn_decoder_readf8(decoder));
-    break;
+    return pn_data_put_long(data, (int8_t) pn_decoder_readf8(decoder));
   case PNE_DECIMAL128: {
     pn_decimal128_t dec128;
 
     if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
     pn_decoder_readf128(decoder, &dec128);
 
-    err = pn_data_put_decimal128(data, dec128);
-    break;
+    return pn_data_put_decimal128(data, dec128);
   }
   case PNE_UUID: {
     pn_uuid_t uuid;
@@ -321,9 +302,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
     pn_decoder_readf128(decoder, &uuid);
 
-    err = pn_data_put_uuid(data, uuid);
-
-    break;
+    return pn_data_put_uuid(data, uuid);
   }
   case PNE_VBIN8:
   case PNE_STR8_UTF8:
@@ -336,8 +315,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
   case PNE_ARRAY32:
     return pni_decoder_decode_array(decoder, data, code);
   case PNE_LIST0:
-    err = pn_data_put_list(data);
-    break;
+    return pn_data_put_list(data);
   case PNE_LIST8:
   case PNE_LIST32:
   case PNE_MAP8:
@@ -346,8 +324,6 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return err;
 }
 
 static inline int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
