@@ -422,7 +422,7 @@ static void pn_transport_initialize(void *object)
   //
   // Turning off the string interning here is a win.
   transport->output_args = pni_data(16, false);
-  transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
+  transport->frame = pni_buffer2(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
@@ -678,7 +678,7 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->scratch);
   pn_data_free(transport->args);
   pn_data_free(transport->output_args);
-  pn_buffer_free(transport->frame);
+  pni_buffer2_free(transport->frame);
   pn_free(transport->context);
   pni_buffer2_free(transport->output_buffer);
   pni_logger_fini(&transport->logger);
@@ -924,7 +924,7 @@ void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
 
 int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...)
 {
-  pn_buffer_t *frame_buf = transport->frame;
+  pni_buffer2_t *frame_buf = transport->frame;
   va_list ap;
   va_start(ap, fmt);
   pn_data_clear(transport->output_args);
@@ -940,14 +940,14 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   pn_do_trace(transport, ch, OUT, transport->output_args, NULL, 0);
 
  encode_performatives:
-  pn_buffer_clear( frame_buf );
-  pn_rwbytes_t buf = pn_buffer_memory( frame_buf );
-  buf.size = pn_buffer_available( frame_buf );
+  pni_buffer2_clear(frame_buf);
+  pn_rwbytes_t buf = pni_buffer2_memory(frame_buf);
+  buf.size = pni_buffer2_available(frame_buf);
 
-  ssize_t wr = pn_data_encode( transport->output_args, buf.start, buf.size );
+  ssize_t wr = pn_data_encode(transport->output_args, buf.start, buf.size);
   if (wr < 0) {
     if (wr == PN_OVERFLOW) {
-      pn_buffer_ensure( frame_buf, pn_buffer_available( frame_buf ) * 2 );
+      pni_buffer2_ensure(frame_buf, pni_buffer2_available(frame_buf) * 2);
       goto encode_performatives;
     }
     pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
@@ -1021,7 +1021,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 {
   bool more_flag = more;
   unsigned framecount = 0;
-  pn_buffer_t *frame = transport->frame;
+  pni_buffer2_t *frame = transport->frame;
   pn_data_t* data = transport->output_args;
   int field_count;
 
@@ -1082,14 +1082,14 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   do { // send as many frames as possible without changing the 'more' flag...
 
   encode_performatives:
-    pn_buffer_clear( frame );
-    pn_rwbytes_t buf = pn_buffer_memory( frame );
-    buf.size = pn_buffer_available( frame );
+    pni_buffer2_clear(frame);
+    pn_rwbytes_t buf = pni_buffer2_memory(frame);
+    buf.size = pni_buffer2_available(frame);
 
     ssize_t wr = pn_data_encode(transport->output_args, buf.start, buf.size);
     if (wr < 0) {
       if (wr == PN_OVERFLOW) {
-        pn_buffer_ensure( frame, pn_buffer_available( frame ) * 2 );
+        pni_buffer2_ensure(frame, pni_buffer2_available(frame) * 2);
         goto encode_performatives;
       }
       pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "error posting frame: %s", pn_code(wr));
@@ -1113,9 +1113,9 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
       }
     }
 
-    if (pn_buffer_available( frame ) < (available + buf.size)) {
+    if (pni_buffer2_available(frame) < (available + buf.size)) {
       // not enough room for payload - try again...
-      pn_buffer_ensure( frame, available + buf.size );
+      pni_buffer2_ensure(frame, available + buf.size);
       goto encode_performatives;
     }
 

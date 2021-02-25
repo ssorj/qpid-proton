@@ -66,7 +66,7 @@ void pni_buffer2_free(pni_buffer2_t *buf)
   }
 }
 
-static int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
+int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
 {
   size_t old_capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);

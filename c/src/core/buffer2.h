@@ -38,6 +38,7 @@ typedef struct pni_buffer2_t {
 
 pni_buffer2_t *pni_buffer2(size_t capacity);
 void pni_buffer2_free(pni_buffer2_t *buf);
+int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size);
 int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size);
 int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size);
 size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst);
@@ -53,6 +54,11 @@ static inline size_t pni_buffer2_size(pni_buffer2_t *buf)
   return buf->size;
 }
 
+static inline size_t pni_buffer2_available(pni_buffer2_t *buf)
+{
+  return buf->capacity - buf->size;
+}
+
 static inline void pni_buffer2_clear(pni_buffer2_t *buf)
 {
   buf->size = 0;
@@ -61,6 +67,11 @@ static inline void pni_buffer2_clear(pni_buffer2_t *buf)
 static inline pn_bytes_t pni_buffer2_bytes(pni_buffer2_t *buf)
 {
   return pn_bytes(pni_buffer2_size(buf), buf->bytes);
+}
+
+static inline pn_rwbytes_t pni_buffer2_memory(pni_buffer2_t *buf)
+{
+  return pn_rwbytes(pni_buffer2_size(buf), buf->bytes);
 }
 
 #ifdef __cplusplus

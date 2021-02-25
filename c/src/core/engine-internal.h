@@ -169,7 +169,7 @@ struct pn_transport_t {
   pn_string_t *scratch;
   pn_data_t *args;
   pn_data_t *output_args;
-  pn_buffer_t *frame;  // frame under construction
+  pni_buffer2_t *frame;  // frame under construction
 
   // Temporary - ??
   pni_buffer2_t *output_buffer;
