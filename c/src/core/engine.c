@@ -1482,7 +1482,7 @@ static void pn_delivery_finalize(void *object)
                         : &link->session->state.incoming,
                         delivery);
     pni_buffer2_clear(delivery->tag);
-    pn_buffer_clear(delivery->bytes);
+    pni_buffer2_clear(delivery->bytes);
     pn_record_clear(delivery->context);
     delivery->settled = true;
     pn_connection_t *conn = link->session->connection;
@@ -1499,7 +1499,7 @@ static void pn_delivery_finalize(void *object)
   if (!pooled) {
     pn_free(delivery->context);
     pni_buffer2_free(delivery->tag);
-    pn_buffer_free(delivery->bytes);
+    pni_buffer2_free(delivery->bytes);
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
   }
@@ -1567,7 +1567,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     if (!delivery) return NULL;
     delivery->tag = pni_buffer2(16);
     // XXX
-    delivery->bytes = pn_buffer(128);
+    delivery->bytes = pni_buffer2(128);
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
     delivery->context = pn_record();
@@ -1590,7 +1590,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
-  pn_buffer_clear(delivery->bytes);
+  pni_buffer2_clear(delivery->bytes);
   delivery->done = false;
   delivery->aborted = false;
   pn_record_clear(delivery->context);
@@ -1629,7 +1629,7 @@ PN_FORCE_INLINE bool pn_delivery_buffered(pn_delivery_t *delivery)
     if (state->sent) {
       return false;
     } else {
-      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
+      return delivery->done || (pni_buffer2_size(delivery->bytes) > 0);
     }
   } else {
     return false;
@@ -1808,8 +1808,8 @@ static void pni_advance_receiver(pn_link_t *link)
   link->session->incoming_deliveries--;
 
   pn_delivery_t *current = link->current;
-  link->session->incoming_bytes -= pn_buffer_size(current->bytes);
-  pn_buffer_clear(current->bytes);
+  link->session->incoming_bytes -= pni_buffer2_size(current->bytes);
+  pni_buffer2_clear(current->bytes);
 
   if (!link->session->state.incoming_window) {
     pni_add_tpwork(current);
@@ -1936,7 +1936,7 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
   pn_delivery_t *current = pn_link_current(sender);
   if (!current) return PN_EOS;
   if (!bytes || !n) return 0;
-  pn_buffer_append(current->bytes, bytes, n);
+  pni_buffer2_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
   pni_add_tpwork(current);
   return n;
@@ -1968,8 +1968,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   pn_delivery_t *delivery = receiver->current;
   if (!delivery) return PN_STATE_ERR;
   if (delivery->aborted) return PN_ABORTED;
-  size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
-  pn_buffer_trim(delivery->bytes, size, 0);
+  size_t size = pni_buffer2_pop_left(delivery->bytes, n, bytes);
   if (size) {
     receiver->session->incoming_bytes -= size;
     if (!receiver->session->state.incoming_window) {
@@ -2127,7 +2126,7 @@ size_t pn_delivery_pending(pn_delivery_t *delivery)
      the PN_ABORTED error return code.
   */
   if (delivery->aborted) return 1;
-  return pn_buffer_size(delivery->bytes);
+  return pni_buffer2_size(delivery->bytes);
 }
 
 bool pn_delivery_partial(pn_delivery_t *delivery)
@@ -2139,8 +2138,8 @@ void pn_delivery_abort(pn_delivery_t *delivery) {
   if (!delivery->local.settled) { /* Can't abort a settled delivery */
     delivery->aborted = true;
     pn_delivery_settle(delivery);
-    delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
-    pn_buffer_clear(delivery->bytes);
+    delivery->link->session->outgoing_bytes -= pni_buffer2_size(delivery->bytes);
+    pni_buffer2_clear(delivery->bytes);
   }
 }
 

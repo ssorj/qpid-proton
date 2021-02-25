@@ -40,6 +40,7 @@ pni_buffer2_t *pni_buffer2(size_t capacity);
 void pni_buffer2_free(pni_buffer2_t *buf);
 int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size);
 int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size);
+size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst);
 
 static inline size_t pni_buffer2_capacity(pni_buffer2_t *buf)
 {

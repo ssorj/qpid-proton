@@ -1735,7 +1735,7 @@ args_end: ;
   }
 
   if (delivery) {
-    pn_buffer_append(delivery->bytes, payload->start, payload->size);
+    pni_buffer2_append(delivery->bytes, payload->start, payload->size);
     if (more) {
       if (!link->more_pending) {
         // First frame of a multi-frame transfer. Remember at link level.
@@ -2473,14 +2473,14 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   bool transfer_posted = false;
 
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
+    if (!state->sent && (delivery->done || pni_buffer2_size(delivery->bytes) > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
 
       if (!state->init) {
         state = pni_delivery_map_push(&ssn_state->outgoing, delivery);
       }
 
-      pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
+      pn_bytes_t bytes = pni_buffer2_bytes(delivery->bytes);
       size_t full_size = bytes.size;
       pn_bytes_t tag = pni_buffer2_bytes(delivery->tag);
 
@@ -2511,10 +2511,11 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
 
       int sent = full_size - bytes.size;
 
-      pn_buffer_trim(delivery->bytes, sent, 0);
+      pni_buffer2_pop_left(delivery->bytes, sent, NULL);
+
       link->session->outgoing_bytes -= sent;
 
-      if (!pn_buffer_size(delivery->bytes) && delivery->done) {
+      if (!pni_buffer2_size(delivery->bytes) && delivery->done) {
         state->sent = true;
         link_state->delivery_count++;
         link_state->link_credit--;

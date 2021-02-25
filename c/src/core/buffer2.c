@@ -85,16 +85,16 @@ static int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
 
 PN_INLINE int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size)
 {
-  size_t old_capacity = pni_buffer2_capacity(buf);
+  size_t capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);
   size_t new_size = old_size + size;
 
-  if (new_size > old_capacity) {
+  if (new_size > capacity) {
     int err = pni_buffer2_ensure(buf, new_size);
     if (err) return err;
   }
 
-  memmove(buf->bytes + old_size, bytes, size);
+  memcpy(buf->bytes + old_size, bytes, size);
   buf->size = new_size;
 
   return 0;
@@ -102,18 +102,37 @@ PN_INLINE int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t s
 
 PN_INLINE int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size)
 {
-  size_t old_capacity = pni_buffer2_capacity(buf);
+  size_t capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);
   size_t new_size = old_size + size + 1;
 
-  if (new_size > old_capacity) {
+  if (new_size > capacity) {
     int err = pni_buffer2_ensure(buf, new_size);
     if (err) return err;
   }
 
-  memmove(buf->bytes + old_size, bytes, size);
+  memcpy(buf->bytes + old_size, bytes, size);
   buf->bytes[new_size - 1] = '\0';
   buf->size = new_size;
 
   return 0;
+}
+
+PN_INLINE size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dest)
+{
+  size_t old_size = pni_buffer2_size(buf);
+  size = pn_min(size, old_size);
+  size_t new_size = old_size - size;
+
+  if (dest) {
+    memcpy(dest, buf->bytes, size);
+  }
+
+  if (new_size) {
+    memmove(buf->bytes, buf->bytes + size, new_size);
+  }
+
+  buf->size = new_size;
+
+  return size;
 }
