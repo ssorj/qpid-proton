@@ -340,8 +340,7 @@ static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uin
   case PNE_UTF32: return pn_data_put_char(data, value);
   case PNE_FLOAT: {
     // XXX: this assumes the platform uses IEEE floats
-    conv_t conv;
-    conv.i = value;
+    conv_t conv = { .i = value };
     return pn_data_put_float(data, conv.f);
   }
   case PNE_DECIMAL32:
@@ -350,7 +349,6 @@ static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uin
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 }
-
 
 static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
@@ -364,8 +362,7 @@ static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uin
   case PNE_MS64: return pn_data_put_timestamp(data, value);
   case PNE_DOUBLE: {
     // XXX: this assumes the platform uses IEEE floats
-    conv_t conv; // XXX initializer syntax
-    conv.l = value;
+    conv_t conv = { .l = value };
     return pn_data_put_double(data, conv.d);
   }
   case PNE_DECIMAL64: return pn_data_put_decimal64(data, value);
@@ -378,18 +375,15 @@ static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, ui
 {
   if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
 
-  switch (code) {
-  case PNE_DECIMAL128: {
-    pn_decimal128_t dec128;
-    pn_decoder_readf128(decoder, &dec128);
-    return pn_data_put_decimal128(data, dec128);
-  }
-  case PNE_UUID: {
+  if (code == PNE_UUID) {
     pn_uuid_t uuid;
     pn_decoder_readf128(decoder, &uuid);
     return pn_data_put_uuid(data, uuid);
-  }
-  default:
+  } else if (code == PNE_DECIMAL128) {
+    pn_decimal128_t dec128;
+    pn_decoder_readf128(decoder, &dec128);
+    return pn_data_put_decimal128(data, dec128);
+  } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 }
