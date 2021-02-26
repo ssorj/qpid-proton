@@ -63,8 +63,8 @@ struct pn_endpoint_t {
 
 typedef struct {
   pn_sequence_t id;
-  bool sending;
-  bool sent;
+  bool sending; // True if we have sent at least 1 frame
+  bool sent;    // True if we have sent the entire delivery
   bool init;
 } pn_delivery_state_t;
 

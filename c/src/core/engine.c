@@ -1575,28 +1575,23 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   } else {
     assert(!delivery->state.init);
 
-    // XXX These will be relatively hot
-
     pni_buffer2_clear(delivery->tag);
     pni_buffer2_clear(delivery->bytes);
+
+    pn_disposition_clear(&delivery->local);
+    pn_disposition_clear(&delivery->remote);
 
     pn_record_clear(delivery->context);
   }
 
   pni_buffer2_append(delivery->tag, tag.start, tag.size);
 
-  pn_disposition_clear(&delivery->local);
-  pn_disposition_clear(&delivery->remote);
-
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
 
-  delivery->state.init = false;
-  delivery->state.sending = false; // True if we have sent at least 1 frame
-  delivery->state.sent = false;    // True if we have sent the entire delivery
-
+  delivery->state = (pn_delivery_state_t) {0};
   delivery->updated = false;
   delivery->settled = false;
   delivery->done = false;
@@ -1604,8 +1599,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->work = false;
   delivery->tpwork = false;
 
-  delivery->link = link;
   delivery->referenced = true;
+  delivery->link = link;
   pn_incref(delivery->link); // Keep link until finalized
   LL_ADD(link, unsettled, delivery);
 
@@ -1619,7 +1614,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   // XXX: could just remove incref above
   //
-
   // XXX
   //
   // The presence of this decref introduces apparent calls (quite a
