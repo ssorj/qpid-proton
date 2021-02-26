@@ -785,7 +785,7 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-PN_FORCE_INLINE void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+PN_INLINE void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
@@ -1842,7 +1842,7 @@ bool pn_link_advance(pn_link_t *link)
 // pn_link_remote_credit asserts on a null link.
 // The docs say nothing on this topic either way.
 // These squishy semantics suck.
-int pn_link_credit(pn_link_t *link)
+PN_INLINE int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
 }
@@ -2048,7 +2048,7 @@ pn_data_t *pn_link_remote_properties(pn_link_t *link)
 }
 
 
-pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
+PN_INLINE pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   assert(delivery);
   return delivery->link;
