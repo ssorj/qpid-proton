@@ -1655,18 +1655,8 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
 args_end: ;
 
-  // printf("handle %d\n", handle);
-  // printf("id %d\n", id);
-  // printf("id_set %d\n", id_set);
-  // printf("tag %s\n", tag.start);
-  // printf("settled %d\n", settled);
-  // printf("settled_set %d\n", settled_set);
-  // printf("more %d\n", more);
-  // printf("type %ld\n", type);
-  // printf("type_set %d\n", type_set);
-  // printf("aborted %d\n", aborted);
-
   pn_session_t *ssn = pni_channel_state(transport, channel);
+
   if (!ssn) {
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
   }
@@ -1676,28 +1666,40 @@ args_end: ;
   }
 
   pn_link_t *link = pni_handle_state(ssn, handle);
+
   if (!link) {
     return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
   }
+
   pn_delivery_t *delivery = NULL;
   bool new_delivery = false;
+
   if (link->more_pending) {
     // Ongoing multiframe delivery.
+
     if (link->unsettled_tail && !link->unsettled_tail->done) {
       delivery = link->unsettled_tail;
-      if (settled_set && !settled && delivery->remote.settled)
+
+      if (settled_set && !settled && delivery->remote.settled) {
         return pn_do_error(transport, "amqp:invalid-field", "invalid transition from settled to unsettled");
-      if (id_set && id != delivery->state.id)
+      }
+
+      if (id_set && id != delivery->state.id) {
         return pn_do_error(transport, "amqp:invalid-field", "invalid delivery-id for a continuation transfer");
+      }
     } else {
       // Application has already settled.  Delivery is no more.
       // Ignore content and look for transition to a new delivery.
+
       if (!id_set || id == link->more_id) {
         // Still old delivery.
-        if (!more || aborted)
+
+        if (!more || aborted) {
           link->more_pending = false;
+        }
       } else {
         // New id.
+
         new_delivery = true;
         link->more_pending = false;
       }
@@ -1709,6 +1711,7 @@ args_end: ;
   if (new_delivery) {
     assert(!link->more_pending);
     assert(delivery == NULL);
+
     pn_delivery_map_t *incoming = &ssn->state.incoming;
 
     if (!ssn->state.incoming_init) {
@@ -1718,12 +1721,15 @@ args_end: ;
     }
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
+
     pn_delivery_state_t *state = pni_delivery_map_push(incoming, delivery);
+
     if (id_set && id != state->id) {
       return pn_do_error(transport, "amqp:session:invalid-field",
                          "sequencing error, expected delivery-id %u, got %u",
                          state->id, id);
     }
+
     if (type_set) {
       delivery->remote.type = type;
       pn_data_copy(delivery->remote.data, transport->disp_data);
@@ -1736,6 +1742,7 @@ args_end: ;
 
   if (delivery) {
     pni_buffer2_append(delivery->bytes, payload->start, payload->size);
+
     if (more) {
       if (!link->more_pending) {
         // First frame of a multi-frame transfer. Remember at link level.
@@ -1743,10 +1750,11 @@ args_end: ;
         assert(id_set);  // Id MUST be set on first frame, and already checked above.
         link->more_id = id;
       }
+
       delivery->done = false;
-    }
-    else
+    } else {
       delivery->done = true;
+    }
 
     // XXX: need to fill in remote state: delivery->remote.state = ...;
     if (settled && !delivery->remote.settled) {
@@ -1762,6 +1770,7 @@ args_end: ;
       link->more_pending = false;
       pn_work_update(transport->connection, delivery);
     }
+
     pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
   }
 
