@@ -1553,6 +1553,8 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
   return dtag;
 }
 
+void pni_class_decref_without_finalizing(const pn_class_t *clazz, void *object);
+
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
@@ -1614,12 +1616,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_work_update(link->session->connection, delivery);
 
   // XXX: could just remove incref above
-  //
-  // XXX
-  //
-  // The presence of this decref introduces apparent calls (quite a
-  // lot) to delivery_finalize.
-  pn_decref(delivery);
+
+  pni_class_decref_without_finalizing(PN_OBJECT, delivery);
 
   return delivery;
 }
@@ -1919,6 +1917,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     link->unsettled_count--;
     delivery->local.settled = true;
     pni_add_tpwork(delivery);
+    //fprintf(stderr, "delivery\n");
     pn_work_update(delivery->link->session->connection, delivery);
     // XXX
     //
