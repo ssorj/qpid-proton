@@ -1556,50 +1556,62 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
+
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
+
   if (!delivery) {
     static const pn_class_t clazz = PN_METACLASS(pn_delivery);
     delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
     if (!delivery) return NULL;
+
     delivery->tag = pni_buffer2(16);
-    // XXX
     delivery->bytes = pni_buffer2(128);
+
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
+
     delivery->context = pn_record();
   } else {
     assert(!delivery->state.init);
+
+    // XXX These will be relatively hot
+
+    pni_buffer2_clear(delivery->tag);
+    pni_buffer2_clear(delivery->bytes);
+
+    pn_record_clear(delivery->context);
   }
-  delivery->link = link;
-  pn_incref(delivery->link);  // keep link until finalized
-  pni_buffer2_clear(delivery->tag);
+
   pni_buffer2_append(delivery->tag, tag.start, tag.size);
+
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);
-  delivery->updated = false;
-  delivery->settled = false;
-  LL_ADD(link, unsettled, delivery);
-  delivery->referenced = true;
+
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
-  delivery->work = false;
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
-  delivery->tpwork = false;
-  pni_buffer2_clear(delivery->bytes);
+
+  delivery->state.init = false;
+  delivery->state.sending = false; // True if we have sent at least 1 frame
+  delivery->state.sent = false;    // True if we have sent the entire delivery
+
+  delivery->updated = false;
+  delivery->settled = false;
   delivery->done = false;
   delivery->aborted = false;
-  pn_record_clear(delivery->context);
+  delivery->work = false;
+  delivery->tpwork = false;
 
-  // begin delivery state
-  delivery->state.init = false;
-  delivery->state.sending = false; /* True if we have sent at least 1 frame */
-  delivery->state.sent = false;    /* True if we have sent the entire delivery */
-  // end delivery state
+  delivery->link = link;
+  delivery->referenced = true;
+  pn_incref(delivery->link); // Keep link until finalized
+  LL_ADD(link, unsettled, delivery);
 
-  if (!link->current)
+  if (!link->current) {
     link->current = delivery;
+  }
 
   link->unsettled_count++;
 

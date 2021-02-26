@@ -345,9 +345,9 @@ struct pn_delivery_t {
   pn_delivery_t *work_prev;
   pn_delivery_t *tpwork_next;
   pn_delivery_t *tpwork_prev;
-  pn_delivery_state_t state;
   pni_buffer2_t *bytes;
   pn_record_t *context;
+  pn_delivery_state_t state;
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
   bool work;
