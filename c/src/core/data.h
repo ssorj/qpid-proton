@@ -61,6 +61,15 @@ struct pn_data_t {
   bool intern;
 };
 
+size_t pn_data_siblings(pn_data_t *data);
+pn_data_t* pni_data(size_t capacity, bool intern);
+void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
+
+int pni_data_traverse(pn_data_t *data,
+                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      void *ctx);
+
 static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {
   if (node_id) {
@@ -69,10 +78,6 @@ static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
     return NULL;
   }
 }
-
-size_t pn_data_siblings(pn_data_t *data);
-
-pn_data_t* pni_data(size_t capacity, bool intern);
 
 static inline pn_type_t pni_data_parent_type(pn_data_t *data)
 {
@@ -84,11 +89,6 @@ static inline pn_type_t pni_data_parent_type(pn_data_t *data)
     return PN_INVALID;
   }
 }
-
-int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      void *ctx);
 
 PN_FORCE_INLINE static bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
