@@ -1468,19 +1468,10 @@ PN_FORCE_INLINE static pni_node_t *pni_data_add(pn_data_t *data)
     if (err) return NULL;
   }
 
-  pni_node_t* node = data->nodes + data->size++;
+  pni_node_t *node = data->nodes + data->size++;
   pni_nid_t node_id = node - data->nodes + 1;
 
-  node->prev = 0;
-  node->next = 0;
-  node->down = 0;
-  node->parent = 0;
-  node->children = 0;
-  node->data_offset = 0;
-  node->data_size = 0;
-  node->data = false;
-  node->described = false;
-  node->small = false;
+  *node = (pni_node_t) {0};
 
   if (data->current) {
     pni_node_t* current = data->nodes + data->current - 1;
