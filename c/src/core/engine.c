@@ -1478,9 +1478,6 @@ static void pn_delivery_finalize(void *object)
                         ? &link->session->state.outgoing
                         : &link->session->state.incoming,
                         delivery);
-    pni_buffer2_clear(delivery->tag);
-    pni_buffer2_clear(delivery->bytes);
-    pn_record_clear(delivery->context);
     delivery->settled = true;
     pn_connection_t *conn = link->session->connection;
     assert(pn_refcount(delivery) == 0);
