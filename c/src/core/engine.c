@@ -1592,6 +1592,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork_prev = NULL;
 
   delivery->state = (pn_delivery_state_t) {0};
+
   delivery->updated = false;
   delivery->settled = false;
   delivery->done = false;
