@@ -1571,16 +1571,6 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
-// XXX Deduplicate
-static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  if (!delivery->work)
-  {
-    LL_ADD(connection, work, delivery);
-    delivery->work = true;
-  }
-}
-
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
@@ -2484,6 +2474,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     state->sent = true;
 
     pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_FLOW);
+    pni_clear_work(transport->connection, delivery);
     pn_full_settle(&link->session->state.incoming, delivery);
 
     return 0;
@@ -2563,7 +2554,10 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     if (err) return err;
   }
 
-  if (delivery->local.settled && state && state->sent) pn_full_settle(&ssn_state->outgoing, delivery);
+  if (delivery->local.settled && state && state->sent) {
+    pni_clear_work(transport->connection, delivery);
+    pn_full_settle(&ssn_state->outgoing, delivery);
+  }
 
   return 0;
 }
@@ -2586,7 +2580,10 @@ static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t 
     if (err) return err;
   }
 
-  if (delivery->local.settled) pn_full_settle(&link->session->state.incoming, delivery);
+  if (delivery->local.settled) {
+    pni_clear_work(transport->connection, delivery);
+    pn_full_settle(&link->session->state.incoming, delivery);
+  }
 
   return 0;
 }

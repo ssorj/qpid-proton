@@ -696,24 +696,6 @@ pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
     return pn_work_head(delivery->link->session->connection);
 }
 
-static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  if (!delivery->work)
-  {
-    LL_ADD(connection, work, delivery);
-    delivery->work = true;
-  }
-}
-
-static void pni_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  if (delivery->work)
-  {
-    LL_REMOVE(connection, work, delivery);
-    delivery->work = false;
-  }
-}
-
 void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   pn_link_t *link = pn_delivery_link(delivery);

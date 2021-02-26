@@ -391,6 +391,24 @@ typedef enum {IN, OUT} pn_dir_t;
 void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
                  pn_data_t *args, const char *payload, size_t size);
 
+static inline void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  if (!delivery->work)
+  {
+    LL_ADD(connection, work, delivery);
+    delivery->work = true;
+  }
+}
+
+static inline void pni_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  if (delivery->work)
+  {
+    LL_REMOVE(connection, work, delivery);
+    delivery->work = false;
+  }
+}
+
 #if __cplusplus
 }
 #endif
