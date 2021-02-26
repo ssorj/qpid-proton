@@ -317,8 +317,6 @@ static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uin
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
