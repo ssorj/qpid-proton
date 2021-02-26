@@ -317,6 +317,8 @@ static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uin
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
+
+  return 0;
 }
 
 static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
@@ -325,10 +327,11 @@ static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uin
 
   uint16_t value = pn_decoder_readf16(decoder);
 
-  switch (code) {
-  case PNE_USHORT: return pn_data_put_ushort(data, value);
-  case PNE_SHORT: return pn_data_put_short(data, value);
-  default:
+  if (code == PNE_USHORT) {
+    return pn_data_put_ushort(data, value);
+  } else if (code == PNE_SHORT) {
+    return pn_data_put_short(data, value);
+  } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 }
