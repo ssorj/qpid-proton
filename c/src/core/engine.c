@@ -1908,17 +1908,20 @@ void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t mode)
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
   assert(delivery);
+
   if (!delivery->local.settled) {
     pn_link_t *link = delivery->link;
-    if (pn_delivery_current(delivery)) {
+
+    if (pn_link_current(link) == delivery) {
       pn_link_advance(link);
     }
 
     link->unsettled_count--;
     delivery->local.settled = true;
+
     pni_add_tpwork(delivery);
-    //fprintf(stderr, "delivery\n");
-    pn_work_update(delivery->link->session->connection, delivery);
+    pni_clear_work(delivery->link->session->connection, delivery);
+
     // XXX
     //
     // Watch out!  I'm trying *not* this.
