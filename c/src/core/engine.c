@@ -735,9 +735,6 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
   }
 }
 
-// XXX
-//
-// Inlining this is a notable performance loser
 static void pni_add_tpwork(pn_delivery_t *delivery)
 {
   pn_connection_t *connection = delivery->link->session->connection;
@@ -758,7 +755,7 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
 // Wish I knew if the incref/decref was well motivated.
 // With it removed, it passes the tests and memory is stable.
 // There is a perf boost from it.
-PN_FORCE_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
+PN_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   if (delivery->tpwork)
   {
