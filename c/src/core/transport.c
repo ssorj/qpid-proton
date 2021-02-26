@@ -1571,6 +1571,16 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
+// XXX Deduplicate
+static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  if (!delivery->work)
+  {
+    LL_ADD(connection, work, delivery);
+    delivery->work = true;
+  }
+}
+
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
@@ -1760,7 +1770,8 @@ args_end: ;
     if (settled && !delivery->remote.settled) {
       delivery->remote.settled = settled;
       delivery->updated = true;
-      pn_work_update(transport->connection, delivery);
+
+      pni_add_work(transport->connection, delivery);
     }
 
     if ((delivery->aborted = aborted)) {
@@ -1768,7 +1779,8 @@ args_end: ;
       delivery->done = true;
       delivery->updated = true;
       link->more_pending = false;
-      pn_work_update(transport->connection, delivery);
+
+      pni_add_work(transport->connection, delivery);
     }
 
     pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
@@ -1826,7 +1838,7 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
       link->credit += link->state.link_credit - old;
       link->drain = drain;
       pn_delivery_t *delivery = pn_link_current(link);
-      if (delivery) pn_work_update(transport->connection, delivery);
+      if (delivery) pni_add_work(transport->connection, delivery);
     } else {
       pn_sequence_t delta = delivery_count - link->state.delivery_count;
       if (delta > 0) {
@@ -1927,7 +1939,7 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
 
   remote->settled = settled;
   delivery->updated = true;
-  pn_work_update(transport->connection, delivery);
+  pni_add_work(transport->connection, delivery);
 
   pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
   return 0;

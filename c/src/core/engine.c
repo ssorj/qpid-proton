@@ -1604,13 +1604,17 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_incref(delivery->link); // Keep link until finalized
   LL_ADD(link, unsettled, delivery);
 
+  link->unsettled_count++;
+
   if (!link->current) {
     link->current = delivery;
   }
 
-  link->unsettled_count++;
-
-  pn_work_update(link->session->connection, delivery);
+  if (link->current == delivery) {
+    if (link->endpoint.type == RECEIVER || (link->endpoint.type == SENDER && pn_link_credit(link))) {
+      pni_add_work(link->session->connection, delivery);
+    }
+  }
 
   // XXX: could just remove incref above
 
@@ -1820,15 +1824,27 @@ static void pni_advance_receiver(pn_link_t *link)
 bool pn_link_advance(pn_link_t *link)
 {
   if (link && link->current) {
+    pn_connection_t *conn = link->session->connection;
     pn_delivery_t *prev = link->current;
+
     if (link->endpoint.type == SENDER) {
       pni_advance_sender(link);
     } else {
       pni_advance_receiver(link);
     }
+
+    if (prev->updated) {
+      pni_add_work(conn, prev);
+    } else {
+      pni_clear_work(conn, prev);
+    }
+
     pn_delivery_t *next = link->current;
-    pn_work_update(link->session->connection, prev);
-    if (next) pn_work_update(link->session->connection, next);
+
+    if (next) {
+      pni_add_work(conn, next);
+    }
+
     return prev != next;
   } else {
     return false;
@@ -2094,7 +2110,7 @@ bool pn_delivery_updated(pn_delivery_t *delivery)
 void pn_delivery_clear(pn_delivery_t *delivery)
 {
   delivery->updated = false;
-  pn_work_update(delivery->link->session->connection, delivery);
+  pni_clear_work(delivery->link->session->connection, delivery);
 }
 
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
