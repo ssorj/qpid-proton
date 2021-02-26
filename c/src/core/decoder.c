@@ -215,6 +215,11 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
 
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
+  if (code == PNE_SMALLULONG) {
+    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
+  }
+
   switch (code & 0xF0) {
   case 0x40: return pni_decoder_decode_fixed0(decoder, data, code);
   case 0x50: return pni_decoder_decode_fixed1(decoder, data, code);
