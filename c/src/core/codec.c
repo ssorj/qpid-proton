@@ -1474,14 +1474,14 @@ PN_FORCE_INLINE static pni_node_t *pni_data_add(pn_data_t *data)
   *node = (pni_node_t) {0};
 
   if (data->current) {
-    pni_node_t* current = data->nodes + data->current - 1;
+    pni_node_t *current = data->nodes + data->current - 1;
 
     current->next = node_id;
     node->prev = data->current;
   }
 
   if (data->parent) {
-    pni_node_t* parent = data->nodes + data->parent - 1;
+    pni_node_t *parent = data->nodes + data->parent - 1;
 
     if (!parent->down) {
       parent->down = node_id;
