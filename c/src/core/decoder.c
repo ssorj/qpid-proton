@@ -294,10 +294,10 @@ static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uin
 {
   switch (code) {
   case PNE_NULL: return pn_data_put_null(data);
-  case PNE_TRUE: return pn_data_put_bool(data, true);
-  case PNE_FALSE: return pn_data_put_bool(data, false);
-  case PNE_UINT0: return pn_data_put_uint(data, 0);
-  case PNE_ULONG0: return pn_data_put_ulong(data, 0);
+  case PNE_TRUE: return pni_data_put_fixed1(data, PN_BOOL, (uint8_t) 1);
+  case PNE_FALSE: return pni_data_put_fixed1(data, PN_BOOL, (uint8_t) 0);
+  case PNE_UINT0: return pni_data_put_fixed4(data, PN_UINT, (uint32_t) 0);
+  case PNE_ULONG0: return pni_data_put_fixed8(data, PN_ULONG, (uint64_t) 0);
   case PNE_LIST0: return pn_data_put_list(data);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
