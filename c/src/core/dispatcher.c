@@ -44,9 +44,9 @@ int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t c
 static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_action_t *action;
-  switch (frame_type) {
-  case AMQP_FRAME_TYPE:
-    /* Regular AMQP frames */
+
+  if (frame_type == AMQP_FRAME_TYPE) {
+    // Regular AMQP frames
     switch (lcode) {
     case OPEN:            action = pn_do_open; break;
     case BEGIN:           action = pn_do_begin; break;
@@ -59,9 +59,8 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
     case CLOSE:           action = pn_do_close; break;
     default:              action = pni_bad_frame; break;
     };
-    break;
-  case SASL_FRAME_TYPE:
-    /* SASL frames */
+  } else if (frame_type == SASL_FRAME_TYPE) {
+    // SASL frames
     switch (lcode) {
     case SASL_MECHANISMS: action = pn_do_mechanisms; break;
     case SASL_INIT:       action = pn_do_init; break;
@@ -70,9 +69,10 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
     case SASL_OUTCOME:    action = pn_do_outcome; break;
     default:              action = pni_bad_frame; break;
     };
-    break;
-  default:              action = pni_bad_frame_type; break;
-  };
+  } else {
+    action = pni_bad_frame_type;
+  }
+
   return action(transport, frame_type, channel, args, payload);
 }
 
