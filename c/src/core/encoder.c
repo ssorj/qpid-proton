@@ -267,8 +267,7 @@ typedef union {
   double d;
 } conv_t;
 
-PN_FORCE_INLINE
-static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
@@ -331,32 +330,32 @@ skip_format_code:
   case PNE_UINT0:
   case PNE_ULONG0:
   case PNE_LIST0: return 0;
-  case PNE_BOOLEAN: pn_encoder_writef8(encoder, atom->u.as_bool); return 0;
-  case PNE_UBYTE: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
-  case PNE_BYTE: pn_encoder_writef8(encoder, atom->u.as_byte); return 0;
-  case PNE_USHORT: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
-  case PNE_SHORT: pn_encoder_writef16(encoder, atom->u.as_short); return 0;
-  case PNE_SMALLUINT: pn_encoder_writef8(encoder, atom->u.as_uint); return 0;
-  case PNE_UINT: pn_encoder_writef32(encoder, atom->u.as_uint); return 0;
-  case PNE_SMALLINT: pn_encoder_writef8(encoder, atom->u.as_int); return 0;
-  case PNE_INT: pn_encoder_writef32(encoder, atom->u.as_int); return 0;
-  case PNE_UTF32: pn_encoder_writef32(encoder, atom->u.as_char); return 0;
-  case PNE_ULONG: pn_encoder_writef64(encoder, atom->u.as_ulong); return 0;
-  case PNE_SMALLULONG: pn_encoder_writef8(encoder, atom->u.as_ulong); return 0;
-  case PNE_LONG: pn_encoder_writef64(encoder, atom->u.as_long); return 0;
-  case PNE_SMALLLONG: pn_encoder_writef8(encoder, atom->u.as_long); return 0;
-  case PNE_MS64: pn_encoder_writef64(encoder, atom->u.as_timestamp); return 0;
+  case PNE_BOOLEAN:
+  case PNE_UBYTE:
+  case PNE_BYTE:
+  case PNE_SMALLUINT:
+  case PNE_SMALLINT:
+  case PNE_SMALLULONG:
+  case PNE_SMALLLONG: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
+  case PNE_USHORT:
+  case PNE_SHORT: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
+  case PNE_UINT:
+  case PNE_INT:
+  case PNE_DECIMAL32:
+  case PNE_UTF32: pn_encoder_writef32(encoder, atom->u.as_uint); return 0;
+  case PNE_ULONG:
+  case PNE_LONG:
+  case PNE_MS64:
+  case PNE_DECIMAL64: pn_encoder_writef64(encoder, atom->u.as_ulong); return 0;
   case PNE_FLOAT: c.f = atom->u.as_float; pn_encoder_writef32(encoder, c.i); return 0;
   case PNE_DOUBLE: c.d = atom->u.as_double; pn_encoder_writef64(encoder, c.l); return 0;
-  case PNE_DECIMAL32: pn_encoder_writef32(encoder, atom->u.as_decimal32); return 0;
-  case PNE_DECIMAL64: pn_encoder_writef64(encoder, atom->u.as_decimal64); return 0;
   case PNE_DECIMAL128: pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes); return 0;
   case PNE_UUID: pn_encoder_writef128(encoder, atom->u.as_uuid.bytes); return 0;
-  case PNE_VBIN8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_VBIN32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  case PNE_STR8_UTF8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_STR32_UTF8: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
+  case PNE_VBIN8:
+  case PNE_STR8_UTF8:
   case PNE_SYM8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
+  case PNE_STR32_UTF8:
+  case PNE_VBIN32:
   case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
   // PNE_ARRAY8
   case PNE_ARRAY32:
@@ -403,7 +402,7 @@ skip_format_code:
   }
 }
 
-static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pn_type_t type = node->atom.type;
