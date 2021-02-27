@@ -1523,7 +1523,7 @@ ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
   return r;
 }
 
-PN_FORCE_INLINE int pn_data_put_list(pn_data_t *data)
+int pn_data_put_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1775,7 +1775,15 @@ int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
   }
 }
 
-PN_INLINE int pni_data_put_fixed1(pn_data_t *data, pn_type_t type, uint8_t value)
+PN_FORCE_INLINE int pni_data_put_fixed0(pn_data_t *data, pn_type_t type)
+{
+  pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
+  node->atom.type = type;
+  return 0;
+}
+
+PN_FORCE_INLINE int pni_data_put_fixed1(pn_data_t *data, pn_type_t type, uint8_t value)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
