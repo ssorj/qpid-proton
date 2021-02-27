@@ -131,47 +131,46 @@ typedef union {
 static inline pn_type_t pn_code2type(uint8_t code)
 {
   switch (code) {
-  case PNE_DESCRIPTOR: return (pn_type_t) PN_ARG_ERR;
-  case PNE_NULL: return PN_NULL;
+  case PNE_NULL:       return PN_NULL;
   case PNE_TRUE:
   case PNE_FALSE:
-  case PNE_BOOLEAN: return PN_BOOL;
-  case PNE_UBYTE: return PN_UBYTE;
-  case PNE_BYTE: return PN_BYTE;
-  case PNE_USHORT: return PN_USHORT;
-  case PNE_SHORT: return PN_SHORT;
+  case PNE_BOOLEAN:    return PN_BOOL;
+  case PNE_UBYTE:      return PN_UBYTE;
+  case PNE_BYTE:       return PN_BYTE;
+  case PNE_USHORT:     return PN_USHORT;
+  case PNE_SHORT:      return PN_SHORT;
   case PNE_UINT0:
   case PNE_SMALLUINT:
-  case PNE_UINT: return PN_UINT;
+  case PNE_UINT:       return PN_UINT;
   case PNE_SMALLINT:
-  case PNE_INT: return PN_INT;
-  case PNE_UTF32: return PN_CHAR;
-  case PNE_FLOAT: return PN_FLOAT;
+  case PNE_INT:        return PN_INT;
+  case PNE_UTF32:      return PN_CHAR;
+  case PNE_FLOAT:      return PN_FLOAT;
   case PNE_LONG:
-  case PNE_SMALLLONG: return PN_LONG;
-  case PNE_MS64: return PN_TIMESTAMP;
-  case PNE_DOUBLE: return PN_DOUBLE;
-  case PNE_DECIMAL32: return PN_DECIMAL32;
-  case PNE_DECIMAL64: return PN_DECIMAL64;
+  case PNE_SMALLLONG:  return PN_LONG;
+  case PNE_MS64:       return PN_TIMESTAMP;
+  case PNE_DOUBLE:     return PN_DOUBLE;
+  case PNE_DECIMAL32:  return PN_DECIMAL32;
+  case PNE_DECIMAL64:  return PN_DECIMAL64;
   case PNE_DECIMAL128: return PN_DECIMAL128;
-  case PNE_UUID: return PN_UUID;
+  case PNE_UUID:       return PN_UUID;
   case PNE_ULONG0:
   case PNE_SMALLULONG:
-  case PNE_ULONG: return PN_ULONG;
+  case PNE_ULONG:      return PN_ULONG;
   case PNE_VBIN8:
-  case PNE_VBIN32: return PN_BINARY;
+  case PNE_VBIN32:     return PN_BINARY;
   case PNE_STR8_UTF8:
   case PNE_STR32_UTF8: return PN_STRING;
   case PNE_SYM8:
-  case PNE_SYM32: return PN_SYMBOL;
+  case PNE_SYM32:      return PN_SYMBOL;
   case PNE_LIST0:
   case PNE_LIST8:
-  case PNE_LIST32: return PN_LIST;
+  case PNE_LIST32:     return PN_LIST;
   case PNE_ARRAY8:
-  case PNE_ARRAY32: return PN_ARRAY;
+  case PNE_ARRAY32:    return PN_ARRAY;
   case PNE_MAP8:
-  case PNE_MAP32: return PN_MAP;
-  default: return (pn_type_t) PN_ARG_ERR;
+  case PNE_MAP32:      return PN_MAP;
+  default:             return (pn_type_t) PN_ARG_ERR;
   }
 }
 
