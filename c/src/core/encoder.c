@@ -262,6 +262,52 @@ typedef union {
   double d;
 } conv_t;
 
+static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  node->start = encoder->position;
+  node->small = true;
+  // We'll backfill the size later
+  encoder->position += 1;
+  pn_encoder_writef8(encoder, node->children);
+  return 0;
+}
+
+static inline int pni_encoder_encode_compound32(pn_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  node->start = encoder->position;
+  // We'll backfill the size later
+  encoder->position += 4;
+  pn_encoder_writef32(encoder, node->children);
+  return 0;
+}
+
+static inline int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  node->start = encoder->position;
+
+  // We'll backfill the size on exit
+  encoder->position += 4;
+
+  if (node->described) {
+    pn_encoder_writef32(encoder, node->children - 1);
+    pn_encoder_writef8(encoder, 0);
+
+    // For zero-length arrays
+    if (node->children == 1) {
+      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+    }
+  } else {
+    pn_encoder_writef32(encoder, node->children);
+
+    // For zero-length arrays
+    if (node->children == 0) {
+      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+    }
+  }
+
+  return 0;
+}
+
 PN_FORCE_INLINE static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
@@ -318,7 +364,7 @@ PN_FORCE_INLINE static inline int pni_encoder_enter(void *ctx, pn_data_t *data, 
 skip_format_code:
 
   switch (code & 0xF0) {
-  case PNE_DESCRIPTOR:
+  case 0x00: // PNE_DESCRIPTOR
   case 0x40: return 0;
   case 0x50: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
   case 0x60: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
@@ -341,44 +387,10 @@ skip_format_code:
   case 0x90: pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes); return 0;
   case 0xA0: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
   case 0xB0: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  case 0xC0:
-    node->start = encoder->position;
-    node->small = true;
-    // We'll backfill the size later
-    encoder->position += 1;
-    pn_encoder_writef8(encoder, node->children);
-    return 0;
-  case 0xD0:
-    node->start = encoder->position;
-    // We'll backfill the size later
-    encoder->position += 4;
-    pn_encoder_writef32(encoder, node->children);
-    return 0;
+  case 0xC0: return pni_encoder_encode_compound8(encoder, data, node);
+  case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
   case 0xE0: // XXX
-  case 0xF0:
-    node->start = encoder->position;
-
-    // We'll backfill the size on exit
-    encoder->position += 4;
-
-    if (node->described) {
-      pn_encoder_writef32(encoder, node->children - 1);
-      pn_encoder_writef8(encoder, 0);
-
-      // For zero-length arrays
-      if (node->children == 1) {
-        pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-      }
-    } else {
-      pn_encoder_writef32(encoder, node->children);
-
-      // For zero-length arrays
-      if (node->children == 0) {
-        pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-      }
-    }
-
-    return 0;
+  case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
   default:
     return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }

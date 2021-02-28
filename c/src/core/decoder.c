@@ -35,11 +35,11 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
 static int pni_decoder_decode_described_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t* code);
 static int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed64(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
+static int pni_decoder_decode_fixed128(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_variable8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_compound8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
@@ -47,7 +47,7 @@ static int pni_decoder_decode_compound32(pn_decoder_t *decoder, pn_data_t *data,
 static int pni_decoder_decode_array8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 static int pni_decoder_decode_array32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code);
 
-static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
+static pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
 {
   if (!decoder->error) decoder->error = pn_error();
   return decoder->error;
@@ -200,11 +200,11 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
 {
   switch (code & 0xF0) {
   case 0x40: return pni_decoder_decode_fixed0(decoder, data, code);
-  case 0x50: return pni_decoder_decode_fixed1(decoder, data, code);
-  case 0x60: return pni_decoder_decode_fixed2(decoder, data, code);
-  case 0x70: return pni_decoder_decode_fixed4(decoder, data, code);
-  case 0x80: return pni_decoder_decode_fixed8(decoder, data, code);
-  case 0x90: return pni_decoder_decode_fixed16(decoder, data, code);
+  case 0x50: return pni_decoder_decode_fixed8(decoder, data, code);
+  case 0x60: return pni_decoder_decode_fixed16(decoder, data, code);
+  case 0x70: return pni_decoder_decode_fixed32(decoder, data, code);
+  case 0x80: return pni_decoder_decode_fixed64(decoder, data, code);
+  case 0x90: return pni_decoder_decode_fixed128(decoder, data, code);
   case 0xA0: return pni_decoder_decode_variable8(decoder, data, code);
   case 0xB0: return pni_decoder_decode_variable32(decoder, data, code);
   case 0xC0: return pni_decoder_decode_compound8(decoder, data, code);
@@ -268,17 +268,17 @@ static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uin
 {
   switch (code) {
   case PNE_NULL: return pni_data_put_fixed0(data, PN_NULL);
-  case PNE_TRUE: return pni_data_put_fixed1(data, PN_BOOL, (uint8_t) 1);
-  case PNE_FALSE: return pni_data_put_fixed1(data, PN_BOOL, (uint8_t) 0);
-  case PNE_UINT0: return pni_data_put_fixed4(data, PN_UINT, (uint32_t) 0);
-  case PNE_ULONG0: return pni_data_put_fixed8(data, PN_ULONG, (uint64_t) 0);
+  case PNE_TRUE: return pni_data_put_fixed8(data, PN_BOOL, (uint8_t) 1);
+  case PNE_FALSE: return pni_data_put_fixed8(data, PN_BOOL, (uint8_t) 0);
+  case PNE_UINT0: return pni_data_put_fixed32(data, PN_UINT, (uint32_t) 0);
+  case PNE_ULONG0: return pni_data_put_fixed64(data, PN_ULONG, (uint64_t) 0);
   case PNE_LIST0: return pni_data_put_fixed0(data, PN_LIST);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 }
 
-static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
 
@@ -289,10 +289,10 @@ static int pni_decoder_decode_fixed1(pn_decoder_t *decoder, pn_data_t *data, uin
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
-  return pni_data_put_fixed1(data, type, value);
+  return pni_data_put_fixed8(data, type, value);
 }
 
-static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
 
@@ -303,10 +303,10 @@ static int pni_decoder_decode_fixed2(pn_decoder_t *decoder, pn_data_t *data, uin
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
-  return pni_data_put_fixed2(data, type, value);
+  return pni_data_put_fixed16(data, type, value);
 }
 
-static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
 
@@ -332,10 +332,10 @@ static int pni_decoder_decode_fixed4(pn_decoder_t *decoder, pn_data_t *data, uin
   //   return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   // }
 
-  return pni_data_put_fixed4(data, type, value);
+  return pni_data_put_fixed32(data, type, value);
 }
 
-static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed64(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
 
@@ -360,10 +360,10 @@ static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uin
   //   return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   // }
 
-  return pni_data_put_fixed8(data, type, value);
+  return pni_data_put_fixed64(data, type, value);
 }
 
-static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+static int pni_decoder_decode_fixed128(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 16) return PN_UNDERFLOW;
 

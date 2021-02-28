@@ -71,10 +71,10 @@ int pni_data_traverse(pn_data_t *data,
                       void *ctx);
 
 int pni_data_put_fixed0(pn_data_t *data, pn_type_t type);
-int pni_data_put_fixed1(pn_data_t *data, pn_type_t type, uint8_t value);
-int pni_data_put_fixed2(pn_data_t *data, pn_type_t type, uint16_t value);
-int pni_data_put_fixed4(pn_data_t *data, pn_type_t type, uint32_t value);
-int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint64_t value);
+int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint8_t value);
+int pni_data_put_fixed16(pn_data_t *data, pn_type_t type, uint16_t value);
+int pni_data_put_fixed32(pn_data_t *data, pn_type_t type, uint32_t value);
+int pni_data_put_fixed64(pn_data_t *data, pn_type_t type, uint64_t value);
 
 static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {

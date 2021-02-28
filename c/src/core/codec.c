@@ -1783,7 +1783,7 @@ PN_FORCE_INLINE int pni_data_put_fixed0(pn_data_t *data, pn_type_t type)
   return 0;
 }
 
-PN_FORCE_INLINE int pni_data_put_fixed1(pn_data_t *data, pn_type_t type, uint8_t value)
+PN_FORCE_INLINE int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint8_t value)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1792,7 +1792,7 @@ PN_FORCE_INLINE int pni_data_put_fixed1(pn_data_t *data, pn_type_t type, uint8_t
   return 0;
 }
 
-PN_INLINE int pni_data_put_fixed2(pn_data_t *data, pn_type_t type, uint16_t value)
+PN_INLINE int pni_data_put_fixed16(pn_data_t *data, pn_type_t type, uint16_t value)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1801,7 +1801,7 @@ PN_INLINE int pni_data_put_fixed2(pn_data_t *data, pn_type_t type, uint16_t valu
   return 0;
 }
 
-PN_INLINE int pni_data_put_fixed4(pn_data_t *data, pn_type_t type, uint32_t value)
+PN_INLINE int pni_data_put_fixed32(pn_data_t *data, pn_type_t type, uint32_t value)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1810,7 +1810,7 @@ PN_INLINE int pni_data_put_fixed4(pn_data_t *data, pn_type_t type, uint32_t valu
   return 0;
 }
 
-PN_INLINE int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint64_t value)
+PN_INLINE int pni_data_put_fixed64(pn_data_t *data, pn_type_t type, uint64_t value)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1818,6 +1818,8 @@ PN_INLINE int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint64_t valu
   node->atom.u.as_ulong = value;
   return 0;
 }
+
+// XXX put fixed 128
 
 size_t pn_data_get_list(pn_data_t *data)
 {
