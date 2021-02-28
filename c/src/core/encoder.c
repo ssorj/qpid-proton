@@ -273,7 +273,7 @@ PN_FORCE_INLINE static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_nod
   pni_node_t *parent = pn_data_node(data, node->parent);
   uint8_t code = pn_node2code(encoder, node);
   pn_atom_t *atom = &node->atom;
-  conv_t c;
+  conv_t conv;
 
   if (parent) {
     pn_type_t parent_type = parent->atom.type;
@@ -322,43 +322,45 @@ PN_FORCE_INLINE static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_nod
 
 skip_format_code:
 
-  switch (code) {
+  switch (code & 0xF0) {
   case PNE_DESCRIPTOR:
-  case PNE_NULL:
-  case PNE_TRUE:
-  case PNE_FALSE:
-  case PNE_UINT0:
-  case PNE_ULONG0:
-  case PNE_LIST0: return 0;
-  case PNE_BOOLEAN:
-  case PNE_UBYTE:
-  case PNE_BYTE:
-  case PNE_SMALLUINT:
-  case PNE_SMALLINT:
-  case PNE_SMALLULONG:
-  case PNE_SMALLLONG: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
-  case PNE_USHORT:
-  case PNE_SHORT: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
-  case PNE_UINT:
-  case PNE_INT:
-  case PNE_DECIMAL32:
-  case PNE_UTF32: pn_encoder_writef32(encoder, atom->u.as_uint); return 0;
-  case PNE_ULONG:
-  case PNE_LONG:
-  case PNE_MS64:
-  case PNE_DECIMAL64: pn_encoder_writef64(encoder, atom->u.as_ulong); return 0;
-  case PNE_FLOAT: c.f = atom->u.as_float; pn_encoder_writef32(encoder, c.i); return 0;
-  case PNE_DOUBLE: c.d = atom->u.as_double; pn_encoder_writef64(encoder, c.l); return 0;
-  case PNE_DECIMAL128: pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes); return 0;
-  case PNE_UUID: pn_encoder_writef128(encoder, atom->u.as_uuid.bytes); return 0;
-  case PNE_VBIN8:
-  case PNE_STR8_UTF8:
-  case PNE_SYM8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_STR32_UTF8:
-  case PNE_VBIN32:
-  case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  // PNE_ARRAY8
-  case PNE_ARRAY32:
+  case 0x40: return 0;
+  case 0x50: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
+  case 0x60: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
+  case 0x70:
+    if (code == PNE_FLOAT) {
+      conv.f = atom->u.as_float;
+      pn_encoder_writef32(encoder, conv.i);
+    } else {
+      pn_encoder_writef32(encoder, atom->u.as_uint);
+    }
+    return 0;
+  case 0x80:
+    if (code == PNE_DOUBLE) {
+      conv.d = atom->u.as_double;
+      pn_encoder_writef64(encoder, conv.l);
+    } else {
+      pn_encoder_writef64(encoder, atom->u.as_ulong);
+    }
+    return 0;
+  case 0x90: pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes); return 0;
+  case 0xA0: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
+  case 0xB0: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
+  case 0xC0:
+    node->start = encoder->position;
+    node->small = true;
+    // We'll backfill the size later
+    encoder->position += 1;
+    pn_encoder_writef8(encoder, node->children);
+    return 0;
+  case 0xD0:
+    node->start = encoder->position;
+    // We'll backfill the size later
+    encoder->position += 4;
+    pn_encoder_writef32(encoder, node->children);
+    return 0;
+  case 0xE0: // XXX
+  case 0xF0:
     node->start = encoder->position;
 
     // We'll backfill the size on exit
@@ -381,21 +383,6 @@ skip_format_code:
       }
     }
 
-    return 0;
-  case PNE_LIST8:
-  case PNE_MAP8:
-    node->start = encoder->position;
-    node->small = true;
-    // We'll backfill the size later
-    encoder->position += 1;
-    pn_encoder_writef8(encoder, node->children);
-    return 0;
-  case PNE_LIST32:
-  case PNE_MAP32:
-    node->start = encoder->position;
-    // We'll backfill the size later
-    encoder->position += 4;
-    pn_encoder_writef32(encoder, node->children);
     return 0;
   default:
     return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
