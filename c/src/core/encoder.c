@@ -174,7 +174,6 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-PN_FORCE_INLINE
 static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   char *end = encoder->output + encoder->size;
   if (end > encoder->position) {
@@ -184,7 +183,6 @@ static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   }
 }
 
-PN_FORCE_INLINE
 static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
@@ -193,8 +191,6 @@ static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
   encoder->position++;
 }
 
-
-PN_FORCE_INLINE
 static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 {
   if (pn_encoder_remaining(encoder) >= 2) {
@@ -204,8 +200,7 @@ static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
   encoder->position += 2;
 }
 
-PN_FORCE_INLINE
-static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
+PN_FORCE_INLINE static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 {
   if (pn_encoder_remaining(encoder) >= 4) {
     encoder->position[0] = 0xFF & (value >> 24);
@@ -216,7 +211,6 @@ static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
   encoder->position += 4;
 }
 
-PN_FORCE_INLINE
 static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   if (pn_encoder_remaining(encoder) >= 8) {
     encoder->position[0] = 0xFF & (value >> 56);
@@ -231,7 +225,6 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   encoder->position += 8;
 }
 
-PN_FORCE_INLINE
 static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) >= 16) {
     memmove(encoder->position, value, 16);
@@ -239,23 +232,25 @@ static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   encoder->position += 16;
 }
 
-PN_FORCE_INLINE
 static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef8(encoder, value->size);
+
   if (pn_encoder_remaining(encoder) >= value->size) {
     memmove(encoder->position, value->start, value->size);
   }
+
   encoder->position += value->size;
 }
 
-PN_FORCE_INLINE
 static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   pn_encoder_writef32(encoder, value->size);
+
   if (pn_encoder_remaining(encoder) >= value->size) {
     memmove(encoder->position, value->start, value->size);
   }
+
   encoder->position += value->size;
 }
 
@@ -267,7 +262,7 @@ typedef union {
   double d;
 } conv_t;
 
-PN_FORCE_INLINE static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
@@ -389,7 +384,7 @@ skip_format_code:
   }
 }
 
-PN_FORCE_INLINE static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pn_type_t type = node->atom.type;
@@ -496,14 +491,13 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
 
 ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)
 {
-  encoder->output = 0;
-  encoder->position = 0;
-  encoder->size = 0;
-
   pn_handle_t save = pn_data_point(src);
-  int err = pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
+
+  int err = pn_encoder_encode(encoder, src, NULL, 0);
+
   pn_data_restore(src, save);
 
   if (err) return err;
+
   return encoder->position - encoder->output;
 }
