@@ -356,6 +356,7 @@ class DataTest(Test):
             assert eq(gotten, v), (gotten, v)
 
         encoded = self.data.encode()
+
         copy = Data(0)
         while encoded:
             n = copy.decode(encoded)
@@ -368,10 +369,13 @@ class DataTest(Test):
             vtype = copy.next()
             assert vtype == ntype, vtype
             gotten = cgetter()
+
             assert eq(gotten, v), (gotten, v)
 
     def _test_int(self, itype):
-        self._test(itype, *self.int_values(itype))
+        values = self.int_values(itype)
+        print("int values", values);
+        self._test(itype, *values)
 
     def testByte(self): self._test_int("byte")
 
@@ -478,7 +482,13 @@ class DataTest(Test):
                u"list": [1, 2, 3, None, 4],
                u"boolean": True}
         self.data.put_object(obj)
+
+        self.data.dump()
+
         enc = self.data.encode()
+
+        print(enc);
+
         data = Data()
         data.decode(enc)
         data.rewind()

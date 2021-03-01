@@ -278,6 +278,8 @@ static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uin
   }
 }
 
+#include <stdio.h>
+
 static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
@@ -289,7 +291,13 @@ static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uin
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
-  return pni_data_put_fixed8(data, type, value);
+  if (type == PN_INT) {
+    return pn_data_put_int(data, (int8_t) value); // XXX
+  } else if (type == PN_LONG) {
+    return pn_data_put_long(data, (int8_t) value); // XXX
+  } else {
+    return pni_data_put_fixed8(data, type, value);
+  }
 }
 
 static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)

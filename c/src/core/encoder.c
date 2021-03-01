@@ -30,6 +30,9 @@
 
 #include "data.h"
 
+static int pni_encoder_encode_current_node(pn_encoder_t *encoder, pn_data_t *data);
+static int pni_encoder_encode_current_node_in_array(pn_encoder_t *encoder, pn_data_t *data, uint8_t code);
+
 static pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
 {
   if (!encoder->error) encoder->error = pn_error();
@@ -84,8 +87,7 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-PN_FORCE_INLINE
-static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
+PN_FORCE_INLINE static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -183,7 +185,7 @@ static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   }
 }
 
-static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
+PN_FORCE_INLINE static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
     encoder->position[0] = value;
@@ -227,7 +229,7 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
 
 static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) >= 16) {
-    memmove(encoder->position, value, 16);
+    memcpy(encoder->position, value, 16);
   }
   encoder->position += 16;
 }
@@ -242,22 +244,35 @@ typedef union {
 
 static inline int pni_encoder_encode_fixed0(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
+  pn_encoder_writef8(encoder, code);
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed8(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed8_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   pn_encoder_writef8(encoder, atom->u.as_ubyte);
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed16(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed8(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_fixed8_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_fixed16_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   pn_encoder_writef16(encoder, atom->u.as_ushort);
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed32(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed16(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_fixed16_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_fixed32_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   if (code == PNE_FLOAT) {
     conv_t conv = { .f = atom->u.as_float };
@@ -269,10 +284,16 @@ static inline int pni_encoder_encode_fixed32(pn_encoder_t *encoder, uint8_t code
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed64(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed32(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_fixed32_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_fixed64_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   if (code == PNE_DOUBLE) {
-    conv_t conv = { .f = atom->u.as_double };
+    conv_t conv = { .d = atom->u.as_double };
     pn_encoder_writef64(encoder, conv.l);
   } else {
     pn_encoder_writef64(encoder, atom->u.as_ulong);
@@ -281,7 +302,13 @@ static inline int pni_encoder_encode_fixed64(pn_encoder_t *encoder, uint8_t code
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed128(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed64(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_fixed64_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_fixed128_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   if (code == PNE_UUID) {
     pn_encoder_writef128(encoder, atom->u.as_uuid.bytes);
@@ -292,7 +319,13 @@ static inline int pni_encoder_encode_fixed128(pn_encoder_t *encoder, uint8_t cod
   return 0;
 }
 
-static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed128(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_fixed128_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_variable8_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   pn_bytes_t *value = &atom->u.as_bytes;
 
@@ -307,7 +340,13 @@ static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, uint8_t co
   return 0;
 }
 
-static inline int pni_encoder_encode_variable32(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_variable8_value(encoder, code, atom);
+}
+
+static inline int pni_encoder_encode_variable32_value(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
   pn_bytes_t *value = &atom->u.as_bytes;
 
@@ -322,136 +361,170 @@ static inline int pni_encoder_encode_variable32(pn_encoder_t *encoder, uint8_t c
   return 0;
 }
 
-static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pni_node_t *node)
+static inline int pni_encoder_encode_variable32(pn_encoder_t *encoder, uint8_t code, pn_atom_t *atom)
 {
-  node->start = encoder->position;
-  node->small = true;
-  // We'll backfill the size later
-  encoder->position += 1;
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_variable32_value(encoder, code, atom);
+}
+
+// XXX Duplicate
+static inline pni_node_t *pni_data_current(pn_data_t *data)
+{
+  return pn_data_node(data, data->current);
+}
+
+PN_FORCE_INLINE static inline int pni_encoder_encode_compound8_value(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
+{
+  pni_node_t *node = pni_data_current(data);
+  size_t count = node->children;
+  char *start = encoder->position;
+  int err;
+
+  encoder->position += 1; // The size is backfilled after writing the elements
   pn_encoder_writef8(encoder, node->children);
-  return 0;
-}
 
-static inline int pni_encoder_encode_compound32(pn_encoder_t *encoder, pni_node_t *node)
-{
-  node->start = encoder->position;
-  // We'll backfill the size later
-  encoder->position += 4;
-  pn_encoder_writef32(encoder, node->children);
-  return 0;
-}
+  pn_data_enter(data);
 
-static inline int pni_encoder_encode_array8(pn_encoder_t *encoder, pni_node_t *node)
-{
-  node->start = encoder->position;
-  node->small = true;
-
-  // We'll backfill the size on exit
-  encoder->position += 1;
-
-  if (node->described) {
-    pn_encoder_writef8(encoder, node->children - 1);
-    pn_encoder_writef8(encoder, 0);
-
-    // For zero-length arrays
-    if (node->children == 1) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-    }
-  } else {
-    pn_encoder_writef8(encoder, node->children);
-
-    // For zero-length arrays
-    if (node->children == 0) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+  for (size_t i = 0; i < count; i++) {
+    if (pn_data_next(data)) {
+      err = pni_encoder_encode_current_node(encoder, data);
+      if (err) return err;
     }
   }
 
+  pn_data_exit(data);
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  pn_encoder_writef8(encoder, (size_t) (pos - start - 1));
+
+  encoder->position = pos;
+
   return 0;
 }
 
-static inline int pni_encoder_encode_array32(pn_encoder_t *encoder, pni_node_t *node)
+static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
 {
-  node->start = encoder->position;
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_compound8_value(encoder, code, data);
+}
 
-  // We'll backfill the size on exit
-  encoder->position += 4;
+static inline int pni_encoder_encode_compound32_value(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
+{
+  pni_node_t *node = pni_data_current(data);
+  size_t count = node->children;
+  char *start = encoder->position;
+  int err;
+
+  encoder->position += 4; // The size is backfilled after writing the elements
+  pn_encoder_writef32(encoder, node->children);
+
+  pn_data_enter(data);
+
+  for (size_t i = 0; i < count; i++) {
+    if (pn_data_next(data)) {
+      err = pni_encoder_encode_current_node(encoder, data);
+      if (err) return err;
+    }
+  }
+
+  pn_data_exit(data);
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  pn_encoder_writef32(encoder, (size_t) (pos - start - 4));
+
+  encoder->position = pos;
+
+  return 0;
+}
+
+static inline int pni_encoder_encode_compound32(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
+{
+  pn_encoder_writef8(encoder, code);
+  return pni_encoder_encode_compound32_value(encoder, code, data);
+}
+
+static inline int pni_encoder_encode_array32(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
+{
+  pni_node_t *node = pni_data_current(data);
+  size_t count = node->children;
+  int err;
+
+  pn_encoder_writef8(encoder, code);
+
+  char *start = encoder->position;
+
+  encoder->position += 4; // The size is backfilled after writing the elements
 
   if (node->described) {
     pn_encoder_writef32(encoder, node->children - 1);
     pn_encoder_writef8(encoder, 0);
-
-    // For zero-length arrays
-    if (node->children == 1) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
-    }
   } else {
     pn_encoder_writef32(encoder, node->children);
+  }
 
-    // For zero-length arrays
-    if (node->children == 0) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+  uint8_t array_code = pn_type2code(encoder, node->type);
+
+  pn_encoder_writef8(encoder, array_code);
+
+  pn_data_enter(data);
+
+  for (size_t i = 0; i < count; i++) {
+    if (pn_data_next(data)) {
+      err = pni_encoder_encode_current_node_in_array(encoder, data, array_code);
+      if (err) return err;
     }
   }
+
+  pn_data_exit(data);
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  pn_encoder_writef32(encoder, (size_t) (pos - start - 4));
+
+  encoder->position = pos;
 
   return 0;
 }
 
-PN_FORCE_INLINE static inline int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+// XXX Name? just described?
+static inline int pni_encoder_encode_described_value(pn_encoder_t *encoder, uint8_t code, pn_data_t *data)
 {
-  pn_encoder_t *encoder = (pn_encoder_t *) ctx;
-  pni_node_t *parent = pn_data_node(data, node->parent);
+  pn_encoder_writef8(encoder, 0);
+
+  pn_data_enter(data);
+
+  if (pn_data_next(data)) {
+    int err = pni_encoder_encode_current_node(encoder, data);
+    if (err) return err;
+  } else {
+    fprintf(stderr, "described value without descriptor\n");
+  }
+
+  if (pn_data_next(data)) {
+    int err = pni_encoder_encode_current_node(encoder, data);
+    if (err) return err;
+  } else {
+    fprintf(stderr, "described value without value\n");
+  }
+
+  pn_data_exit(data);
+
+  return 0;
+}
+
+PN_FORCE_INLINE static inline int pni_encoder_encode_current_node(pn_encoder_t *encoder, pn_data_t *data)
+{
+  pni_node_t *node = pni_data_current(data);
   uint8_t code = pn_node2code(encoder, node);
   pn_atom_t *atom = &node->atom;
 
-  if (parent) {
-    pn_type_t parent_type = parent->atom.type;
-
-    if (parent_type == PN_LIST && parent->described) {
-      // Omit trailing nulls for described lists
-      if (code == PNE_NULL) {
-        encoder->null_count++;
-        return 0;
-      } else {
-        // Output pending nulls before writing the current node
-        for (unsigned i = 0; i < encoder->null_count; i++) {
-          pn_encoder_writef8(encoder, PNE_NULL);
-        }
-        encoder->null_count = 0;
-      }
-    } else if (parent_type == PN_ARRAY) {
-      if (parent->described) {
-        if (node->prev == 0) {
-          // Write the descriptor using the normal procedure
-        } else {
-          // The *array* format code.  This overrides the element node's format.
-          code = pn_type2code(encoder, parent->type);
-
-          if (node->prev == 2) {
-            // The first element.  Write the format code.
-          } else {
-            goto skip_format_code;
-          }
-        }
-      } else {
-        // The *array* format code.  This overrides the element node's format.
-        code = pn_type2code(encoder, parent->type);
-
-        if (node->prev == 0) {
-          // The first element.  Write the format code.
-        } else {
-          goto skip_format_code;
-        }
-      }
-    }
-  }
-
-  // Write the format code
-  pn_encoder_writef8(encoder, code);
-
-skip_format_code:
-
   switch (code & 0xF0) {
-  case 0x00: // PNE_DESCRIPTOR
+  case 0x00: return pni_encoder_encode_described_value(encoder, code, data);
   case 0x40: return pni_encoder_encode_fixed0(encoder, code, atom);
   case 0x50: return pni_encoder_encode_fixed8(encoder, code, atom);
   case 0x60: return pni_encoder_encode_fixed16(encoder, code, atom);
@@ -460,62 +533,35 @@ skip_format_code:
   case 0x90: return pni_encoder_encode_fixed128(encoder, code, atom);
   case 0xA0: return pni_encoder_encode_variable8(encoder, code, atom);
   case 0xB0: return pni_encoder_encode_variable32(encoder, code, atom);
-  case 0xC0: return pni_encoder_encode_compound8(encoder, node);
-  case 0xD0: return pni_encoder_encode_compound32(encoder, node);
-  case 0xE0: return pni_encoder_encode_array8(encoder, node);
-  case 0xF0: return pni_encoder_encode_array32(encoder, node);
-  default:
-    return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
+  case 0xC0: return pni_encoder_encode_compound8(encoder, code, data);
+  case 0xD0: return pni_encoder_encode_compound32(encoder, code, data);
+  case 0xE0: // return pni_encoder_encode_array8(encoder, code, data);
+  case 0xF0: return pni_encoder_encode_array32(encoder, code, data);
+  default:   return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 
-PN_FORCE_INLINE static inline int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static inline int pni_encoder_encode_current_node_in_array(pn_encoder_t *encoder, pn_data_t *data, uint8_t code)
 {
-  pn_encoder_t *encoder = (pn_encoder_t *) ctx;
-  pn_type_t type = node->atom.type;
-  pni_node_t *parent = pn_data_node(data, node->parent);
+  pni_node_t *node = pni_data_current(data);
+  pn_atom_t *atom = &node->atom;
 
-  // XXX
-  //
-  // In my testing, I encounter the following case very infrequently
-  // now that I generate the LIST0 encoding at the outset and I
-  // produce transport frames more carefully.
-  //
-  // if (type == PN_LIST && node->children && node->children - encoder->null_count == 0) {
-  //   fprintf(stderr, "I coulda!\n");
-  // }
-
-  if ((type == PN_LIST && (node->children || (parent && parent->atom.type == PN_ARRAY)))
-      || type == PN_MAP
-      || type == PN_ARRAY) {
-    char *pos = encoder->position;
-    encoder->position = node->start;
-
-    if (node->small) {
-      // Backfill the size
-      size_t size = pos - node->start - 1;
-      pn_encoder_writef8(encoder, size);
-
-      // Adjust the count
-      if (encoder->null_count) {
-        pn_encoder_writef8(encoder, node->children - encoder->null_count);
-      }
-    } else {
-      // Backfill the size
-      size_t size = pos - node->start - 4;
-      pn_encoder_writef32(encoder, size);
-
-      // Adjust the count
-      if (encoder->null_count) {
-        pn_encoder_writef32(encoder, node->children - encoder->null_count);
-      }
-    }
-
-    encoder->position = pos;
-    encoder->null_count = 0;
+  switch (code & 0xF0) {
+  case 0x00: // PNE_DESCRIPTOR
+  case 0x40:
+  case 0x50: return pni_encoder_encode_fixed8_value(encoder, code, atom);
+  case 0x60: return pni_encoder_encode_fixed16_value(encoder, code, atom);
+  case 0x70: return pni_encoder_encode_fixed32_value(encoder, code, atom);
+  case 0x80: return pni_encoder_encode_fixed64_value(encoder, code, atom);
+  case 0x90: return pni_encoder_encode_fixed128_value(encoder, code, atom);
+  case 0xA0: return pni_encoder_encode_variable8_value(encoder, code, atom);
+  case 0xB0: return pni_encoder_encode_variable32_value(encoder, code, atom);
+  case 0xC0: return pni_encoder_encode_compound8_value(encoder, code, data);
+  case 0xD0: return pni_encoder_encode_compound32_value(encoder, code, data);
+  case 0xE0: // return pni_encoder_encode_array8_value(encoder, code, data);
+  // case 0xF0: return pni_encoder_encode_array32_value(encoder, code, data); // XXX Nested arrays
+  default:   return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }
-
-  return 0;
 }
 
 ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
@@ -524,45 +570,20 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   encoder->position = dst;
   encoder->size = size;
 
+  // XXX This means we can do a simpler data_next
   if (!src->size) return 0;
 
-  pni_node_t *node = pn_data_node(src, 1);
-  pni_node_t *parent = NULL;
-  size_t next;
+  pn_handle_t save = pn_data_point(src);
   int err;
 
-  while (node) {
-    err = pni_encoder_enter(encoder, src, node);
+  pn_data_rewind(src);
+
+  while (pn_data_next(src)) {
+    err = pni_encoder_encode_current_node(encoder, src);
     if (err) return err;
-
-    if (node->down) {
-      next = node->down;
-    } else {
-      err = pni_encoder_exit(encoder, src, node);
-      if (err) return err;
-
-      if (node->next) {
-        next = node->next;
-      } else {
-        parent = pn_data_node(src, node->parent);
-        next = 0;
-
-        while (parent) {
-          err = pni_encoder_exit(encoder, src, parent);
-          if (err) return err;
-
-          if (parent->next) {
-            next = parent->next;
-            break;
-          } else {
-            parent = pn_data_node(src, parent->parent);
-          }
-        }
-      }
-    }
-
-    node = pn_data_node(src, next);
   }
+
+  pn_data_restore(src, save);
 
   size_t encoded = encoder->position - encoder->output;
 
@@ -576,13 +597,7 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
 
 ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)
 {
-  // XXX The save and restore aren't doing anything in this case
-  pn_handle_t save = pn_data_point(src);
-
   int err = pn_encoder_encode(encoder, src, NULL, 0);
-
-  pn_data_restore(src, save);
-
   if (err) return err;
 
   return encoder->position - encoder->output;
