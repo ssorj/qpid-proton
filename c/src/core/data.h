@@ -45,7 +45,6 @@ typedef struct {
   pni_nid_t children;
   bool described; // For arrays
   bool data;
-  bool small;
 } pni_node_t;
 
 struct pn_data_t {

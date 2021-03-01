@@ -2134,7 +2134,6 @@ PN_FORCE_INLINE static int pni_data_copy_node(pn_data_t *data, pni_node_t *src) 
   dst->atom = src->atom;
   dst->described = src->described;
   dst->type = src->type;
-  dst->small = src->small;
 
   if ((type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) && data->intern) {
     err = pni_data_intern_node(data, dst);

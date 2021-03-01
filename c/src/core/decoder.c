@@ -278,8 +278,6 @@ static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uin
   }
 }
 
-#include <stdio.h>
-
 static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
