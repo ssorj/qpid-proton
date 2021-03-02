@@ -374,7 +374,6 @@ class DataTest(Test):
 
     def _test_int(self, itype):
         values = self.int_values(itype)
-        print("int values", values);
         self._test(itype, *values)
 
     def testByte(self): self._test_int("byte")
@@ -482,13 +481,7 @@ class DataTest(Test):
                u"list": [1, 2, 3, None, 4],
                u"boolean": True}
         self.data.put_object(obj)
-
-        self.data.dump()
-
         enc = self.data.encode()
-
-        print(enc);
-
         data = Data()
         data.decode(enc)
         data.rewind()

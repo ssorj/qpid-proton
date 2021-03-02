@@ -196,8 +196,7 @@ static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   assert(pn_encoder_remaining(encoder) >= 1);
 
-  encoder->position[0] = value;
-  encoder->position += 1;
+  *encoder->position++ = value;
 }
 
 static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
@@ -276,7 +275,7 @@ static inline int pni_encoder_encode_fixed8(pn_encoder_t *encoder, pn_atom_t *at
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed16(pn_encoder_t *encoder, pn_atom_t *atom)
+static int pni_encoder_encode_fixed16(pn_encoder_t *encoder, pn_atom_t *atom)
 {
   if (pn_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
 
@@ -285,7 +284,7 @@ static inline int pni_encoder_encode_fixed16(pn_encoder_t *encoder, pn_atom_t *a
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed32(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed32(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
   if (pn_encoder_remaining(encoder) < 4) return PN_OVERFLOW;
 
@@ -299,7 +298,7 @@ static inline int pni_encoder_encode_fixed32(pn_encoder_t *encoder, pn_atom_t *a
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed64(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed64(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
   if (pn_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
 
@@ -313,7 +312,7 @@ static inline int pni_encoder_encode_fixed64(pn_encoder_t *encoder, pn_atom_t *a
   return 0;
 }
 
-static inline int pni_encoder_encode_fixed128(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed128(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
   if (pn_encoder_remaining(encoder) < 16) return PN_OVERFLOW;
 
@@ -339,7 +338,7 @@ static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, pn_atom_t 
   return 0;
 }
 
-static inline int pni_encoder_encode_variable32(pn_encoder_t *encoder, pn_atom_t *atom)
+static int pni_encoder_encode_variable32(pn_encoder_t *encoder, pn_atom_t *atom)
 {
   // XXX Assert string length
 
@@ -450,7 +449,7 @@ static int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data)
     pn_encoder_writef32(encoder, node->children);
   }
 
-  // XXX Need to handle described values here?
+  // XXX Need to handle described values here? Yes.
   if (pn_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
   pn_encoder_writef8(encoder, array_code);
 
