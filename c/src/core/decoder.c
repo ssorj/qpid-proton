@@ -248,7 +248,7 @@ static inline int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_d
   int err;
   uint8_t code;
 
-  err = pni_data_put_fixed0(data, PN_DESCRIBED);
+  err = pn_data_put_described(data);
   if (err) return err;
 
   pn_data_enter(data);
@@ -267,12 +267,12 @@ static inline int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_d
 static int pni_decoder_decode_fixed0(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   switch (code) {
-  case PNE_NULL: return pni_data_put_fixed0(data, PN_NULL);
-  case PNE_TRUE: return pni_data_put_fixed8(data, PN_BOOL, (uint8_t) 1);
-  case PNE_FALSE: return pni_data_put_fixed8(data, PN_BOOL, (uint8_t) 0);
-  case PNE_UINT0: return pni_data_put_fixed32(data, PN_UINT, (uint32_t) 0);
-  case PNE_ULONG0: return pni_data_put_fixed64(data, PN_ULONG, (uint64_t) 0);
-  case PNE_LIST0: return pni_data_put_fixed0(data, PN_LIST);
+  case PNE_NULL:   return pn_data_put_null(data);
+  case PNE_TRUE:   return pn_data_put_bool(data, true);
+  case PNE_FALSE:  return pn_data_put_bool(data, false);
+  case PNE_UINT0:  return pn_data_put_uint(data, 0);
+  case PNE_ULONG0: return pn_data_put_ulong(data, 0);
+  case PNE_LIST0:  return pn_data_put_list(data);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
@@ -282,19 +282,18 @@ static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uin
 {
   if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
 
-  pn_type_t type = pn_code2type(code);
   uint8_t value = pn_decoder_readf8(decoder);
 
-  if (type == PN_ARG_ERR) {
+  switch (code) {
+  case PNE_UBYTE:      return pn_data_put_ubyte(data, value);
+  case PNE_BYTE:       return pn_data_put_byte(data, value);
+  case PNE_SMALLUINT:  return pn_data_put_uint(data, value);
+  case PNE_SMALLULONG: return pn_data_put_ulong(data, value);
+  case PNE_SMALLINT:   return pn_data_put_int(data, (int8_t) value);
+  case PNE_SMALLLONG:  return pn_data_put_long(data, (int8_t) value);
+  case PNE_BOOLEAN:    return pn_data_put_bool(data, value);
+  default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
-  }
-
-  if (type == PN_INT) {
-    return pn_data_put_int(data, (int8_t) value); // XXX
-  } else if (type == PN_LONG) {
-    return pn_data_put_long(data, (int8_t) value); // XXX
-  } else {
-    return pni_data_put_fixed8(data, type, value);
   }
 }
 
@@ -302,71 +301,57 @@ static int pni_decoder_decode_fixed16(pn_decoder_t *decoder, pn_data_t *data, ui
 {
   if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
 
-  pn_type_t type = pn_code2type(code);
   uint16_t value = pn_decoder_readf16(decoder);
 
-  if (type == PN_ARG_ERR) {
+  if (code == PNE_USHORT) {
+    return pn_data_put_ushort(data, value);
+  } else if (code == PNE_SHORT) {
+    return pn_data_put_short(data, (int16_t) value);
+  } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return pni_data_put_fixed16(data, type, value);
 }
 
 static int pni_decoder_decode_fixed32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
 
-  pn_type_t type = pn_code2type(code);
   uint32_t value = pn_decoder_readf32(decoder);
 
-  if (type == PN_ARG_ERR) {
+  switch (code) {
+  case PNE_UINT:      return pn_data_put_uint(data, value);
+  case PNE_INT:       return pn_data_put_int(data, value);
+  case PNE_UTF32:     return pn_data_put_char(data, value);
+  case PNE_DECIMAL32: return pn_data_put_decimal32(data, value);
+  case PNE_FLOAT: {
+    // XXX: this assumes the platform uses IEEE floats
+    conv_t conv = { .i = value };
+    return pn_data_put_float(data, conv.f);
+  }
+  default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  // switch (code) {
-  // case PNE_UINT: return pn_data_put_uint(data, value);
-  // case PNE_INT: return pn_data_put_int(data, value);
-  // case PNE_UTF32: return pn_data_put_char(data, value);
-  // case PNE_FLOAT: {
-  //   // XXX: this assumes the platform uses IEEE floats
-  //   conv_t conv = { .i = value };
-  //   return pn_data_put_float(data, conv.f);
-  // }
-  // case PNE_DECIMAL32:
-  //   return pn_data_put_decimal32(data, value);
-  // default:
-  //   return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
-  // }
-
-  return pni_data_put_fixed32(data, type, value);
 }
 
 static int pni_decoder_decode_fixed64(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
 
-  pn_type_t type = pn_code2type(code);
   uint64_t value = pn_decoder_readf64(decoder);
 
-  if (type == PN_ARG_ERR) {
+  switch (code) {
+  case PNE_ULONG:     return pn_data_put_ulong(data, value);
+  case PNE_LONG:      return pn_data_put_long(data, value);
+  case PNE_MS64:      return pn_data_put_timestamp(data, value);
+  case PNE_DECIMAL64: return pn_data_put_decimal64(data, value);
+  case PNE_DOUBLE: {
+    // XXX: this assumes the platform uses IEEE floats
+    conv_t conv = { .l = value };
+    return pn_data_put_double(data, conv.d);
+  }
+  default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  // switch (code) {
-  // case PNE_ULONG: return pn_data_put_ulong(data, value);
-  // case PNE_LONG: return pn_data_put_long(data, value);
-  // case PNE_MS64: return pn_data_put_timestamp(data, value);
-  // case PNE_DOUBLE: {
-  //   // XXX: this assumes the platform uses IEEE floats
-  //   conv_t conv = { .l = value };
-  //   return pn_data_put_double(data, conv.d);
-  // }
-  // case PNE_DECIMAL64: return pn_data_put_decimal64(data, value);
-  // default:
-  //   return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
-  // }
-
-  return pni_data_put_fixed64(data, type, value);
 }
 
 static int pni_decoder_decode_fixed128(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
@@ -431,15 +416,19 @@ static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data,
   return pni_decoder_decode_variable_values(decoder, data, code, size);
 }
 
-PN_FORCE_INLINE static int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data, uint8_t code, size_t count)
+PN_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data,
+                                                                     uint8_t code, size_t count)
 {
-  pn_type_t type = pn_code2type(code);
+  int err;
 
-  if (type == PN_ARG_ERR) {
-    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+  if ((0x0F & code) == 0) {
+    err = pn_data_put_list(data);
+  } else if ((0x0F & code) == 1) {
+    err = pn_data_put_map(data);
+  } else {
+    err = pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
-  int err = pni_data_put_fixed0(data, type);
   if (err) return err;
 
   pn_data_enter(data);
