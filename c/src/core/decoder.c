@@ -95,6 +95,8 @@ static inline uint32_t pn_decoder_readf32(pn_decoder_t *decoder)
 
 static inline uint64_t pn_decoder_readf64(pn_decoder_t *decoder)
 {
+  // Asserts XXX
+
   uint64_t a = (uint8_t) decoder->position[0];
   uint64_t b = (uint8_t) decoder->position[1];
   uint64_t c = (uint8_t) decoder->position[2];
@@ -198,6 +200,10 @@ static inline int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data
 
 static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
+  if (code == PNE_SMALLULONG) {
+    return pn_data_put_ulong(data, pn_decoder_readf8(decoder));
+  }
+
   switch (code & 0xF0) {
   case 0x40: return pni_decoder_decode_fixed0(decoder, data, code);
   case 0x50: return pni_decoder_decode_fixed8(decoder, data, code);
@@ -445,26 +451,26 @@ PN_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_
 
 static int pni_decoder_decode_compound8(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
-  if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
+  if (pn_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
 
   size_t size = pn_decoder_readf8(decoder);
-  size_t count = pn_decoder_readf8(decoder);
 
-  // Check that the size is big enough for the count
-  if (size < 1) return PN_ARG_ERR;
+  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+
+  size_t count = pn_decoder_readf8(decoder);
 
   return pni_decoder_decode_compound_values(decoder, data, code, count);
 }
 
 static int pni_decoder_decode_compound32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
-  if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
+  if (pn_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
 
   size_t size = pn_decoder_readf32(decoder);
-  size_t count = pn_decoder_readf32(decoder);
 
-  // Check that the size is big enough for the count
-  if (size < 4) return PN_ARG_ERR;
+  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+
+  size_t count = pn_decoder_readf32(decoder);
 
   return pni_decoder_decode_compound_values(decoder, data, code, count);
 }
