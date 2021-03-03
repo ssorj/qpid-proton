@@ -1417,6 +1417,8 @@ PN_FORCE_INLINE static void pn_delivery_incref(void *object)
   }
 }
 
+// #define pn_delivery_incref pn_object_incref
+
 static bool pni_preserve_delivery(pn_delivery_t *delivery)
 {
   if (!delivery->local.settled) return true;
@@ -1436,15 +1438,6 @@ static void pn_delivery_finalize(void *object)
     if (pni_link_live(link) && pni_preserve_delivery(delivery) && delivery->referenced) {
       delivery->referenced = false;
       pn_object_incref(delivery);
-      // XXX
-      //
-      // I was seeing a lot of stacks in link and session_finalize
-      // (which seemed odd, since my test has one link and session for
-      // its lifetime), so I tried removing this, and they
-      // disappeared.  Memory remained stable (but I only have one
-      // link).  Removing this is a performance win.
-      //
-      // The tests fail with this removed.
       pn_decref(link);
       return;
     }
