@@ -725,10 +725,6 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
   }
-  // XXX
-  //
-  // I didn't understand why this was here outside the if block, so I
-  // tried moving it inside.  FWIW, the tests pass either way.
   pn_modified(connection, &connection->endpoint, true);
 }
 
@@ -1600,7 +1596,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   // XXX: could just remove incref above
 
-  pni_class_decref_without_finalizing(PN_OBJECT, delivery);
+  pn_decref(delivery);
+  // pni_class_decref_without_finalizing(PN_OBJECT, delivery);
 
   return delivery;
 }
