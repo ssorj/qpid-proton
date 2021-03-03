@@ -64,18 +64,7 @@ pn_record_t *pn_record(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_record);
   pn_record_t *record = (pn_record_t *) pn_class_new(&clazz, sizeof(pn_record_t));
-  pn_record_def(record, PN_LEGCTX, PN_VOID);
   return record;
-}
-
-static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
-  for (size_t i = 0; i < record->size; i++) {
-    pni_field_t *field = &record->fields[i];
-    if (field->key == key) {
-      return field;
-    }
-  }
-  return NULL;
 }
 
 static pni_field_t *pni_record_create(pn_record_t *record) {
@@ -89,6 +78,24 @@ static pni_field_t *pni_record_create(pn_record_t *record) {
   field->clazz = NULL;
   field->value = NULL;
   return field;
+}
+
+static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
+  for (size_t i = 0; i < record->size; i++) {
+    pni_field_t *field = &record->fields[i];
+    if (field->key == key) {
+      return field;
+    }
+  }
+
+  if (key == PN_LEGCTX) {
+    pni_field_t *field = pni_record_create(record);
+    field->key = PN_LEGCTX;
+    field->clazz = PN_VOID;
+    return field;
+  }
+
+  return NULL;
 }
 
 PN_FORCE_INLINE void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
@@ -131,7 +138,6 @@ void *pn_record_get(pn_record_t *record, pn_handle_t key)
 void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
 {
   assert(record);
-
   pni_field_t *field = pni_record_find(record, key);
   if (field) {
     void *old = field->value;
@@ -144,6 +150,7 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
 PN_FORCE_INLINE void pn_record_clear(pn_record_t *record)
 {
   assert(record);
+
   for (size_t i = 0; i < record->size; i++) {
     pni_field_t *field = &record->fields[i];
     pn_class_decref(field->clazz, field->value);
@@ -151,6 +158,6 @@ PN_FORCE_INLINE void pn_record_clear(pn_record_t *record)
     field->clazz = NULL;
     field->value = NULL;
   }
+
   record->size = 0;
-  pn_record_def(record, PN_LEGCTX, PN_VOID);
 }
