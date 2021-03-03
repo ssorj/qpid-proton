@@ -1565,6 +1565,7 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
 static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   assert(!delivery->work);
+  pni_clear_work(delivery->link->session->connection, delivery);
   pn_clear_tpwork(delivery);
   pn_delivery_map_del(db, delivery);
   pn_incref(delivery);
@@ -2474,7 +2475,6 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     state->sent = true;
 
     pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_FLOW);
-    pni_clear_work(transport->connection, delivery);
     pn_full_settle(&link->session->state.incoming, delivery);
 
     return 0;
@@ -2555,7 +2555,6 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   }
 
   if (delivery->local.settled && state && state->sent) {
-    pni_clear_work(transport->connection, delivery);
     pn_full_settle(&ssn_state->outgoing, delivery);
   }
 
@@ -2581,7 +2580,6 @@ static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t 
   }
 
   if (delivery->local.settled) {
-    pni_clear_work(transport->connection, delivery);
     pn_full_settle(&link->session->state.incoming, delivery);
   }
 
