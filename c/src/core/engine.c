@@ -1417,8 +1417,6 @@ PN_FORCE_INLINE static void pn_delivery_incref(void *object)
   }
 }
 
-// #define pn_delivery_incref pn_object_incref
-
 static bool pni_preserve_delivery(pn_delivery_t *delivery)
 {
   if (!delivery->local.settled) return true;
@@ -1819,12 +1817,6 @@ bool pn_link_advance(pn_link_t *link)
   }
 }
 
-// XXX
-//
-// This one returns 0 for a null link.
-// pn_link_remote_credit asserts on a null link.
-// The docs say nothing on this topic either way.
-// These squishy semantics suck.
 PN_INLINE int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
