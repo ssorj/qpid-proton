@@ -1528,8 +1528,6 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
   return dtag;
 }
 
-void pni_class_decref_without_finalizing(const pn_class_t *clazz, void *object);
-
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
@@ -1595,9 +1593,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   }
 
   // XXX: could just remove incref above
-
   pn_decref(delivery);
-  // pni_class_decref_without_finalizing(PN_OBJECT, delivery);
 
   return delivery;
 }

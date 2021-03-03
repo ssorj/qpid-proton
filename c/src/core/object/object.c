@@ -112,15 +112,6 @@ PN_FORCE_INLINE int pn_class_decref(const pn_class_t *clazz, void *object)
   return 0;
 }
 
-void pni_class_decref_without_finalizing(const pn_class_t *clazz, void *object)
-{
-  assert(clazz);
-  assert(object);
-
-  clazz = clazz->reify(object);
-  clazz->decref(object);
-}
-
 PN_FORCE_INLINE void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
