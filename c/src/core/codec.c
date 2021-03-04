@@ -423,7 +423,7 @@ PN_INLINE void pn_data_clear(pn_data_t *data)
   if (data->intern_buf) pni_buffer2_clear(data->intern_buf);
 }
 
-static int pni_data_grow(pn_data_t *data)
+PN_NO_INLINE static int pni_data_grow(pn_data_t *data)
 {
   size_t capacity = data->capacity ? data->capacity : 2;
   if (capacity >= PNI_NID_MAX) return PN_OUT_OF_MEMORY;

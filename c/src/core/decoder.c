@@ -377,7 +377,7 @@ static int pni_decoder_decode_fixed128(pn_decoder_t *decoder, pn_data_t *data, u
   }
 }
 
-static inline int pni_decoder_decode_variable_values(pn_decoder_t *decoder, pn_data_t *data, uint8_t code, size_t size)
+static inline int pni_decoder_decode_variable_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code, size_t size)
 {
   int err;
   char *start = (char *) decoder->position;
@@ -408,7 +408,7 @@ static int pni_decoder_decode_variable8(pn_decoder_t *decoder, pn_data_t *data, 
 
   if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
 
-  return pni_decoder_decode_variable_values(decoder, data, code, size);
+  return pni_decoder_decode_variable_value(decoder, data, code, size);
 }
 
 static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
@@ -419,7 +419,7 @@ static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data,
 
   if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
 
-  return pni_decoder_decode_variable_values(decoder, data, code, size);
+  return pni_decoder_decode_variable_value(decoder, data, code, size);
 }
 
 PN_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data,
