@@ -240,22 +240,22 @@ static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   encoder->position += 16;
 }
 
-static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
+static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= value->size + 1);
+  assert(pn_encoder_remaining(encoder) >= value.size + 1);
 
-  pn_encoder_writef8(encoder, value->size);
-  memcpy(encoder->position, value->start, value->size);
-  encoder->position += value->size;
+  pn_encoder_writef8(encoder, value.size);
+  memcpy(encoder->position, value.start, value.size);
+  encoder->position += value.size;
 }
 
-static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
+static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= value->size + 4);
+  assert(pn_encoder_remaining(encoder) >= value.size + 4);
 
-  pn_encoder_writef32(encoder, value->size);
-  memcpy(encoder->position, value->start, value->size);
-  encoder->position += value->size;
+  pn_encoder_writef32(encoder, value.size);
+  memcpy(encoder->position, value.start, value.size);
+  encoder->position += value.size;
 }
 
 typedef union {
@@ -329,9 +329,9 @@ static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, pn_atom_t 
 {
   // XXX Assert string length
 
-  pn_bytes_t *value = &atom->u.as_bytes; // XXX Pointer?
+  pn_bytes_t value = atom->u.as_bytes;
 
-  if (pn_encoder_remaining(encoder) < value->size + 1) return PN_OVERFLOW;
+  if (pn_encoder_remaining(encoder) < value.size + 1) return PN_OVERFLOW;
 
   pn_encoder_writev8(encoder, value);
 
@@ -342,9 +342,9 @@ static int pni_encoder_encode_variable32(pn_encoder_t *encoder, pn_atom_t *atom)
 {
   // XXX Assert string length
 
-  pn_bytes_t *value = &atom->u.as_bytes; // XXX Pointer?
+  pn_bytes_t value = atom->u.as_bytes; // XXX Pointer?
 
-  if (pn_encoder_remaining(encoder) < value->size + 4) return PN_OVERFLOW;
+  if (pn_encoder_remaining(encoder) < value.size + 4) return PN_OVERFLOW;
 
   pn_encoder_writev32(encoder, value);
 
