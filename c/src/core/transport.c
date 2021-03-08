@@ -1592,7 +1592,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   int err = 0;
   int count = pn_data_siblings(args);
 
-  pni_data_require_field(args, &err, PN_UINT, "handle");
+  pni_data_require_first_field(args, &err, PN_UINT, "handle");
   handle = pn_data_get_uint(args);
   if (err) return err;
   if (count == 1) goto args_end;

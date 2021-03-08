@@ -1288,28 +1288,28 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 // This forced inline seems to be worth it
 PN_FORCE_INLINE bool pn_data_next(pn_data_t *data)
 {
-  pni_node_t* current = pni_data_current(data);
+  pni_node_t *current = pni_data_current(data);
 
   if (current) {
     if (current->next) {
       data->current = current->next;
       return true;
-    } else {
-      return false;
     }
   } else {
-    pni_node_t* parent = pn_data_node(data, data->parent);
+    pni_node_t *parent = pn_data_node(data, data->parent);
 
-    if (parent && parent->down) {
-      data->current = parent->down;
-      return true;
-    } else if (!parent && data->size) {
+    if (parent) {
+      if (parent->down) {
+        data->current = parent->down;
+        return true;
+      }
+    } else if (data->size) {
       data->current = 1;
       return true;
-    } else {
-      return false;
     }
   }
+
+  return false;
 }
 
 bool pn_data_prev(pn_data_t *data)

@@ -686,23 +686,23 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     int err = 0;
     size_t field_count;
 
-    pni_data_require_field(msg->data, &err, PN_DESCRIBED, "described");
+    pni_data_require_first_field(msg->data, &err, PN_DESCRIBED, "described");
     if (err) return err;
     pn_data_enter(msg->data);
 
     uint64_t descriptor = 0;
-    if (pni_data_next_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
+    if (pni_data_first_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
     if (err) return err;
 
     switch (descriptor) {
     case HEADER:
-      pni_data_require_field(msg->data, &err, PN_LIST, "header");
+      pni_data_require_next_field(msg->data, &err, PN_LIST, "header");
       if (err) return err;
       pn_data_enter(msg->data);
 
       field_count = pn_data_siblings(msg->data);
 
-      if (pni_data_next_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
+      if (pni_data_first_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
       if (err) return err;
       if (field_count == 1) break;
 
@@ -723,10 +723,11 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       break;
     case PROPERTIES:
+      // XXX Always?
       pn_data_clear(msg->id);
       pn_data_clear(msg->correlation_id);
 
-      pni_data_require_field(msg->data, &err, PN_LIST, "properties");
+      pni_data_require_next_field(msg->data, &err, PN_LIST, "properties");
       if (err) return err;
       pn_data_enter(msg->data);
 

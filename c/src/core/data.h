@@ -28,6 +28,8 @@
 #include "decoder.h"
 #include "encoder.h"
 
+#include <assert.h>
+
 typedef uint16_t pni_nid_t;
 #define PNI_NID_MAX ((pni_nid_t)-1)
 #define PNI_INTERN_MINSIZE 64
@@ -69,12 +71,6 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
-int pni_data_put_fixed0(pn_data_t *data, pn_type_t type);
-int pni_data_put_fixed8(pn_data_t *data, pn_type_t type, uint8_t value);
-int pni_data_put_fixed16(pn_data_t *data, pn_type_t type, uint16_t value);
-int pni_data_put_fixed32(pn_data_t *data, pn_type_t type, uint32_t value);
-int pni_data_put_fixed64(pn_data_t *data, pn_type_t type, uint64_t value);
-
 static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
 {
   if (node_id) {
@@ -95,20 +91,65 @@ static inline pn_type_t pni_data_parent_type(pn_data_t *data)
   }
 }
 
-PN_FORCE_INLINE static bool pni_data_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
 {
-  if (!pn_data_next(data) || pn_data_type(data) == PN_NULL) {
-    return false;
-  } else if (pn_data_type(data) == type) {
-    return true;
-  } else {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
-                           name, pn_type_name(type), pn_type_name(pn_data_type(data)));
-    return false;
+  assert(!data->current);
+  assert(data->parent || data->size);
+
+  if (pn_data_next(data)) {
+    pni_node_t *next = pn_data_node(data, data->current);
+    assert(next);
+
+    pn_type_t next_type = next->atom.type;
+
+    if (next_type == type) {
+      return true;
+    } else if (next_type != PN_NULL) {
+      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
+                             name, pn_type_name(type), pn_type_name(next_type));
+    }
+  }
+
+  return false;
+}
+
+PN_FORCE_INLINE static bool pni_data_next_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
+{
+  assert(data->current);
+
+  pni_node_t *current = pn_data_node(data, data->current);
+  assert(current);
+
+  if (current->next) {
+    data->current = current->next;
+    pni_node_t *next = pn_data_node(data, data->current);
+    assert(next);
+
+    pn_type_t next_type = next->atom.type;
+
+    if (next_type == type) {
+      return true;
+    } else if (next_type != PN_NULL) {
+      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
+                             name, pn_type_name(type), pn_type_name(next_type));
+    }
+  }
+
+  return false;
+}
+
+PN_FORCE_INLINE static void pni_data_require_first_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+{
+  bool found = pni_data_first_field(data, err, type, name);
+
+  if (*err) return;
+
+  if (!found) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
   }
 }
 
-PN_FORCE_INLINE static void pni_data_require_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+PN_FORCE_INLINE static void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
 {
   bool found = pni_data_next_field(data, err, type, name);
 
