@@ -1227,8 +1227,11 @@ PN_INLINE void pn_data_rewind(pn_data_t *data)
 
 static inline pni_node_t *pni_data_current(pn_data_t *data)
 {
-  // XXX
-  return pn_data_node(data, data->current);
+  assert(data);
+
+  if (!data->current) return NULL;
+
+  return data->nodes + data->current - 1;
 }
 
 PN_INLINE void pn_data_narrow(pn_data_t *data)
@@ -1271,17 +1274,16 @@ bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 
 static pni_node_t *pni_data_peek(pn_data_t *data)
 {
-  pni_node_t *current = pni_data_current(data);
-  if (current) {
+  if (data->current) {
+    pni_node_t *current = pni_data_node(data, data->current);
     return pn_data_node(data, current->next);
-  }
-
-  pni_node_t *parent = pn_data_node(data, data->parent);
-  if (parent) {
+  } else if (data->parent) {
+    pni_node_t *parent = pni_data_node(data, data->parent);
     return pn_data_node(data, parent->down);
+  // This doesn't handle the no-parent initial state
+  } else {
+    return NULL;
   }
-
-  return NULL;
 }
 
 // XXX

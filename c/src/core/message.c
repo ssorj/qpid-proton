@@ -691,7 +691,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     pn_data_enter(msg->data);
 
     uint64_t descriptor = 0;
-    if (pni_data_first_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pn_data_get_ulong(msg->data);
+    if (pni_data_first_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pni_data_get_ulong(msg->data);
     if (err) return err;
 
     switch (descriptor) {
