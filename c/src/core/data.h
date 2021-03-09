@@ -80,15 +80,22 @@ static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
   }
 }
 
-static inline pn_type_t pni_data_parent_type(pn_data_t *data)
+PN_FORCE_INLINE static pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
 {
-  pni_node_t *node = pn_data_node(data, data->parent);
+  assert(data);
+  assert(node_id);
 
-  if (node) {
-    return node->atom.type;
-  } else {
-    return PN_INVALID;
-  }
+  return data->nodes + node_id - 1;
+}
+
+static inline pn_type_t pni_data_type(pn_data_t *data)
+{
+  assert(data);
+  assert(data->current);
+
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  return node->atom.type;
 }
 
 PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
@@ -97,7 +104,7 @@ PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_t
   assert(data->parent || data->size);
 
   if (pn_data_next(data)) {
-    pni_node_t *next = pn_data_node(data, data->current);
+    pni_node_t *next = pni_data_node(data, data->current);
     assert(next);
 
     pn_type_t next_type = next->atom.type;
@@ -117,12 +124,12 @@ PN_FORCE_INLINE static bool pni_data_next_field(pn_data_t *data, int *err, pn_ty
 {
   assert(data->current);
 
-  pni_node_t *current = pn_data_node(data, data->current);
+  pni_node_t *current = pni_data_node(data, data->current);
   assert(current);
 
   if (current->next) {
     data->current = current->next;
-    pni_node_t *next = pn_data_node(data, data->current);
+    pni_node_t *next = pni_data_node(data, data->current);
     assert(next);
 
     pn_type_t next_type = next->atom.type;

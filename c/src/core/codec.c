@@ -514,7 +514,7 @@ static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
   pn_handle_t point = pn_data_point(src);
   pn_data_rewind(src);
   pn_data_next(src);
-  if (pn_data_type(src) == PN_ARRAY) {
+  if (pni_data_type(src) == PN_ARRAY) {
     switch (pn_data_get_array(src)) {
      case 0:                    /* Empty array => null */
       err = pn_data_put_null(data);
@@ -796,7 +796,7 @@ static bool pn_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
   if (suspend) return false;
   bool found = pn_data_next(data);
   if (found) {
-    *type = pn_data_type(data);
+    *type = pni_data_type(data);
     return true;
   } else {
     pni_node_t *parent = pn_data_node(data, data->parent);
@@ -1227,6 +1227,7 @@ PN_INLINE void pn_data_rewind(pn_data_t *data)
 
 static inline pni_node_t *pni_data_current(pn_data_t *data)
 {
+  // XXX
   return pn_data_node(data, data->current);
 }
 
@@ -1288,25 +1289,23 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 // This forced inline seems to be worth it
 PN_FORCE_INLINE bool pn_data_next(pn_data_t *data)
 {
-  pni_node_t *current = pni_data_current(data);
+  if (data->current) {
+    pni_node_t *current = data->nodes + data->current - 1;
 
-  if (current) {
     if (current->next) {
       data->current = current->next;
       return true;
     }
-  } else {
-    pni_node_t *parent = pn_data_node(data, data->parent);
+  } else if (data->parent) {
+    pni_node_t *parent = data->nodes + data->parent - 1;
 
-    if (parent) {
-      if (parent->down) {
-        data->current = parent->down;
-        return true;
-      }
-    } else if (data->size) {
-      data->current = 1;
+    if (parent->down) {
+      data->current = parent->down;
       return true;
     }
+  } else if (data->size) {
+    data->current = 1;
+    return true;
   }
 
   return false;
@@ -1410,7 +1409,7 @@ PN_FORCE_INLINE bool pn_data_exit(pn_data_t *data)
 bool pn_data_lookup(pn_data_t *data, const char *name)
 {
   while (pn_data_next(data)) {
-    pn_type_t type = pn_data_type(data);
+    pn_type_t type = pni_data_type(data);
 
     switch (type) {
     case PN_STRING:

@@ -649,7 +649,7 @@ int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src);
 
 static inline void pni_data_get_message_id(pn_data_t *data, int *err, const char *name, pn_data_t *dst)
 {
-  pn_type_t type = pn_data_type(data);
+  pn_type_t type = pni_data_type(data);
 
   if (type == PN_NULL) {
     return;
@@ -700,7 +700,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       pn_data_enter(msg->data);
 
-      field_count = pn_data_siblings(msg->data);
+      field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
       if (pni_data_first_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
       if (err) return err;
@@ -727,7 +727,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       pn_data_enter(msg->data);
 
-      field_count = pn_data_siblings(msg->data);
+      field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
       if (pn_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "message_id", msg->id);
       if (err) return err;
@@ -1118,7 +1118,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   if (pn_data_size(msg->body)) {
     pn_data_rewind(msg->body);
     pn_data_next(msg->body);
-    pn_type_t body_type = pn_data_type(msg->body);
+    pn_type_t body_type = pni_data_type(msg->body);
     pn_data_rewind(msg->body);
 
     pn_data_put_described(data);
