@@ -101,7 +101,6 @@ static inline pn_type_t pni_data_type(pn_data_t *data)
 PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
 {
   assert(!data->current);
-  assert(data->parent || data->size);
 
   if (pn_data_next(data)) {
     pni_node_t *next = pni_data_node(data, data->current);
