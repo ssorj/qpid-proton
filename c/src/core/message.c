@@ -723,10 +723,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       break;
     case PROPERTIES:
-      // XXX Always?
-      pn_data_clear(msg->id);
-      pn_data_clear(msg->correlation_id);
-
       pni_data_require_next_field(msg->data, &err, PN_LIST, "properties");
       if (err) return err;
       pn_data_enter(msg->data);
