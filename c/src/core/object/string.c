@@ -131,12 +131,12 @@ PN_INLINE size_t pn_string_size(pn_string_t *string)
   return string->size;
 }
 
-int pn_string_set(pn_string_t *string, const char *bytes)
+PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
 {
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
-int pn_string_grow(pn_string_t *string, size_t capacity)
+PN_NO_INLINE int pn_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
   while (string->capacity < (capacity*sizeof(char) + 1)) {
@@ -158,11 +158,13 @@ int pn_string_grow(pn_string_t *string, size_t capacity)
 
 int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
-  int err = pn_string_grow(string, n);
-  if (err) return err;
+  if (string->capacity < n * sizeof(char) + 1) {
+    int err = pn_string_grow(string, n);
+    if (err) return err;
+  }
 
   if (bytes) {
-    memcpy(string->bytes, bytes, n*sizeof(char));
+    memcpy(string->bytes, bytes, n * sizeof(char));
     string->bytes[n] = '\0';
     string->size = n;
     string->is_null = false;

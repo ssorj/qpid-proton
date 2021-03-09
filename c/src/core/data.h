@@ -166,7 +166,7 @@ PN_FORCE_INLINE static void pni_data_require_next_field(pn_data_t* data, int* er
   }
 }
 
-static inline uint64_t pni_data_get_ulong(pn_data_t *data)
+PN_FORCE_INLINE static uint64_t pni_data_get_ulong(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
 
@@ -175,6 +175,15 @@ static inline uint64_t pni_data_get_ulong(pn_data_t *data)
   assert(node->atom.type == PN_ULONG);
 
   return node->atom.u.as_ulong;
+}
+
+PN_FORCE_INLINE static pn_bytes_t pni_data_get_bytes(pn_data_t *data)
+{
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  if (node->atom.type == PN_NULL) return pn_bytes_null;
+
+  return node->atom.u.as_bytes;
 }
 
 #endif /* data.h */
