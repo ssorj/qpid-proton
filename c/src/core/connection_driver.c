@@ -23,36 +23,8 @@
 #include <proton/connection_driver.h>
 #include <proton/event.h>
 #include <proton/transport.h>
+#include <assert.h>
 #include <string.h>
-
-PN_FORCE_INLINE static pn_event_t *batch_next(pn_connection_driver_t *d) {
-  if (!d->collector) return NULL;
-  // XXX
-  //
-  // This is a hot path.  I wonder if we could avoid examining the
-  // previous event every time.
-  pn_event_t *handled = pn_collector_prev(d->collector);
-  if (handled) {
-    switch (pn_event_type(handled)) {
-     case PN_CONNECTION_INIT:   /* Auto-bind after the INIT event is handled */
-      pn_transport_bind(d->transport, d->connection);
-      break;
-     case PN_TRANSPORT_CLOSED:  /* No more events after TRANSPORT_CLOSED  */
-      pn_collector_release(d->collector);
-      break;
-     default:
-      break;
-    }
-  }
-  /* Log the next event that will be processed */
-  pn_event_t *next = pn_collector_next(d->collector);
-  if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
-    pn_string_clear(d->transport->scratch);
-    pn_inspect(next, d->transport->scratch);
-    pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, pn_string_get(d->transport->scratch));
-  }
-  return next;
-}
 
 int pn_connection_driver_init(pn_connection_driver_t* d, pn_connection_t *c, pn_transport_t *t) {
   memset(d, 0, sizeof(*d));
@@ -137,11 +109,39 @@ void pn_connection_driver_close(pn_connection_driver_t *d) {
   pn_connection_driver_write_close(d);
 }
 
-PN_FORCE_INLINE pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
-  return batch_next(d);
+pn_event_t *pn_connection_driver_next_event(pn_connection_driver_t *d) {
+  if (!d->collector) return NULL;
+
+  // XXX
+  //
+  // This is a hot path.  I wonder if we could avoid examining the
+  // previous event every time.
+
+  pn_event_t *prev = pn_collector_prev(d->collector);
+
+  if (prev) {
+    if (pn_event_type(prev) == PN_CONNECTION_INIT) {
+      // Auto-bind after the INIT event is handled
+      pn_transport_bind(d->transport, d->connection);
+    } else if (pn_event_type(prev) == PN_TRANSPORT_CLOSED) {
+      // No more events after TRANSPORT_CLOSED
+      pn_collector_release(d->collector);
+    }
+  }
+
+  pn_event_t *next = pn_collector_next(d->collector);
+
+  // Log the next event that will be processed
+  if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
+    pn_string_clear(d->transport->scratch);
+    pn_inspect(next, d->transport->scratch);
+    pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, pn_string_get(d->transport->scratch));
+  }
+
+  return next;
 }
 
-PN_FORCE_INLINE bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
+PN_INLINE bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
   return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
 }
 

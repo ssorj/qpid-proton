@@ -201,7 +201,7 @@ PN_FORCE_INLINE pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
-PN_FORCE_INLINE pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+PN_INLINE pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
@@ -276,29 +276,28 @@ pn_event_t *pn_event(void)
   return pn_event_new();
 }
 
-PN_FORCE_INLINE pn_event_type_t pn_event_type(pn_event_t *event)
+PN_INLINE pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event ? event->type : PN_EVENT_NONE;
 }
 
-PN_FORCE_INLINE const pn_class_t *pn_event_class(pn_event_t *event)
+PN_INLINE const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
   return event->clazz;
 }
 
-PN_FORCE_INLINE void *pn_event_context(pn_event_t *event)
+PN_INLINE void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
 }
 
-PN_FORCE_INLINE pn_record_t *pn_event_attachments(pn_event_t *event)
+PN_INLINE pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
   return event->attachments;
 }
-
 
 const char *pn_event_type_name(pn_event_type_t type)
 {
