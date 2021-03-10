@@ -448,7 +448,7 @@ static void pni_data_rebase(pn_data_t *data, const char *base)
   }
 }
 
-static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
+PN_FORCE_INLINE static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   assert(node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL);
 

@@ -31,7 +31,6 @@
 
 #include "buffer2.h"
 #include "memory.h"
-#include "util.h"
 
 PN_STRUCT_CLASSDEF(pni_buffer2)
 
@@ -66,7 +65,7 @@ void pni_buffer2_free(pni_buffer2_t *buf)
   }
 }
 
-PN_NO_INLINE int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
+int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
 {
   size_t old_capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);
@@ -81,60 +80,6 @@ PN_NO_INLINE int pni_buffer2_ensure(pni_buffer2_t *buf, size_t size)
   buf->capacity = new_capacity;
 
   return 0;
-}
-
-PN_INLINE int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size)
-{
-  size_t capacity = pni_buffer2_capacity(buf);
-  size_t old_size = pni_buffer2_size(buf);
-  size_t new_size = old_size + size;
-
-  if (new_size > capacity) {
-    int err = pni_buffer2_ensure(buf, new_size);
-    if (err) return err;
-  }
-
-  memcpy(buf->bytes + old_size, bytes, size);
-  buf->size = new_size;
-
-  return 0;
-}
-
-PN_INLINE int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size)
-{
-  size_t capacity = pni_buffer2_capacity(buf);
-  size_t old_size = pni_buffer2_size(buf);
-  size_t new_size = old_size + size + 1;
-
-  if (new_size > capacity) {
-    int err = pni_buffer2_ensure(buf, new_size);
-    if (err) return err;
-  }
-
-  memcpy(buf->bytes + old_size, bytes, size);
-  buf->bytes[new_size - 1] = '\0';
-  buf->size = new_size;
-
-  return 0;
-}
-
-PN_INLINE size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst)
-{
-  size_t old_size = pni_buffer2_size(buf);
-  size = pn_min(size, old_size);
-  size_t new_size = old_size - size;
-
-  if (dst) {
-    memcpy(dst, buf->bytes, size);
-  }
-
-  if (new_size) {
-    memmove(buf->bytes, buf->bytes + size, new_size);
-  }
-
-  buf->size = new_size;
-
-  return size;
 }
 
 int pni_buffer2_quote(pni_buffer2_t *buf, pn_string_t *str, size_t n)
