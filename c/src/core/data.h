@@ -165,7 +165,29 @@ PN_FORCE_INLINE static void pni_data_require_next_field(pn_data_t* data, int* er
   }
 }
 
-PN_FORCE_INLINE static uint64_t pni_data_get_ulong(pn_data_t *data)
+static inline uint8_t pni_data_get_ubyte(pn_data_t *data)
+{
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  if (node->atom.type == PN_NULL) return 0;
+
+  assert(node->atom.type == PN_UBYTE);
+
+  return node->atom.u.as_ubyte;
+}
+
+static inline uint32_t pni_data_get_uint(pn_data_t *data)
+{
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  if (node->atom.type == PN_NULL) return 0;
+
+  assert(node->atom.type == PN_UINT);
+
+  return node->atom.u.as_uint;
+}
+
+static inline uint64_t pni_data_get_ulong(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
 
@@ -174,6 +196,17 @@ PN_FORCE_INLINE static uint64_t pni_data_get_ulong(pn_data_t *data)
   assert(node->atom.type == PN_ULONG);
 
   return node->atom.u.as_ulong;
+}
+
+static inline bool pni_data_get_bool(pn_data_t *data)
+{
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  if (node->atom.type == PN_NULL) return 0;
+
+  assert(node->atom.type == PN_BOOL);
+
+  return node->atom.u.as_bool;
 }
 
 PN_FORCE_INLINE static pn_bytes_t pni_data_get_bytes(pn_data_t *data)

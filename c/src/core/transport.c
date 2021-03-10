@@ -1593,18 +1593,18 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   int count = pni_data_node(args, args->parent)->children;
 
   pni_data_require_first_field(args, &err, PN_UINT, "handle");
-  handle = pn_data_get_uint(args);
+  handle = pni_data_get_uint(args);
   if (err) return err;
   if (count == 1) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_UINT, "delivery_id")) {
-    id = pn_data_get_uint(args);
+    id = pni_data_get_uint(args);
     id_set = true;
   }
   if (err) return err;
   if (count == 2) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BINARY, "delivery_tag")) tag = pn_data_get_binary(args);
+  if (pni_data_next_field(args, &err, PN_BINARY, "delivery_tag")) tag = pni_data_get_bytes(args);
   if (err) return err;
   if (count == 3) goto args_end;
 
@@ -1613,17 +1613,17 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   if (count == 4) goto args_end;
 
   if (pni_data_next_field(args, &err, PN_BOOL, "settled")) {
-    settled = pn_data_get_bool(args);
+    settled = pni_data_get_bool(args);
     settled_set = true;
   }
   if (err) return err;
   if (count == 5) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BOOL, "more")) more = pn_data_get_bool(args);
+  if (pni_data_next_field(args, &err, PN_BOOL, "more")) more = pni_data_get_bool(args);
   if (err) return err;
   if (count == 6) goto args_end;
 
-  pni_data_next_field(args, &err, PN_UINT, "settle_mode");
+  pni_data_next_field(args, &err, PN_UINT, "settle_mode"); // Skipped
   if (err) return err;
   if (count == 7) goto args_end;
 
@@ -1633,7 +1633,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
     if (pni_data_next_field(args, &err, PN_ULONG, "descriptor")) {
       if (err) return err;
-      type = pn_data_get_ulong(args);
+      type = pni_data_get_ulong(args);
       type_set = true;
     }
 
@@ -1651,7 +1651,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   if (err) return err;
   if (count == 9) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BOOL, "aborted")) aborted = pn_data_get_bool(args);
+  if (pni_data_next_field(args, &err, PN_BOOL, "aborted")) aborted = pni_data_get_bool(args);
   if (err) return err;
 
 args_end: ;
@@ -1886,10 +1886,10 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
       pn_data_enter(transport->disp_data);
 
       if (pn_data_next(transport->disp_data)) {
-        remote->section_number = pn_data_get_uint(transport->disp_data);
+        remote->section_number = pni_data_get_uint(transport->disp_data);
       }
       if (pn_data_next(transport->disp_data)) {
-        remote->section_offset = pn_data_get_ulong(transport->disp_data);
+        remote->section_offset = pni_data_get_ulong(transport->disp_data);
       }
       break;
 
@@ -1911,10 +1911,10 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
       pn_data_enter(transport->disp_data);
 
       if (pn_data_next(transport->disp_data)) {
-        remote->failed = pn_data_get_bool(transport->disp_data);
+        remote->failed = pni_data_get_bool(transport->disp_data);
       }
       if (pn_data_next(transport->disp_data)) {
-        remote->undeliverable = pn_data_get_bool(transport->disp_data);
+        remote->undeliverable = pni_data_get_bool(transport->disp_data);
       }
       pn_data_narrow(transport->disp_data);
       pn_data_clear(remote->data);

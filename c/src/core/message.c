@@ -494,7 +494,7 @@ int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
   return pn_data_put_atom(msg->id, id);
 }
 
-static inline int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
+static inline int pni_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 {
   return pn_string_setn(string, bytes.start, bytes.size);
 }
@@ -507,7 +507,7 @@ pn_bytes_t pn_message_get_user_id(pn_message_t *msg)
 int pn_message_set_user_id(pn_message_t *msg, pn_bytes_t user_id)
 {
   assert(msg);
-  return pn_string_set_bytes(msg->user_id, user_id);
+  return pni_string_set_bytes(msg->user_id, user_id);
 }
 
 const char *pn_message_get_address(pn_message_t *msg)
@@ -697,23 +697,23 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
-      if (pni_data_first_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pn_data_get_bool(msg->data);
+      if (pni_data_first_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pni_data_get_bool(msg->data);
       if (err) return err;
       if (field_count == 1) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UBYTE, "priority")) msg->priority = pn_data_get_ubyte(msg->data);
+      if (pni_data_next_field(msg->data, &err, PN_UBYTE, "priority")) msg->priority = pni_data_get_ubyte(msg->data);
       if (err) return err;
       if (field_count == 2) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UINT, "ttl")) msg->ttl = pn_data_get_uint(msg->data);
+      if (pni_data_next_field(msg->data, &err, PN_UINT, "ttl")) msg->ttl = pni_data_get_uint(msg->data);
       if (err) return err;
       if (field_count == 3) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pn_data_get_bool(msg->data);
+      if (pni_data_next_field(msg->data, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pni_data_get_bool(msg->data);
       if (err) return err;
       if (field_count == 4) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UINT, "delivery_count")) msg->delivery_count = pn_data_get_uint(msg->data);
+      if (pni_data_next_field(msg->data, &err, PN_UINT, "delivery_count")) msg->delivery_count = pni_data_get_uint(msg->data);
       if (err) return err;
 
       break;
@@ -730,28 +730,28 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       if (pni_data_next_field(msg->data, &err, PN_BINARY, "user_id")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->user_id, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->user_id, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 2) break;
 
       if (pni_data_next_field(msg->data, &err, PN_STRING, "to")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->address, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->address, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 3) break;
 
       if (pni_data_next_field(msg->data, &err, PN_STRING, "subject")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->subject, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->subject, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 4) break;
 
       if (pni_data_next_field(msg->data, &err, PN_STRING, "reply_to")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->reply_to, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->reply_to, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 5) break;
@@ -762,14 +762,14 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       if (pni_data_next_field(msg->data, &err, PN_SYMBOL, "content_type")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->content_type, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->content_type, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 7) break;
 
       if (pni_data_next_field(msg->data, &err, PN_SYMBOL, "content_encoding")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->content_encoding, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->content_encoding, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 8) break;
@@ -788,20 +788,20 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       if (pni_data_next_field(msg->data, &err, PN_STRING, "group_id")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->group_id, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->group_id, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
       if (field_count == 11) break;
 
       if (pni_data_next_field(msg->data, &err, PN_UINT, "group_sequence")) {
-        msg->group_sequence = pn_data_get_uint(msg->data);
+        msg->group_sequence = pni_data_get_uint(msg->data);
       }
       if (err) return err;
       if (field_count == 12) break;
 
       if (pni_data_next_field(msg->data, &err, PN_STRING, "reply_to_group_id")) {
         if (err) return err;
-        err = pn_string_set_bytes(msg->reply_to_group_id, pni_data_get_bytes(msg->data));
+        err = pni_string_set_bytes(msg->reply_to_group_id, pni_data_get_bytes(msg->data));
       }
       if (err) return err;
 
@@ -906,8 +906,7 @@ static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* val
   }
 }
 
-PN_FORCE_INLINE
-static inline void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
+PN_FORCE_INLINE static void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
 {
   size_t size = pn_string_size(value);
 

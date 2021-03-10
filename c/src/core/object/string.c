@@ -104,7 +104,6 @@ pn_string_t *pn_string(const char *bytes)
 
 #define pn_string_initialize NULL
 
-
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
   static const pn_class_t clazz = PN_CLASS(pn_string);
@@ -156,7 +155,7 @@ PN_NO_INLINE int pn_string_grow(pn_string_t *string, size_t capacity)
   return 0;
 }
 
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
+PN_FORCE_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
   if (string->capacity < n * sizeof(char) + 1) {
     int err = pn_string_grow(string, n);
