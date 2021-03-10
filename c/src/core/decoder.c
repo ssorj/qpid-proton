@@ -257,7 +257,7 @@ static inline int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_d
   err = pni_data_put_described(data);
   if (err) return err;
 
-  pn_data_enter(data);
+  pni_data_enter(data);
 
   err = pni_decoder_decode_described_type(decoder, data, &code);
   if (err) return err;
@@ -265,7 +265,7 @@ static inline int pni_decoder_decode_described_value(pn_decoder_t *decoder, pn_d
   err = pni_decoder_decode_value(decoder, data, code);
   if (err) return err;
 
-  pn_data_exit(data);
+  pni_data_exit(data);
 
   return 0;
 }
@@ -440,14 +440,14 @@ PN_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_
   int err = pni_data_put_compound(data, type);
   if (err) return err;
 
-  pn_data_enter(data);
+  pni_data_enter(data);
 
   for (size_t i = 0; i < count; i++) {
     err = pni_decoder_decode_item(decoder, data);
     if (err) return err;
   }
 
-  pn_data_exit(data);
+  pni_data_exit(data);
 
   return 0;
 }
@@ -487,7 +487,7 @@ static inline int pni_decoder_decode_array_values(pn_decoder_t *decoder, pn_data
   err = pn_data_put_array(data, described, (pn_type_t) 0);
   if (err) return err;
 
-  pn_data_enter(data);
+  pni_data_enter(data);
 
   // Get the array type code
   err = pni_decoder_decode_type(decoder, data, &array_code);
@@ -506,7 +506,7 @@ static inline int pni_decoder_decode_array_values(pn_decoder_t *decoder, pn_data
     if (err) return err;
   }
 
-  pn_data_exit(data);
+  pni_data_exit(data);
   pni_data_set_array_type(data, type);
 
   return 0;
