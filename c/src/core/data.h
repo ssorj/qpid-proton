@@ -89,6 +89,7 @@ int pni_data_put_null(pn_data_t *data);
 int pni_data_put_bool(pn_data_t *data, bool b);
 int pni_data_put_ubyte(pn_data_t *data, uint8_t ub);
 int pni_data_put_uint(pn_data_t *data, uint32_t ui);
+int pni_data_put_long(pn_data_t *data, int64_t l);
 int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
 int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
 int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);

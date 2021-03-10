@@ -297,7 +297,7 @@ static int pni_decoder_decode_fixed8(pn_decoder_t *decoder, pn_data_t *data, uin
   // Handled in decode_value
   // case PNE_SMALLULONG: return pni_data_put_ulong(data, value);
   case PNE_SMALLINT:   return pn_data_put_int(data, (int8_t) value);
-  case PNE_SMALLLONG:  return pn_data_put_long(data, (int8_t) value);
+  case PNE_SMALLLONG:  return pni_data_put_long(data, (int8_t) value);
   case PNE_BOOLEAN:    return pni_data_put_bool(data, value);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
@@ -348,7 +348,7 @@ static int pni_decoder_decode_fixed64(pn_decoder_t *decoder, pn_data_t *data, ui
 
   switch (code) {
   case PNE_ULONG:     return pni_data_put_ulong(data, value);
-  case PNE_LONG:      return pn_data_put_long(data, value);
+  case PNE_LONG:      return pni_data_put_long(data, value);
   case PNE_MS64:      return pni_data_put_timestamp(data, value);
   case PNE_DECIMAL64: return pn_data_put_decimal64(data, value);
   case PNE_DOUBLE: {

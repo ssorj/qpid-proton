@@ -875,10 +875,10 @@ static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data
   pn_condition_t *cond = &disposition->condition;
   switch (disposition->type) {
   case PN_RECEIVED:
-    PN_RETURN_IF_ERROR(pn_data_put_list(data));
+    PN_RETURN_IF_ERROR(pni_data_put_compound(data, PN_LIST));
     pni_data_enter(data);
-    PN_RETURN_IF_ERROR(pn_data_put_uint(data, disposition->section_number));
-    PN_RETURN_IF_ERROR(pn_data_put_ulong(data, disposition->section_offset));
+    PN_RETURN_IF_ERROR(pni_data_put_uint(data, disposition->section_number));
+    PN_RETURN_IF_ERROR(pni_data_put_ulong(data, disposition->section_offset));
     pni_data_exit(data);
     return 0;
   case PN_ACCEPTED:
