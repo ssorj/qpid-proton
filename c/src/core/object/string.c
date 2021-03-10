@@ -33,7 +33,7 @@
 
 struct pn_string_t {
   char *bytes;
-  ssize_t size;
+  size_t size;
   size_t capacity;
   bool is_null;
 };
@@ -52,7 +52,7 @@ static uintptr_t pn_string_hashcode(void *object)
   }
 
   uintptr_t hashcode = 1;
-  for (ssize_t i = 0; i < string->size; i++) {
+  for (size_t i = 0; i < string->size; i++) {
     hashcode = hashcode * 31 + string->bytes[i];
   }
   return hashcode;
@@ -83,7 +83,7 @@ static int pn_string_inspect(void *obj, pn_string_t *dst)
   int err = pn_string_addf(dst, "\"");
   if (err) return err;
 
-  for (int i = 0; i < str->size; i++) {
+  for (size_t i = 0; i < str->size; i++) {
     uint8_t c = str->bytes[i];
     if (isprint(c)) {
       err = pn_string_addf(dst, "%c", c);
@@ -115,7 +115,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
   return string;
 }
 
-const char *pn_string_get(pn_string_t *string)
+PN_INLINE const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
   if (string->is_null) {
@@ -246,13 +246,13 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
   }
 }
 
-char *pn_string_buffer(pn_string_t *string)
+PN_INLINE char *pn_string_buffer(pn_string_t *string)
 {
   assert(string);
   return string->bytes;
 }
 
-size_t pn_string_capacity(pn_string_t *string)
+PN_INLINE size_t pn_string_capacity(pn_string_t *string)
 {
   assert(string);
   return string->capacity - 1;
@@ -268,7 +268,7 @@ int pn_string_resize(pn_string_t *string, size_t size)
   return 0;
 }
 
-int pn_string_copy(pn_string_t *string, pn_string_t *src)
+PN_INLINE int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
