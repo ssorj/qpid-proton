@@ -63,6 +63,27 @@ struct pn_data_t {
 };
 
 pn_data_t* pni_data(size_t capacity, bool intern);
+
+bool pni_data_enter(pn_data_t *data);
+bool pni_data_exit(pn_data_t *data);
+bool pni_data_next(pn_data_t *data);
+
+void pni_data_rewind(pn_data_t *data);
+void pni_data_narrow(pn_data_t *data);
+void pni_data_widen(pn_data_t *data);
+
+int pni_data_put_described(pn_data_t *data);
+int pni_data_put_compound(pn_data_t *data, pn_type_t type);
+int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
+
+int pni_data_put_null(pn_data_t *data);
+int pni_data_put_bool(pn_data_t *data, bool b);
+int pni_data_put_ubyte(pn_data_t *data, uint8_t ub);
+int pni_data_put_uint(pn_data_t *data, uint32_t ui);
+int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
+int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
+int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);
+
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 int pni_data_traverse(pn_data_t *data,

@@ -491,7 +491,7 @@ int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
 {
   assert(msg);
   pn_data_clear(msg->id);
-  return pn_data_put_atom(msg->id, id);
+  return pni_data_put_atom(msg->id, id);
 }
 
 static inline int pni_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
@@ -556,8 +556,8 @@ pn_atom_t pn_message_get_correlation_id(pn_message_t *msg)
 int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t atom)
 {
   assert(msg);
-  pn_data_rewind(msg->correlation_id);
-  return pn_data_put_atom(msg->correlation_id, atom);
+  pni_data_rewind(msg->correlation_id);
+  return pni_data_put_atom(msg->correlation_id, atom);
 }
 
 const char *pn_message_get_content_type(pn_message_t *msg)
@@ -676,14 +676,14 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     size -= used;
     bytes += used;
 
-    pn_data_rewind(msg->data);
+    pni_data_rewind(msg->data);
 
     int err = 0;
     size_t field_count;
 
     pni_data_require_first_field(msg->data, &err, PN_DESCRIBED, "described");
     if (err) return err;
-    pn_data_enter(msg->data);
+    pni_data_enter(msg->data);
 
     uint64_t descriptor = 0;
     if (pni_data_first_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pni_data_get_ulong(msg->data);
@@ -693,7 +693,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     case HEADER:
       pni_data_require_next_field(msg->data, &err, PN_LIST, "header");
       if (err) return err;
-      pn_data_enter(msg->data);
+      pni_data_enter(msg->data);
 
       field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
@@ -720,11 +720,11 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     case PROPERTIES:
       pni_data_require_next_field(msg->data, &err, PN_LIST, "properties");
       if (err) return err;
-      pn_data_enter(msg->data);
+      pni_data_enter(msg->data);
 
       field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
-      if (pn_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "message_id", msg->id);
+      if (pni_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "message_id", msg->id);
       if (err) return err;
       if (field_count == 1) break;
 
@@ -756,7 +756,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       if (field_count == 5) break;
 
-      if (pn_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "correlation_id", msg->correlation_id);
+      if (pni_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "correlation_id", msg->correlation_id);
       if (err) return err;
       if (field_count == 6) break;
 
@@ -807,17 +807,17 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
       break;
     case DELIVERY_ANNOTATIONS:
-      pn_data_narrow(msg->data);
+      pni_data_narrow(msg->data);
       err = pn_data_copy(msg->instructions, msg->data);
       if (err) return err;
       break;
     case MESSAGE_ANNOTATIONS:
-      pn_data_narrow(msg->data);
+      pni_data_narrow(msg->data);
       err = pn_data_copy(msg->annotations, msg->data);
       if (err) return err;
       break;
     case APPLICATION_PROPERTIES:
-      pn_data_narrow(msg->data);
+      pni_data_narrow(msg->data);
       err = pn_data_copy(msg->properties, msg->data);
       if (err) return err;
       break;
@@ -829,7 +829,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       // msg->inferred = true;
     case AMQP_VALUE:
       // msg->inferred = false;
-      pn_data_narrow(msg->data);
+      pni_data_narrow(msg->data);
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
       break;
@@ -873,67 +873,45 @@ static inline void pni_data_put_message_id_or_null(pn_data_t* data, pn_data_t* v
   if (pn_data_size(value)) {
     pn_data_appendn(data, value, 1);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
 static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
 {
   if (value) {
-    pn_data_put_bool(data, value);
+    pni_data_put_bool(data, value);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
 static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
-    pn_data_put_uint(data, value);
+    pni_data_put_uint(data, value);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
-static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* value)
+PN_FORCE_INLINE static void pni_data_put_variable_or_null(pn_data_t* data, pn_string_t* value, pn_type_t type)
 {
   size_t size = pn_string_size(value);
 
   if (size) {
-    pn_data_put_binary(data, pn_bytes(size, pn_string_get(value)));
+    pni_data_put_variable(data, pn_bytes(size, pn_string_get(value)), PN_BINARY);
   } else {
-    pn_data_put_null(data);
-  }
-}
-
-PN_FORCE_INLINE static void pni_data_put_string_or_null(pn_data_t* data, pn_string_t* value)
-{
-  size_t size = pn_string_size(value);
-
-  if (size) {
-    pn_data_put_string(data, pn_bytes(size, pn_string_get(value)));
-  } else {
-    pn_data_put_null(data);
-  }
-}
-
-static inline void pni_data_put_symbol_or_null(pn_data_t* data, pn_string_t* value)
-{
-  size_t size = pn_string_size(value);
-
-  if (size) {
-    pn_data_put_symbol(data, pn_bytes(size, pn_string_get(value)));
-  } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
 static inline void pni_data_put_timestamp_or_null(pn_data_t* data, pn_timestamp_t value)
 {
   if (value) {
-    pn_data_put_timestamp(data, value);
+    pni_data_put_timestamp(data, value);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
@@ -954,17 +932,17 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   else field_count = 0;
 
   if (field_count > 0) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, HEADER);
-    pn_data_put_list(data);
-    pn_data_enter(data);
+    pni_data_put_described(data);
+    pni_data_enter(data);
+    pni_data_put_ulong(data, HEADER);
+    pni_data_put_compound(data, PN_LIST);
+    pni_data_enter(data);
 
     pni_data_put_bool_or_null(data, msg->durable);
 
     if (field_count >= 2) {
-      if (msg->priority != HEADER_PRIORITY_DEFAULT) pn_data_put_ubyte(data, msg->priority);
-      else pn_data_put_null(data);
+      if (msg->priority != HEADER_PRIORITY_DEFAULT) pni_data_put_ubyte(data, msg->priority);
+      else pni_data_put_null(data);
     }
 
     if (field_count >= 3) pni_data_put_uint_or_null(data, msg->ttl);
@@ -977,36 +955,36 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   end_header:
 
-    pn_data_exit(data);
-    pn_data_exit(data);
+    pni_data_exit(data);
+    pni_data_exit(data);
   }
 
   // Delivery annotations
 
   if (pn_data_size(msg->instructions)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, DELIVERY_ANNOTATIONS);
-    pn_data_rewind(msg->instructions);
+    pni_data_put_described(data);
+    pni_data_enter(data);
+    pni_data_put_ulong(data, DELIVERY_ANNOTATIONS);
+    pni_data_rewind(msg->instructions);
     err = pn_data_append(data, msg->instructions);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
+    pni_data_exit(data);
   }
 
   // Message annotations
 
   if (pn_data_size(msg->annotations)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, MESSAGE_ANNOTATIONS);
-    pn_data_rewind(msg->annotations);
+    pni_data_put_described(data);
+    pni_data_enter(data);
+    pni_data_put_ulong(data, MESSAGE_ANNOTATIONS);
+    pni_data_rewind(msg->annotations);
     err = pn_data_append(data, msg->annotations);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
+    pni_data_exit(data);
   }
 
   // Properties
@@ -1027,33 +1005,33 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   else field_count = 0;
 
   if (field_count > 0) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, PROPERTIES);
-    pn_data_put_list(data);
-    pn_data_enter(data);
+    pni_data_put_described(data);
+    pni_data_enter(data);
+    pni_data_put_ulong(data, PROPERTIES);
+    pni_data_put_compound(data, PN_LIST);
+    pni_data_enter(data);
 
     pni_data_put_message_id_or_null(data, msg->id);
 
-    if (field_count >= 2) pni_data_put_binary_or_null(data, msg->user_id);
+    if (field_count >= 2) pni_data_put_variable_or_null(data, msg->user_id, PN_STRING);
     else goto end_properties;
 
-    if (field_count >= 3) pni_data_put_string_or_null(data, msg->address);
+    if (field_count >= 3) pni_data_put_variable_or_null(data, msg->address, PN_STRING);
     else goto end_properties;
 
-    if (field_count >= 4) pni_data_put_string_or_null(data, msg->subject);
+    if (field_count >= 4) pni_data_put_variable_or_null(data, msg->subject, PN_STRING);
     else goto end_properties;
 
-    if (field_count >= 5) pni_data_put_string_or_null(data, msg->reply_to);
+    if (field_count >= 5) pni_data_put_variable_or_null(data, msg->reply_to, PN_STRING);
     else goto end_properties;
 
     if (field_count >= 6) pni_data_put_message_id_or_null(data, msg->correlation_id);
     else goto end_properties;
 
-    if (field_count >= 7) pni_data_put_symbol_or_null(data, msg->content_type);
+    if (field_count >= 7) pni_data_put_variable_or_null(data, msg->content_type, PN_SYMBOL);
     else goto end_properties;
 
-    if (field_count >= 8) pni_data_put_symbol_or_null(data, msg->content_encoding);
+    if (field_count >= 8) pni_data_put_variable_or_null(data, msg->content_encoding, PN_SYMBOL);
     else goto end_properties;
 
     if (field_count >= 9) pni_data_put_timestamp_or_null(data, msg->expiry_time);
@@ -1062,7 +1040,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     if (field_count >= 10) pni_data_put_timestamp_or_null(data, msg->creation_time);
     else goto end_properties;
 
-    if (field_count >= 11) pni_data_put_string_or_null(data, msg->group_id);
+    if (field_count >= 11) pni_data_put_variable_or_null(data, msg->group_id, PN_STRING);
     else goto end_properties;
 
     // XXX
@@ -1074,62 +1052,62 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     // if (field_count >= 12) pni_data_put_uint_or_null(data, msg->group_sequence);
     if (field_count >= 12) {
       if (msg->group_sequence) {
-        pn_data_put_uint(data, msg->group_sequence);
+        pni_data_put_uint(data, msg->group_sequence);
       } else if (pn_string_size(msg->group_id) && pn_string_size(msg->reply_to_group_id)) {
-        pn_data_put_uint(data, msg->group_sequence);
+        pni_data_put_uint(data, msg->group_sequence);
       } else {
-        pn_data_put_null(data);
+        pni_data_put_null(data);
       }
     } else {
       goto end_properties;
     }
 
-    if (field_count == 13) pni_data_put_string_or_null(data, msg->reply_to_group_id);
+    if (field_count == 13) pni_data_put_variable_or_null(data, msg->reply_to_group_id, PN_STRING);
 
   end_properties:
 
-    pn_data_exit(data);
-    pn_data_exit(data);
+    pni_data_exit(data);
+    pni_data_exit(data);
   }
 
   // Application properties
 
   if (pn_data_size(msg->properties)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, APPLICATION_PROPERTIES);
-    pn_data_rewind(msg->properties);
+    pni_data_put_described(data);
+    pni_data_enter(data);
+    pni_data_put_ulong(data, APPLICATION_PROPERTIES);
+    pni_data_rewind(msg->properties);
     err = pn_data_append(data, msg->properties);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
+    pni_data_exit(data);
   }
 
   // Body
 
   if (pn_data_size(msg->body)) {
-    pn_data_rewind(msg->body);
-    pn_data_next(msg->body);
+    pni_data_rewind(msg->body);
+    pni_data_next(msg->body);
     pn_type_t body_type = pni_data_type(msg->body);
-    pn_data_rewind(msg->body);
+    pni_data_rewind(msg->body);
 
-    pn_data_put_described(data);
-    pn_data_enter(data);
+    pni_data_put_described(data);
+    pni_data_enter(data);
     if (msg->inferred) {
       switch (body_type) {
       case PN_BINARY:
-        pn_data_put_ulong(data, DATA);
+        pni_data_put_ulong(data, DATA);
         break;
       case PN_LIST:
-        pn_data_put_ulong(data, AMQP_SEQUENCE);
+        pni_data_put_ulong(data, AMQP_SEQUENCE);
         break;
       default:
-        pn_data_put_ulong(data, AMQP_VALUE);
+        pni_data_put_ulong(data, AMQP_VALUE);
         break;
       }
     } else {
-      pn_data_put_ulong(data, AMQP_VALUE);
+      pni_data_put_ulong(data, AMQP_VALUE);
     }
     pn_data_append(data, msg->body);
   }

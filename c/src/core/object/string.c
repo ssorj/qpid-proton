@@ -130,7 +130,7 @@ PN_INLINE size_t pn_string_size(pn_string_t *string)
   return string->size;
 }
 
-PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
+PN_FORCE_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
 {
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }

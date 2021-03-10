@@ -876,10 +876,10 @@ static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data
   switch (disposition->type) {
   case PN_RECEIVED:
     PN_RETURN_IF_ERROR(pn_data_put_list(data));
-    pn_data_enter(data);
+    pni_data_enter(data);
     PN_RETURN_IF_ERROR(pn_data_put_uint(data, disposition->section_number));
     PN_RETURN_IF_ERROR(pn_data_put_ulong(data, disposition->section_offset));
-    pn_data_exit(data);
+    pni_data_exit(data);
     return 0;
   case PN_ACCEPTED:
   case PN_RELEASED:
@@ -978,18 +978,18 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
 static inline void pni_data_put_bool_or_null(pn_data_t* data, bool value)
 {
   if (value) {
-    pn_data_put_bool(data, value);
+    pni_data_put_bool(data, value);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
 static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
 {
   if (value) {
-    pn_data_put_uint(data, value);
+    pni_data_put_uint(data, value);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
@@ -998,9 +998,9 @@ static inline void pni_data_put_binary_or_null(pn_data_t* data, pn_string_t* val
   size_t size = pn_string_size(value);
 
   if (size) {
-    pn_data_put_binary(data, pn_bytes(size, pn_string_get(value)));
+    pni_data_put_variable(data, pn_bytes(size, pn_string_get(value)), PN_BINARY);
   } else {
-    pn_data_put_null(data);
+    pni_data_put_null(data);
   }
 }
 
@@ -1030,16 +1030,16 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
  compute_performatives:
   pn_data_clear(data);
 
-  pn_data_put_described(data);
-  pn_data_enter(data);
-  pn_data_put_ulong(data, TRANSFER);
-  pn_data_put_list(data);
-  pn_data_enter(data);
+  pni_data_put_described(data);
+  pni_data_enter(data);
+  pni_data_put_ulong(data, TRANSFER);
+  pni_data_put_compound(data, PN_LIST);
+  pni_data_enter(data);
 
-  pn_data_put_uint(data, handle);
-  pn_data_put_uint(data, id);
-  pn_data_put_binary(data, pn_bytes(tag->size, tag->start));
-  pn_data_put_uint(data, message_format);
+  pni_data_put_uint(data, handle);
+  pni_data_put_uint(data, id);
+  pni_data_put_variable(data, pn_bytes(tag->size, tag->start), PN_BINARY);
+  pni_data_put_uint(data, message_format);
 
   if (batchable) field_count = 7;
   else if (aborted) field_count = 6;
@@ -1052,23 +1052,23 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
   if (field_count > 0) pni_data_put_bool_or_null(data, settled);
   if (field_count > 1) pni_data_put_bool_or_null(data, more_flag);
-  if (field_count > 2) pn_data_put_null(data);
+  if (field_count > 2) pni_data_put_null(data);
 
   if (field_count > 3) {
     if (code) {
-      pn_data_put_described(data);
-      pn_data_enter(data);
-      pn_data_put_ulong(data, code);
+      pni_data_put_described(data);
+      pni_data_enter(data);
+      pni_data_put_ulong(data, code);
 
       if (pn_data_size(state)) {
         pn_data_appendn(data, state, 1);
       } else {
-        pn_data_put_null(data);
+        pni_data_put_null(data);
       }
 
-      pn_data_exit(data);
+      pni_data_exit(data);
     } else {
-      pn_data_put_null(data);
+      pni_data_put_null(data);
     }
   }
 
@@ -1076,8 +1076,8 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   if (field_count > 5) pni_data_put_bool_or_null(data, aborted);
   if (field_count > 6) pni_data_put_bool_or_null(data, batchable);
 
-  pn_data_exit(data);
-  pn_data_exit(data);
+  pni_data_exit(data);
+  pni_data_exit(data);
 
   do { // send as many frames as possible without changing the 'more' flag...
 
@@ -1524,10 +1524,10 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (err) return err;
 
-  pn_data_rewind(link->remote_source.properties);
-  pn_data_rewind(link->remote_source.filter);
-  pn_data_rewind(link->remote_source.outcomes);
-  pn_data_rewind(link->remote_source.capabilities);
+  pni_data_rewind(link->remote_source.properties);
+  pni_data_rewind(link->remote_source.filter);
+  pni_data_rewind(link->remote_source.outcomes);
+  pni_data_rewind(link->remote_source.capabilities);
 
   pn_data_clear(link->remote_target.properties);
   pn_data_clear(link->remote_target.capabilities);
@@ -1544,8 +1544,8 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     if (err) return err;
   }
 
-  pn_data_rewind(link->remote_target.properties);
-  pn_data_rewind(link->remote_target.capabilities);
+  pni_data_rewind(link->remote_target.properties);
+  pni_data_rewind(link->remote_target.capabilities);
 
   if (!is_sender) {
     link->state.delivery_count = idc;
@@ -1629,7 +1629,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
   if (pni_data_next_field(args, &err, PN_DESCRIBED, "state")) {
     if (err) return err;
-    pn_data_enter(args);
+    pni_data_enter(args);
 
     if (pni_data_next_field(args, &err, PN_ULONG, "descriptor")) {
       if (err) return err;
@@ -1637,12 +1637,12 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       type_set = true;
     }
 
-    pn_data_next(args);
-    pn_data_narrow(args);
+    pni_data_next(args);
+    pni_data_narrow(args);
     pn_data_copy(args, transport->disp_data);
-    pn_data_widen(args);
+    pni_data_widen(args);
 
-    pn_data_exit(args);
+    pni_data_exit(args);
   }
   if (err) return err;
   if (count == 8) goto args_end;
@@ -1865,7 +1865,7 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
     condition->description = pn_string(NULL);
   }
   pn_string_setn(condition->description, desc.start, desc.size);
-  pn_data_rewind(pn_condition_info(condition));
+  pni_data_rewind(pn_condition_info(condition));
   return 0;
 }
 
@@ -1881,14 +1881,14 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
   if (remote_data) {
     switch (type) {
     case PN_RECEIVED:
-      pn_data_rewind(transport->disp_data);
-      pn_data_next(transport->disp_data);
-      pn_data_enter(transport->disp_data);
+      pni_data_rewind(transport->disp_data);
+      pni_data_next(transport->disp_data);
+      pni_data_enter(transport->disp_data);
 
-      if (pn_data_next(transport->disp_data)) {
+      if (pni_data_next(transport->disp_data)) {
         remote->section_number = pni_data_get_uint(transport->disp_data);
       }
-      if (pn_data_next(transport->disp_data)) {
+      if (pni_data_next(transport->disp_data)) {
         remote->section_offset = pni_data_get_ulong(transport->disp_data);
       }
       break;
@@ -1906,20 +1906,20 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
       break;
 
     case PN_MODIFIED:
-      pn_data_rewind(transport->disp_data);
-      pn_data_next(transport->disp_data);
-      pn_data_enter(transport->disp_data);
+      pni_data_rewind(transport->disp_data);
+      pni_data_next(transport->disp_data);
+      pni_data_enter(transport->disp_data);
 
-      if (pn_data_next(transport->disp_data)) {
+      if (pni_data_next(transport->disp_data)) {
         remote->failed = pni_data_get_bool(transport->disp_data);
       }
-      if (pn_data_next(transport->disp_data)) {
+      if (pni_data_next(transport->disp_data)) {
         remote->undeliverable = pni_data_get_bool(transport->disp_data);
       }
-      pn_data_narrow(transport->disp_data);
+      pni_data_narrow(transport->disp_data);
       pn_data_clear(remote->data);
       pn_data_appendn(remote->annotations, transport->disp_data, 1);
-      pn_data_widen(transport->disp_data);
+      pni_data_widen(transport->disp_data);
       break;
 
     default:
@@ -1965,8 +1965,8 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
     deliveries = &ssn->state.incoming;
   }
 
-  pn_data_rewind(transport->disp_data);
-  bool remote_data = (pn_data_next(transport->disp_data) &&
+  pni_data_rewind(transport->disp_data);
+  bool remote_data = (pni_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
   // Do some validation of received first and last values
