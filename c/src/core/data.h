@@ -62,7 +62,6 @@ struct pn_data_t {
   bool intern;
 };
 
-size_t pn_data_siblings(pn_data_t *data);
 pn_data_t* pni_data(size_t capacity, bool intern);
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 

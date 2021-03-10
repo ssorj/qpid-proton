@@ -1375,16 +1375,6 @@ PN_FORCE_INLINE pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-PN_INLINE size_t pn_data_siblings(pn_data_t *data)
-{
-  pni_node_t *node = pn_data_node(data, data->parent);
-  if (node) {
-    return node->children;
-  } else {
-    return 0;
-  }
-}
-
 PN_FORCE_INLINE bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
