@@ -2993,6 +2993,30 @@ static void pni_close_head(pn_transport_t *transport)
   }
 }
 
+PN_NO_INLINE static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
+{
+  int more = 0;
+
+  if (!transport->remote_max_frame) {
+    // No limit, so double it
+    more = transport->output_size;
+  } else if (transport->remote_max_frame > transport->output_size) {
+    more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
+  }
+
+  if (more) {
+    char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf,
+                                                  transport->output_size + more);
+    if (newbuf) {
+      transport->output_buf = newbuf;
+      transport->output_size += more;
+      space += more;
+    }
+  }
+
+  return space;
+}
+
 // generate outbound data, return amount of pending output else error
 static ssize_t transport_produce(pn_transport_t *transport)
 {
@@ -3000,20 +3024,9 @@ static ssize_t transport_produce(pn_transport_t *transport)
 
   ssize_t space = transport->output_size - transport->output_pending;
 
-  if (space <= 0) {     // can we expand the buffer?
-    int more = 0;
-    if (!transport->remote_max_frame)   // no limit, so double it
-      more = transport->output_size;
-    else if (transport->remote_max_frame > transport->output_size)
-      more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
-    if (more) {
-      char *newbuf = (char *)pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf, transport->output_size + more );
-      if (newbuf) {
-        transport->output_buf = newbuf;
-        transport->output_size += more;
-        space += more;
-      }
-    }
+  if (space <= 0) {
+    // can we expand the buffer?
+    space = pni_transport_grow_output_capacity(transport, space);
   }
 
   while (space > 0) {
@@ -3220,7 +3233,7 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
   return 0;
 }
 
-PN_NO_INLINE static ssize_t pni_transport_grow_capacity(pn_transport_t *transport, ssize_t capacity)
+PN_NO_INLINE static ssize_t pni_transport_grow_input_capacity(pn_transport_t *transport, ssize_t capacity)
 {
   // can we expand the size of the input buffer?
   int more = 0;
@@ -3253,7 +3266,7 @@ PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == don
   ssize_t capacity = transport->input_size - transport->input_pending;
 
   if (capacity <= 0) {
-    capacity = pni_transport_grow_capacity(transport, capacity);
+    capacity = pni_transport_grow_input_capacity(transport, capacity);
   }
 
   return capacity;
