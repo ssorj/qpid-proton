@@ -140,7 +140,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->id)) {
+  if (pni_data_size(msg->id)) {
     err = pn_string_addf(dst, "id=");
     if (err) return err;
     err = pn_inspect(msg->id, dst);
@@ -180,7 +180,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->correlation_id)) {
+  if (pni_data_size(msg->correlation_id)) {
     err = pn_string_addf(dst, "correlation_id=");
     if (err) return err;
     err = pn_inspect(msg->correlation_id, dst);
@@ -254,7 +254,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->instructions)) {
+  if (pni_data_size(msg->instructions)) {
     err = pn_string_addf(dst, "instructions=");
     if (err) return err;
     err = pn_inspect(msg->instructions, dst);
@@ -264,7 +264,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->annotations)) {
+  if (pni_data_size(msg->annotations)) {
     err = pn_string_addf(dst, "annotations=");
     if (err) return err;
     err = pn_inspect(msg->annotations, dst);
@@ -274,7 +274,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->properties)) {
+  if (pni_data_size(msg->properties)) {
     err = pn_string_addf(dst, "properties=");
     if (err) return err;
     err = pn_inspect(msg->properties, dst);
@@ -284,7 +284,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->body)) {
+  if (pni_data_size(msg->body)) {
     err = pn_string_addf(dst, "body=");
     if (err) return err;
     err = pn_inspect(msg->body, dst);
@@ -370,12 +370,12 @@ void pn_message_clear(pn_message_t *msg)
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
-  pn_data_clear(msg->id);
+  pni_data_clear(msg->id);
   pn_string_clear(msg->user_id);
   pn_string_clear(msg->address);
   pn_string_clear(msg->subject);
   pn_string_clear(msg->reply_to);
-  pn_data_clear(msg->correlation_id);
+  pni_data_clear(msg->correlation_id);
   pn_string_clear(msg->content_type);
   pn_string_clear(msg->content_encoding);
   msg->expiry_time = 0;
@@ -384,11 +384,11 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   pn_string_clear(msg->reply_to_group_id);
   msg->inferred = false;
-  pn_data_clear(msg->data);
-  pn_data_clear(msg->instructions);
-  pn_data_clear(msg->annotations);
-  pn_data_clear(msg->properties);
-  pn_data_clear(msg->body);
+  pni_data_clear(msg->data);
+  pni_data_clear(msg->instructions);
+  pni_data_clear(msg->annotations);
+  pni_data_clear(msg->properties);
+  pni_data_clear(msg->body);
 }
 
 int pn_message_errno(pn_message_t *msg)
@@ -490,7 +490,7 @@ pn_atom_t pn_message_get_id(pn_message_t *msg)
 int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
 {
   assert(msg);
-  pn_data_clear(msg->id);
+  pni_data_clear(msg->id);
   return pni_data_put_atom(msg->id, id);
 }
 
@@ -665,7 +665,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   pn_message_clear(msg);
 
   while (size) {
-    pn_data_clear(msg->data);
+    pni_data_clear(msg->data);
 
     ssize_t used = pn_data_decode(msg->data, bytes, size);
 
@@ -808,17 +808,17 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       break;
     case DELIVERY_ANNOTATIONS:
       pni_data_narrow(msg->data);
-      err = pn_data_copy(msg->instructions, msg->data);
+      err = pni_data_copy(msg->instructions, msg->data);
       if (err) return err;
       break;
     case MESSAGE_ANNOTATIONS:
       pni_data_narrow(msg->data);
-      err = pn_data_copy(msg->annotations, msg->data);
+      err = pni_data_copy(msg->annotations, msg->data);
       if (err) return err;
       break;
     case APPLICATION_PROPERTIES:
       pni_data_narrow(msg->data);
-      err = pn_data_copy(msg->properties, msg->data);
+      err = pni_data_copy(msg->properties, msg->data);
       if (err) return err;
       break;
     case DATA:
@@ -830,19 +830,19 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     case AMQP_VALUE:
       // msg->inferred = false;
       pni_data_narrow(msg->data);
-      err = pn_data_copy(msg->body, msg->data);
+      err = pni_data_copy(msg->body, msg->data);
       if (err) return err;
       break;
     case FOOTER:
       break;
     default:
-      err = pn_data_copy(msg->body, msg->data);
+      err = pni_data_copy(msg->body, msg->data);
       if (err) return err;
       break;
     }
   }
 
-  pn_data_clear(msg->data);
+  pni_data_clear(msg->data);
 
   return 0;
 }
@@ -870,8 +870,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 
 static inline void pni_data_put_message_id_or_null(pn_data_t* data, pn_data_t* value)
 {
-  if (pn_data_size(value)) {
-    pn_data_appendn(data, value, 1);
+  if (pni_data_size(value)) {
+    pni_data_appendn(data, value, 1);
   } else {
     pni_data_put_null(data);
   }
@@ -917,7 +917,7 @@ static inline void pni_data_put_timestamp_or_null(pn_data_t* data, pn_timestamp_
 
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
-  pn_data_clear(data);
+  pni_data_clear(data);
 
   int err = 0;
   int field_count;
@@ -961,12 +961,12 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Delivery annotations
 
-  if (pn_data_size(msg->instructions)) {
+  if (pni_data_size(msg->instructions)) {
     pni_data_put_described(data);
     pni_data_enter(data);
     pni_data_put_ulong(data, DELIVERY_ANNOTATIONS);
     pni_data_rewind(msg->instructions);
-    err = pn_data_append(data, msg->instructions);
+    err = pni_data_appendn(data, msg->instructions, -1);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
@@ -975,12 +975,12 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Message annotations
 
-  if (pn_data_size(msg->annotations)) {
+  if (pni_data_size(msg->annotations)) {
     pni_data_put_described(data);
     pni_data_enter(data);
     pni_data_put_ulong(data, MESSAGE_ANNOTATIONS);
     pni_data_rewind(msg->annotations);
-    err = pn_data_append(data, msg->annotations);
+    err = pni_data_appendn(data, msg->annotations, -1);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
@@ -996,12 +996,12 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   else if (msg->expiry_time) field_count = 9;
   else if (pn_string_size(msg->content_encoding)) field_count = 8;
   else if (pn_string_size(msg->content_type)) field_count = 7;
-  else if (pn_data_size(msg->correlation_id)) field_count = 6;
+  else if (pni_data_size(msg->correlation_id)) field_count = 6;
   else if (pn_string_size(msg->reply_to)) field_count = 5;
   else if (pn_string_size(msg->subject)) field_count = 4;
   else if (pn_string_size(msg->address)) field_count = 3;
   else if (pn_string_size(msg->user_id)) field_count = 2;
-  else if (pn_data_size(msg->id)) field_count = 1;
+  else if (pni_data_size(msg->id)) field_count = 1;
   else field_count = 0;
 
   if (field_count > 0) {
@@ -1072,12 +1072,12 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Application properties
 
-  if (pn_data_size(msg->properties)) {
+  if (pni_data_size(msg->properties)) {
     pni_data_put_described(data);
     pni_data_enter(data);
     pni_data_put_ulong(data, APPLICATION_PROPERTIES);
     pni_data_rewind(msg->properties);
-    err = pn_data_append(data, msg->properties);
+    err = pni_data_appendn(data, msg->properties, -1);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
@@ -1086,7 +1086,8 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   // Body
 
-  if (pn_data_size(msg->body)) {
+  if (pni_data_size(msg->body)) {
+    // XXX Optimize this
     pni_data_rewind(msg->body);
     pni_data_next(msg->body);
     pn_type_t body_type = pni_data_type(msg->body);
@@ -1109,7 +1110,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     } else {
       pni_data_put_ulong(data, AMQP_VALUE);
     }
-    pn_data_append(data, msg->body);
+    pni_data_appendn(data, msg->body, -1);
   }
   return 0;
 }

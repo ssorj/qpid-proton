@@ -559,7 +559,7 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   pn_handle_t save = pn_data_point(src);
   int err;
 
-  pn_data_rewind(src);
+  pni_data_rewind(src);
 
   while (pn_data_next(src)) {
     err = pni_encoder_encode_current_node(encoder, src);

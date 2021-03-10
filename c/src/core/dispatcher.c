@@ -99,18 +99,18 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
   int err = 0;
 
   // Enter the described type
-  pn_data_enter(args);
+  pni_data_enter(args);
 
   pni_data_require_first_field(args, &err, PN_ULONG, "descriptor");
-  descriptor = pn_data_get_ulong(args);
+  descriptor = pni_data_get_ulong(args);
   if (err) {
     PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error reading frame data"); // XXX details
     return err;
   }
 
   // Enter the list
-  pn_data_next(args);
-  pn_data_enter(args);
+  pni_data_next(args);
+  pni_data_enter(args);
 
   size_t payload_size = frame.size - dsize;
   const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
@@ -120,7 +120,7 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
 
   err = pni_dispatch_action(transport, descriptor, frame.type, frame.channel, args, &payload);
 
-  pn_data_clear(args);
+  pni_data_clear(args);
 
   return err;
 }

@@ -62,7 +62,16 @@ struct pn_data_t {
   bool intern;
 };
 
+// XXX Try to get rid of this
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id);
+
 pn_data_t* pni_data(size_t capacity, bool intern);
+
+size_t pni_data_size(pn_data_t *data);
+void pni_data_clear(pn_data_t *data);
+
+pn_type_t pni_data_type(pn_data_t *data);
+pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id);
 
 bool pni_data_enter(pn_data_t *data);
 bool pni_data_exit(pn_data_t *data);
@@ -84,39 +93,15 @@ int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
 int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
 int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);
 
+int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
+int pni_data_copy(pn_data_t *data, pn_data_t *src);
+
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
-
-static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
-{
-  if (node_id) {
-    return data->nodes + node_id - 1;
-  } else {
-    return NULL;
-  }
-}
-
-PN_FORCE_INLINE static pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
-{
-  assert(data);
-  assert(node_id);
-
-  return data->nodes + node_id - 1;
-}
-
-static inline pn_type_t pni_data_type(pn_data_t *data)
-{
-  assert(data);
-  assert(data->current);
-
-  pni_node_t *node = pni_data_node(data, data->current);
-
-  return node->atom.type;
-}
 
 PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
 {

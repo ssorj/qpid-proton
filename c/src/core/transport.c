@@ -895,7 +895,7 @@ static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data
                  disposition->undeliverable,
                  disposition->annotations);
   default:
-    return pn_data_copy(data, disposition->data);
+    return pni_data_copy(data, disposition->data);
   }
 }
 
@@ -907,7 +907,7 @@ void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
     pn_string_format(transport->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
     pn_inspect(args, transport->scratch);
 
-    if (pn_data_size(args)==0) {
+    if (pni_data_size(args)==0) {
         pn_string_addf(transport->scratch, "(EMPTY FRAME)");
     }
 
@@ -927,7 +927,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   pni_buffer2_t *frame_buf = transport->frame;
   va_list ap;
   va_start(ap, fmt);
-  pn_data_clear(transport->output_args);
+  pni_data_clear(transport->output_args);
   int err = pn_data_vfill(transport->output_args, fmt, ap);
   va_end(ap);
   if (err) {
@@ -1028,7 +1028,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   // create performatives, assuming 'more' flag need not change
 
  compute_performatives:
-  pn_data_clear(data);
+  pni_data_clear(data);
 
   pni_data_put_described(data);
   pni_data_enter(data);
@@ -1060,8 +1060,8 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
       pni_data_enter(data);
       pni_data_put_ulong(data, code);
 
-      if (pn_data_size(state)) {
-        pn_data_appendn(data, state, 1);
+      if (pni_data_size(state)) {
+        pni_data_appendn(data, state, 1);
       } else {
         pni_data_put_null(data);
       }
@@ -1251,9 +1251,9 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   uint16_t remote_channel_max;
   uint32_t remote_max_frame;
   pn_bytes_t remote_container, remote_hostname;
-  pn_data_clear(transport->remote_offered_capabilities);
-  pn_data_clear(transport->remote_desired_capabilities);
-  pn_data_clear(transport->remote_properties);
+  pni_data_clear(transport->remote_offered_capabilities);
+  pni_data_clear(transport->remote_desired_capabilities);
+  pni_data_clear(transport->remote_properties);
   int err = pn_data_scan(args, "D.[?S?S?I?HI..CCC]",
                          &container_q, &remote_container,
                          &hostname_q, &remote_hostname,
@@ -1511,10 +1511,10 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   if (rcv_settle)
     link->remote_rcv_settle_mode = rcv_settle_mode;
 
-  pn_data_clear(link->remote_source.properties);
-  pn_data_clear(link->remote_source.filter);
-  pn_data_clear(link->remote_source.outcomes);
-  pn_data_clear(link->remote_source.capabilities);
+  pni_data_clear(link->remote_source.properties);
+  pni_data_clear(link->remote_source.filter);
+  pni_data_clear(link->remote_source.outcomes);
+  pni_data_clear(link->remote_source.capabilities);
 
   err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]",
                      link->remote_source.properties,
@@ -1529,8 +1529,8 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pni_data_rewind(link->remote_source.outcomes);
   pni_data_rewind(link->remote_source.capabilities);
 
-  pn_data_clear(link->remote_target.properties);
-  pn_data_clear(link->remote_target.capabilities);
+  pni_data_clear(link->remote_target.properties);
+  pni_data_clear(link->remote_target.capabilities);
 
   if (pn_terminus_get_type(&link->remote_target) == PN_COORDINATOR) {
     // coordinator target only has a capabilities field
@@ -1587,7 +1587,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   bool type_set = false;
   bool aborted = false;
 
-  pn_data_clear(transport->disp_data);
+  pni_data_clear(transport->disp_data);
 
   int err = 0;
   int count = pni_data_node(args, args->parent)->children;
@@ -1639,7 +1639,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
     pni_data_next(args);
     pni_data_narrow(args);
-    pn_data_copy(args, transport->disp_data);
+    pni_data_copy(args, transport->disp_data);
     pni_data_widen(args);
 
     pni_data_exit(args);
@@ -1733,7 +1733,7 @@ args_end: ;
 
     if (type_set) {
       delivery->remote.type = type;
-      pn_data_copy(delivery->remote.data, transport->disp_data);
+      pni_data_copy(delivery->remote.data, transport->disp_data);
     }
 
     link->state.delivery_count++;
@@ -1917,13 +1917,13 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
         remote->undeliverable = pni_data_get_bool(transport->disp_data);
       }
       pni_data_narrow(transport->disp_data);
-      pn_data_clear(remote->data);
-      pn_data_appendn(remote->annotations, transport->disp_data, 1);
+      pni_data_clear(remote->data);
+      pni_data_appendn(remote->annotations, transport->disp_data, 1);
       pni_data_widen(transport->disp_data);
       break;
 
     default:
-      pn_data_copy(remote->data, transport->disp_data);
+      pni_data_copy(remote->data, transport->disp_data);
       break;
     }
   }
@@ -1942,7 +1942,7 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   pn_sequence_t first, last;
   uint64_t type = 0;
   bool last_init, settled, type_init;
-  pn_data_clear(transport->disp_data);
+  pni_data_clear(transport->disp_data);
   int err = pn_data_scan(args, "D.[oI?IoD?LC]", &role, &first, &last_init,
                          &last, &settled, &type_init, &type,
                          transport->disp_data);
@@ -2427,7 +2427,7 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   }
 
   if (!pni_disposition_batchable(&delivery->local)) {
-    pn_data_clear(transport->disp_data);
+    pni_data_clear(transport->disp_data);
     PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
     // XXX
     disposition_count++;
@@ -2496,7 +2496,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       size_t full_size = bytes.size;
       pn_bytes_t tag = pni_buffer2_bytes(delivery->tag);
 
-      pn_data_clear(transport->disp_data);
+      pni_data_clear(transport->disp_data);
 
       int err = pni_disposition_encode(&delivery->local, transport->disp_data);
       if (err) return err;

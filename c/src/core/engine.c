@@ -24,6 +24,7 @@
 
 #include "engine-internal.h"
 
+#include "data.h"
 #include "framing.h"
 #include "memory.h"
 #include "platform/platform.h"
@@ -1351,13 +1352,13 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   terminus->timeout = src->timeout;
   terminus->dynamic = src->dynamic;
   terminus->distribution_mode = src->distribution_mode;
-  err = pn_data_copy(terminus->properties, src->properties);
+  err = pni_data_copy(terminus->properties, src->properties);
   if (err) return err;
-  err = pn_data_copy(terminus->capabilities, src->capabilities);
+  err = pni_data_copy(terminus->capabilities, src->capabilities);
   if (err) return err;
-  err = pn_data_copy(terminus->outcomes, src->outcomes);
+  err = pni_data_copy(terminus->outcomes, src->outcomes);
   if (err) return err;
-  err = pn_data_copy(terminus->filter, src->filter);
+  err = pni_data_copy(terminus->filter, src->filter);
   if (err) return err;
   return 0;
 }
@@ -1487,8 +1488,8 @@ PN_FORCE_INLINE static void pn_disposition_clear(pn_disposition_t *ds)
   ds->failed = false;
   ds->undeliverable = false;
   ds->settled = false;
-  pn_data_clear(ds->data);
-  pn_data_clear(ds->annotations);
+  pni_data_clear(ds->data);
+  pni_data_clear(ds->annotations);
   pn_condition_clear(&ds->condition);
 }
 
@@ -2173,7 +2174,7 @@ void pn_condition_clear(pn_condition_t *condition)
   assert(condition);
   if (condition->name) pn_string_clear(condition->name);
   if (condition->description) pn_string_clear(condition->description);
-  if (condition->info) pn_data_clear(condition->info);
+  if (condition->info) pni_data_clear(condition->info);
 }
 
 const char *pn_condition_get_name(pn_condition_t *condition)
@@ -2392,7 +2393,7 @@ int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src) {
         if (dest->info == NULL) {
           dest->info = pn_data(0);
         }
-        err = pn_data_copy(dest->info, src->info);
+        err = pni_data_copy(dest->info, src->info);
       }
     }
   }

@@ -389,7 +389,7 @@ pn_data_t *pni_data(size_t capacity, bool intern)
   return data;
 }
 
-PN_INLINE void pn_data_free(pn_data_t *data)
+void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
 }
@@ -404,13 +404,18 @@ pn_error_t *pn_data_error(pn_data_t *data)
   return pni_data_error(data);
 }
 
-PN_INLINE size_t pn_data_size(pn_data_t *data)
+PN_FORCE_INLINE size_t pni_data_size(pn_data_t *data)
 {
   assert(data);
   return data->size;
 }
 
-PN_INLINE void pn_data_clear(pn_data_t *data)
+size_t pn_data_size(pn_data_t *data)
+{
+  return pni_data_size(data);
+}
+
+PN_FORCE_INLINE void pni_data_clear(pn_data_t *data)
 {
   assert(data);
 
@@ -421,6 +426,11 @@ PN_INLINE void pn_data_clear(pn_data_t *data)
   data->base_current = 0;
 
   if (data->intern_buf) pni_buffer2_clear(data->intern_buf);
+}
+
+void pn_data_clear(pn_data_t *data)
+{
+  pni_data_clear(data);
 }
 
 PN_NO_INLINE static int pni_data_grow(pn_data_t *data)
@@ -1382,13 +1392,39 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-PN_FORCE_INLINE pn_type_t pn_data_type(pn_data_t *data)
+PN_FORCE_INLINE pn_type_t pni_data_type(pn_data_t *data)
 {
-  pni_node_t *node = pni_data_current(data);
-  if (node) {
-    return node->atom.type;
+  assert(data);
+  assert(data->current);
+
+  pni_node_t *node = pni_data_node(data, data->current);
+
+  return node->atom.type;
+}
+
+pn_type_t pn_data_type(pn_data_t *data)
+{
+  if (data->current) {
+    return pni_data_type(data);
   } else {
     return PN_INVALID;
+  }
+}
+
+PN_FORCE_INLINE pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
+{
+  assert(data);
+  assert(node_id);
+
+  return data->nodes + node_id - 1;
+}
+
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
+{
+  if (node_id) {
+    return pni_data_node(data, node_id);
+  } else {
+    return NULL;
   }
 }
 
@@ -2119,12 +2155,17 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
   }
 }
 
+PN_FORCE_INLINE int pni_data_copy(pn_data_t *data, pn_data_t *src)
+{
+  pni_data_clear(data);
+  int err = pni_data_appendn(data, src, -1);
+  pni_data_rewind(data);
+  return err;
+}
+
 int pn_data_copy(pn_data_t *data, pn_data_t *src)
 {
-  pn_data_clear(data);
-  int err = pn_data_append(data, src);
-  pn_data_rewind(data);
-  return err;
+  return pni_data_copy(data, src);
 }
 
 PN_FORCE_INLINE static int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
@@ -2145,19 +2186,14 @@ PN_FORCE_INLINE static int pni_data_copy_node(pn_data_t *data, pni_node_t *src) 
   return err;
 }
 
-PN_FORCE_INLINE int pn_data_append(pn_data_t *data, pn_data_t *src)
-{
-  return pn_data_appendn(data, src, -1);
-}
-
-PN_FORCE_INLINE int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+PN_FORCE_INLINE int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
   int level = 0;
   int count = 0;
   pn_handle_t point = pn_data_point(src);
 
-  pn_data_rewind(src);
+  pni_data_rewind(src);
 
   while (true) {
     if (!pni_data_next(src)) {
@@ -2191,6 +2227,16 @@ PN_FORCE_INLINE int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   pn_data_restore(src, point);
 
   return err;
+}
+
+int pn_data_append(pn_data_t *data, pn_data_t *src)
+{
+  return pni_data_appendn(data, src, -1);
+}
+
+int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+{
+  return pni_data_appendn(data, src, limit);
 }
 
 int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src) {
