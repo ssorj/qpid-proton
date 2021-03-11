@@ -135,28 +135,19 @@ static inline pni_node_t *pni_data_next_node(pn_data_t *data) {
 
 static inline pni_node_t *pni_data_first_field(pn_data_t *data, pn_type_t type, int *err)
 {
-  if (pn_data_next(data)) {
-    return pni_data_node(data, data->current);
+  pni_node_t *node = pni_data_first_node(data);
+
+  if (node) {
+    pn_type_t node_type = node->atom.type;
+
+    if (node_type == type) {
+      return node;
+    } else if (node_type != PN_NULL) {
+      *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! AAA");
+    }
   }
 
   return NULL;
-
-  // pni_node_t *node = pni_data_first_node(data);
-
-  // if (node) {
-  //   pn_type_t node_type = node->atom.type;
-
-  //   if (node_type != type) {
-  //     fprintf(stderr, "nt=%s t=%s\n", pn_type_name(node_type), pn_type_name(type));
-  //     pn_data_dump(data);
-  //     exit(1);
-  //   }
-
-  //   if (node_type == type) return node;
-  //   else if (node_type != PN_NULL) *err = PN_ERR;
-  // }
-
-  // return NULL;
 }
 
 static inline pni_node_t *pni_data_next_field(pn_data_t *data, pn_type_t type, int *err)
@@ -176,22 +167,30 @@ static inline pni_node_t *pni_data_next_field(pn_data_t *data, pn_type_t type, i
   return NULL;
 }
 
-static inline void pni_data_require_first_field(pn_data_t* data, pn_type_t type, int *err)
+static inline pni_node_t *pni_data_require_first_field(pn_data_t* data, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_data_first_field(data, type, err);
 
-  if (!node && !(*err)) {
+  if (node) {
+    return node;
+  } else if (!(*err)) {
     *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! BBB");
   }
+
+  return NULL;
 }
 
-static inline void pni_data_require_next_field(pn_data_t* data, pn_type_t type, int *err)
+static inline pni_node_t *pni_data_require_next_field(pn_data_t* data, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_data_next_field(data, type, err);
 
-  if (!node && !(*err)) {
+  if (node) {
+    return node;
+  } else if (!(*err)) {
     *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! CCC");
   }
+
+  return NULL;
 }
 
 static inline uint8_t pni_node_get_ubyte(pni_node_t *node)

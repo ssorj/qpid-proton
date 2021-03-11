@@ -677,22 +677,30 @@ static inline pni_node_t *pni_message_data_next_field(pn_message_t *msg, pn_type
   return NULL;
 }
 
-static inline void pni_message_data_require_first_field(pn_message_t *msg, pn_type_t type, int *err)
+static inline pni_node_t *pni_message_data_require_first_field(pn_message_t *msg, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_message_data_first_field(msg, type, err);
 
-  if (!node && !(*err)) {
+  if (node) {
+    return node;
+  } else if (!(*err)) {
     *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! BBB");
   }
+
+  return NULL;
 }
 
-static inline void pni_message_data_require_next_field(pn_message_t *msg, pn_type_t type, int *err)
+static inline pni_node_t *pni_message_data_require_next_field(pn_message_t *msg, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_message_data_next_field(msg, type, err);
 
-  if (!node && !(*err)) {
+  if (node) {
+    return node;
+  } else if (!(*err)) {
     *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! CCC");
   }
+
+  return NULL;
 }
 
 static inline void pni_message_data_set_message_id(pn_message_t *msg, pn_data_t *dst, int *err)

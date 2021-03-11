@@ -1590,60 +1590,65 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   pni_data_clear(transport->disp_data);
 
   int err = 0;
-  int count = pni_data_node(args, args->parent)->children;
+  int field_count = pni_data_node(args, args->parent)->children;
+  pni_node_t *node;
 
   // Handle
-  pni_data_require_first_field(args, PN_UINT, &err);
+  node = pni_data_require_first_field(args, PN_UINT, &err);
   if (err) return err;
-  handle = pni_data_get_uint(args);
-  if (count == 1) goto args_end;
+  handle = pni_node_get_uint(node);
+  if (field_count == 1) goto args_end;
 
   // Delivery ID
-  if (pni_data_next_field(args, PN_UINT, &err)) {
+  node = pni_data_next_field(args, PN_UINT, &err);
+  if (node) {
     id = pni_data_get_uint(args);
     id_set = true;
   }
   if (err) return err;
-  if (count == 2) goto args_end;
+  if (field_count == 2) goto args_end;
 
   // Delivery tag
-  if (pni_data_next_field(args, PN_BINARY, &err)) tag = pni_data_get_bytes(args);
+  node = pni_data_next_field(args, PN_BINARY, &err);
+  if (node) tag = pni_node_get_bytes(node);
   if (err) return err;
-  if (count == 3) goto args_end;
+  if (field_count == 3) goto args_end;
 
   // Message format
-  pni_data_next_field(args, PN_UINT, &err); // Skipped
+  node = pni_data_next_field(args, PN_UINT, &err); // Skipped
   if (err) return err;
-  if (count == 4) goto args_end;
+  if (field_count == 4) goto args_end;
 
   // Settled
-  if (pni_data_next_field(args, PN_BOOL, &err)) {
-    settled = pni_data_get_bool(args);
+  node = pni_data_next_field(args, PN_BOOL, &err);
+  if (node) {
+    settled = pni_node_get_bool(node);
     settled_set = true;
   }
   if (err) return err;
-  if (count == 5) goto args_end;
+  if (field_count == 5) goto args_end;
 
   // More
-  if (pni_data_next_field(args, PN_BOOL, &err)) more = pni_data_get_bool(args);
+  node = pni_data_next_field(args, PN_BOOL, &err);
+  if (node) more = pni_node_get_bool(node);
   if (err) return err;
-  if (count == 6) goto args_end;
+  if (field_count == 6) goto args_end;
 
   // Settle mode
-  pni_data_next_field(args, PN_UINT, &err); // Skipped
+  node = pni_data_next_field(args, PN_UINT, &err); // Skipped
   if (err) return err;
-  if (count == 7) goto args_end;
+  if (field_count == 7) goto args_end;
 
   // State
-  if (pni_data_next_field(args, PN_DESCRIBED, &err)) {
+  node = pni_data_next_field(args, PN_DESCRIBED, &err);
+  if (node) {
     pni_data_enter(args);
 
     // Descriptor
-    if (pni_data_next_field(args, PN_ULONG, &err)) {
-      type = pni_data_get_ulong(args);
-      type_set = true;
-    }
+    node = pni_data_require_first_field(args, PN_ULONG, &err);
     if (err) return err;
+    type = pni_node_get_ulong(node);
+    type_set = true;
 
     pni_data_next(args);
     pni_data_narrow(args);
@@ -1653,15 +1658,16 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     pni_data_exit(args);
   }
   if (err) return err;
-  if (count == 8) goto args_end;
+  if (field_count == 8) goto args_end;
 
   // Resume
-  pni_data_next_field(args, PN_BOOL, &err);
+  node = pni_data_next_field(args, PN_BOOL, &err); // Skipped
   if (err) return err;
-  if (count == 9) goto args_end;
+  if (field_count == 9) goto args_end;
 
   // Aborted
-  if (pni_data_next_field(args, PN_BOOL, &err)) aborted = pni_data_get_bool(args);
+  node = pni_data_next_field(args, PN_BOOL, &err);
+  if (node) aborted = pni_node_get_bool(node);
   if (err) return err;
 
 args_end: ;

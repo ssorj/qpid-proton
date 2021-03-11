@@ -102,12 +102,12 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
   pni_data_enter(args);
 
   // Get the descriptor
-  pni_data_require_first_field(args, PN_ULONG, &err);
+  pni_node_t *node = pni_data_require_first_field(args, PN_ULONG, &err);
   if (err) {
     PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error reading frame data"); // XXX details
     return err;
   }
-  descriptor = pni_data_get_ulong(args);
+  descriptor = pni_node_get_ulong(node);
 
   // Enter the list
   pni_data_next(args);
