@@ -1575,10 +1575,10 @@ ssize_t pn_data_encoded_size(pn_data_t *data)
 
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
-  pn_decoder_t decoder;
-  pn_decoder_initialize(&decoder);
-  ssize_t r = pn_decoder_decode(&decoder, bytes, size, data);
-  pn_decoder_finalize(&decoder);
+  pni_decoder_t decoder;
+  pni_decoder_initialize(&decoder);
+  ssize_t r = pni_decoder_decode(&decoder, bytes, size, data);
+  pni_decoder_finalize(&decoder);
   return r;
 }
 

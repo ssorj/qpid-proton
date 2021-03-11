@@ -726,13 +726,13 @@ static inline void pni_string_set_bytes_from_node(pn_string_t *str, pni_node_t *
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
-  assert(msg && bytes && size);
+  assert(msg);
+  assert(bytes);
+  assert(size);
 
-  pn_message_clear(msg); // XXX
+  pn_message_clear(msg);
 
   while (size) {
-    pni_data_clear(msg->data);
-
     ssize_t used = pn_data_decode(msg->data, bytes, size);
 
     if (used < 0) {
@@ -914,9 +914,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       break;
     }
-  }
 
-  pni_data_clear(msg->data);
+    pni_data_clear(msg->data);
+  }
 
   return 0;
 }
