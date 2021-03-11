@@ -80,6 +80,8 @@ bool pni_data_next(pn_data_t *data);
 void pni_data_rewind(pn_data_t *data);
 void pni_data_narrow(pn_data_t *data);
 void pni_data_widen(pn_data_t *data);
+pn_handle_t pni_data_point(pn_data_t *data);
+bool pni_data_restore(pn_data_t *data, pn_handle_t point);
 
 int pni_data_put_described(pn_data_t *data);
 int pni_data_put_compound(pn_data_t *data, pn_type_t type);
@@ -124,7 +126,7 @@ static inline pni_node_t *pni_data_first_node(pn_data_t *data) {
   return NULL;
 }
 
-static inline pni_node_t *pni_data_next_node(pn_data_t *data) {
+PNI_FORCE_INLINE static inline pni_node_t *pni_data_next_node(pn_data_t *data) {
   pni_node_t *current = pni_data_node(data, data->current);
 
   if (current->next) {
@@ -152,7 +154,7 @@ static inline pni_node_t *pni_data_first_field(pn_data_t *data, pn_type_t type, 
   return NULL;
 }
 
-static inline pni_node_t *pni_data_next_field(pn_data_t *data, pn_type_t type, int *err)
+PNI_FORCE_INLINE static inline pni_node_t *pni_data_next_field(pn_data_t *data, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_data_next_node(data);
 
@@ -268,6 +270,15 @@ static inline pn_bytes_t pni_data_get_bytes(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
   return pni_node_get_bytes(node);
+}
+
+static inline pn_timestamp_t pni_node_get_timestamp(pni_node_t *node)
+{
+  if (node->atom.type == PN_NULL) return 0;
+
+  assert(node->atom.type == PN_TIMESTAMP);
+
+  return node->atom.u.as_timestamp;
 }
 
 #endif /* data.h */

@@ -90,8 +90,10 @@
 // Perhaps in a compiler/compiler.h?  A root-level config.h?
 #if defined(__GNUC__)
 #  define PNI_INLINE inline
+#  define PNI_FORCE_INLINE __attribute__((always_inline))
 #else
 #  define PNI_INLINE
+#  define PNI_FORCE_INLINE
 #endif
 
 /**

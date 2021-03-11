@@ -637,30 +637,24 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
 
 int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src);
 
-static inline pni_node_t *pni_message_data_first_field(pn_message_t *msg, pn_type_t type, int *err)
+PNI_FORCE_INLINE static inline pni_node_t *pni_message_data_first_field(pn_message_t *msg, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_data_first_node(msg->data);
 
   if (node) {
     pn_type_t node_type = node->atom.type;
 
-    // if (node_type != type) {
-    //   fprintf(stderr, "nt=%s t=%s\n", pn_type_name(node_type), pn_type_name(type));
-    //   pn_data_dump(data);
-    //   exit(1);
-    // }
-
     if (node_type == type) {
       return node;
     } else if (node_type != PN_NULL) {
-      *err = pn_error_format(pn_message_error(msg), PN_ERR, "Gaah");
+      *err = PN_ERR; // pn_error_format(pn_message_error(msg), PN_ERR, "Gaah");
     }
   }
 
   return NULL;
 }
 
-static inline pni_node_t *pni_message_data_next_field(pn_message_t *msg, pn_type_t type, int *err)
+PNI_FORCE_INLINE static inline pni_node_t *pni_message_data_next_field(pn_message_t *msg, pn_type_t type, int *err)
 {
   pni_node_t *node = pni_data_next_node(msg->data);
 
@@ -670,7 +664,7 @@ static inline pni_node_t *pni_message_data_next_field(pn_message_t *msg, pn_type
     if (node_type == type) {
       return node;
     } else if (node_type != PN_NULL) {
-      *err = pn_error_format(pn_message_error(msg), PN_ERR, "mismatched types! AAA");
+      *err = PN_ERR; // pn_error_format(pn_message_error(msg), PN_ERR, "mismatched types! AAA");
     }
   }
 
@@ -684,7 +678,7 @@ static inline pni_node_t *pni_message_data_require_first_field(pn_message_t *msg
   if (node) {
     return node;
   } else if (!(*err)) {
-    *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! BBB");
+    *err = PN_ERR; // pn_error_format(pn_message_error(msg), PN_ERR, "missing! BBB");
   }
 
   return NULL;
@@ -697,7 +691,7 @@ static inline pni_node_t *pni_message_data_require_next_field(pn_message_t *msg,
   if (node) {
     return node;
   } else if (!(*err)) {
-    *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! CCC");
+    *err = PN_ERR; // pn_error_format(pn_message_error(msg), PN_ERR, "missing! CCC");
   }
 
   return NULL;
@@ -714,11 +708,11 @@ static inline void pni_message_data_set_message_id(pn_message_t *msg, pn_data_t 
   if (type == PN_STRING || type == PN_BINARY || type == PN_UUID || type == PN_ULONG || type == PN_INT) {
     *err = pni_data_copy_current_node(dst, msg->data);
   } else {
-    *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: illegal ID type: %s", pn_type_name(type));
+    *err = PN_ERR; // pn_error_format(pn_message_error(msg), PN_ERR, "data error: illegal ID type: %s", pn_type_name(type));
   }
 }
 
-static inline void pni_string_set_bytes_from_node(pn_string_t *str, pni_node_t *node, int *err)
+PNI_FORCE_INLINE static inline void pni_string_set_bytes_from_node(pn_string_t *str, pni_node_t *node, int *err)
 {
   pn_bytes_t bytes = pni_node_get_bytes(node);
   pn_string_setn(str, bytes.start, bytes.size);
@@ -831,7 +825,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       if (field_count == 5) break;
 
-      // XXX Revisit
+      // Correlation ID
       if (pni_data_next_node(msg->data)) pni_message_data_set_message_id(msg, msg->correlation_id, &err);
       if (err) return err;
       if (field_count == 6) break;
@@ -848,17 +842,15 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       if (err) return err;
       if (field_count == 8) break;
 
-      // XXX
       // Expiry time
       node = pni_message_data_next_field(msg, PN_TIMESTAMP, &err);
-      if (node) msg->expiry_time = pn_data_get_timestamp(msg->data);
+      if (node) msg->expiry_time = pni_node_get_timestamp(node);
       if (err) return err;
       if (field_count == 9) break;
 
-      // XXX
       // Creation time
       node = pni_message_data_next_field(msg, PN_TIMESTAMP, &err);
-      if (node) msg->creation_time = pn_data_get_timestamp(msg->data);
+      if (node) msg->creation_time = pni_node_get_timestamp(node);
       if (err) return err;
       if (field_count == 10) break;
 
@@ -1162,10 +1154,12 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
   if (pni_data_size(msg->body)) {
     // XXX Optimize this
-    pni_data_rewind(msg->body);
-    pni_data_next(msg->body);
-    pn_type_t body_type = pni_data_type(msg->body);
-    pni_data_rewind(msg->body);
+    // pni_data_rewind(msg->body);
+    // pni_data_next(msg->body);
+    // pn_type_t body_type = pni_data_type(msg->body);
+    // pni_data_rewind(msg->body);
+
+    pn_type_t body_type = pni_data_first_node(msg->body)->atom.type;
 
     pni_data_put_described(data);
     pni_data_enter(data);
