@@ -104,78 +104,98 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
-PN_FORCE_INLINE static bool pni_data_first_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
-{
+static inline pni_node_t *pni_data_first_node(pn_data_t *data) {
   assert(!data->current);
 
-  if (pn_data_next(data)) {
-    pni_node_t *next = pni_data_node(data, data->current);
-    assert(next);
+  if (data->parent) {
+    pni_node_t *parent = pni_data_node(data, data->parent);
 
-    pn_type_t next_type = next->atom.type;
+    assert(parent->down);
 
-    if (next_type == type) {
-      return true;
-    } else if (next_type != PN_NULL) {
-      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
-                             name, pn_type_name(type), pn_type_name(next_type));
-    }
+    data->current = parent->down;
+    return pni_data_node(data, data->current);
+  } else if (data->size) {
+    data->current = 1;
+    return pni_data_node(data, data->current);
   }
 
-  return false;
+  return NULL;
 }
 
-PN_FORCE_INLINE static bool pni_data_next_field(pn_data_t *data, int *err, pn_type_t type, const char *name)
-{
-  assert(data->current);
-
+static inline pni_node_t *pni_data_next_node(pn_data_t *data) {
   pni_node_t *current = pni_data_node(data, data->current);
-  assert(current);
 
   if (current->next) {
     data->current = current->next;
-    pni_node_t *next = pni_data_node(data, data->current);
-    assert(next);
+    return pni_data_node(data, data->current);
+  }
 
-    pn_type_t next_type = next->atom.type;
+  return NULL;
+}
 
-    if (next_type == type) {
-      return true;
-    } else if (next_type != PN_NULL) {
-      *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: expected %s and got %s",
-                             name, pn_type_name(type), pn_type_name(next_type));
+static inline pni_node_t *pni_data_first_field(pn_data_t *data, pn_type_t type, int *err)
+{
+  if (pn_data_next(data)) {
+    return pni_data_node(data, data->current);
+  }
+
+  return NULL;
+
+  // pni_node_t *node = pni_data_first_node(data);
+
+  // if (node) {
+  //   pn_type_t node_type = node->atom.type;
+
+  //   if (node_type != type) {
+  //     fprintf(stderr, "nt=%s t=%s\n", pn_type_name(node_type), pn_type_name(type));
+  //     pn_data_dump(data);
+  //     exit(1);
+  //   }
+
+  //   if (node_type == type) return node;
+  //   else if (node_type != PN_NULL) *err = PN_ERR;
+  // }
+
+  // return NULL;
+}
+
+static inline pni_node_t *pni_data_next_field(pn_data_t *data, pn_type_t type, int *err)
+{
+  pni_node_t *node = pni_data_next_node(data);
+
+  if (node) {
+    pn_type_t node_type = node->atom.type;
+
+    if (node_type == type) {
+      return node;
+    } else if (node_type != PN_NULL) {
+      *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! AAA");
     }
   }
 
-  return false;
+  return NULL;
 }
 
-PN_FORCE_INLINE static void pni_data_require_first_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+static inline void pni_data_require_first_field(pn_data_t* data, pn_type_t type, int *err)
 {
-  bool found = pni_data_first_field(data, err, type, name);
+  pni_node_t *node = pni_data_first_field(data, type, err);
 
-  if (*err) return;
-
-  if (!found) {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
+  if (!node && !(*err)) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! BBB");
   }
 }
 
-PN_FORCE_INLINE static void pni_data_require_next_field(pn_data_t* data, int* err, pn_type_t type, const char* name)
+static inline void pni_data_require_next_field(pn_data_t* data, pn_type_t type, int *err)
 {
-  bool found = pni_data_next_field(data, err, type, name);
+  pni_node_t *node = pni_data_next_field(data, type, err);
 
-  if (*err) return;
-
-  if (!found) {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: required node not found", name);
+  if (!node && !(*err)) {
+    *err = pn_error_format(pn_data_error(data), PN_ERR, "mismatched types! CCC");
   }
 }
 
-static inline uint8_t pni_data_get_ubyte(pn_data_t *data)
+static inline uint8_t pni_node_get_ubyte(pni_node_t *node)
 {
-  pni_node_t *node = pni_data_node(data, data->current);
-
   if (node->atom.type == PN_NULL) return 0;
 
   assert(node->atom.type == PN_UBYTE);
@@ -183,10 +203,14 @@ static inline uint8_t pni_data_get_ubyte(pn_data_t *data)
   return node->atom.u.as_ubyte;
 }
 
-static inline uint32_t pni_data_get_uint(pn_data_t *data)
+static inline uint8_t pni_data_get_ubyte(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
+  return pni_node_get_ubyte(node);
+}
 
+static inline uint32_t pni_node_get_uint(pni_node_t *node)
+{
   if (node->atom.type == PN_NULL) return 0;
 
   assert(node->atom.type == PN_UINT);
@@ -194,10 +218,14 @@ static inline uint32_t pni_data_get_uint(pn_data_t *data)
   return node->atom.u.as_uint;
 }
 
-static inline uint64_t pni_data_get_ulong(pn_data_t *data)
+static inline uint32_t pni_data_get_uint(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
+  return pni_node_get_uint(node);
+}
 
+static inline uint64_t pni_node_get_ulong(pni_node_t *node)
+{
   if (node->atom.type == PN_NULL) return 0;
 
   assert(node->atom.type == PN_ULONG);
@@ -205,24 +233,40 @@ static inline uint64_t pni_data_get_ulong(pn_data_t *data)
   return node->atom.u.as_ulong;
 }
 
-static inline bool pni_data_get_bool(pn_data_t *data)
+static inline uint64_t pni_data_get_ulong(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
+  return pni_node_get_ulong(node);
+}
 
-  if (node->atom.type == PN_NULL) return 0;
+static inline bool pni_node_get_bool(pni_node_t *node)
+{
+  if (node->atom.type == PN_NULL) return false;
 
   assert(node->atom.type == PN_BOOL);
 
   return node->atom.u.as_bool;
 }
 
-PN_FORCE_INLINE static pn_bytes_t pni_data_get_bytes(pn_data_t *data)
+static inline bool pni_data_get_bool(pn_data_t *data)
 {
   pni_node_t *node = pni_data_node(data, data->current);
+  return pni_node_get_bool(node);
+}
 
+static inline pn_bytes_t pni_node_get_bytes(pni_node_t *node)
+{
   if (node->atom.type == PN_NULL) return pn_bytes_null;
 
+  // XXX assert(node->atom.type == <bytes types>);
+
   return node->atom.u.as_bytes;
+}
+
+static inline pn_bytes_t pni_data_get_bytes(pn_data_t *data)
+{
+  pni_node_t *node = pni_data_node(data, data->current);
+  return pni_node_get_bytes(node);
 }
 
 #endif /* data.h */

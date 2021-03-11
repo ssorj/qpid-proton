@@ -75,7 +75,7 @@ static inline pn_rwbytes_t pni_buffer2_memory(pni_buffer2_t *buf)
   return pn_rwbytes(pni_buffer2_size(buf), buf->bytes);
 }
 
-PN_FORCE_INLINE static int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size)
+PNI_INLINE static int pni_buffer2_append(pni_buffer2_t *buf, const char *bytes, size_t size)
 {
   size_t capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);
@@ -92,7 +92,7 @@ PN_FORCE_INLINE static int pni_buffer2_append(pni_buffer2_t *buf, const char *by
   return 0;
 }
 
-PN_FORCE_INLINE static int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size)
+PNI_INLINE static int pni_buffer2_append_string(pni_buffer2_t *buf, const char *bytes, size_t size)
 {
   size_t capacity = pni_buffer2_capacity(buf);
   size_t old_size = pni_buffer2_size(buf);
@@ -110,7 +110,7 @@ PN_FORCE_INLINE static int pni_buffer2_append_string(pni_buffer2_t *buf, const c
   return 0;
 }
 
-PN_FORCE_INLINE static size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst)
+PNI_INLINE static size_t pni_buffer2_pop_left(pni_buffer2_t *buf, size_t size, char *dst)
 {
   size_t old_size = pni_buffer2_size(buf);
   size = pn_min(size, old_size);

@@ -734,7 +734,7 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
 // Wish I knew if the incref/decref was well motivated.
 // With it removed, it passes the tests and memory is stable.
 // There is a perf boost from it.
-PN_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
+PNI_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   if (delivery->tpwork)
   {
@@ -761,7 +761,7 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-PN_INLINE void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+PNI_INLINE void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
@@ -892,19 +892,19 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
   }
 }
 
-PN_FORCE_INLINE static bool pni_connection_live(pn_connection_t *conn) {
+PNI_INLINE static bool pni_connection_live(pn_connection_t *conn) {
   return pn_refcount(conn) > 1;
 }
 
-PN_FORCE_INLINE static bool pni_session_live(pn_session_t *ssn) {
+PNI_INLINE static bool pni_session_live(pn_session_t *ssn) {
   return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
 }
 
-PN_FORCE_INLINE static bool pni_link_live(pn_link_t *link) {
+PNI_INLINE static bool pni_link_live(pn_link_t *link) {
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
 
-PN_FORCE_INLINE static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
+PNI_INLINE static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   switch (endpoint->type) {
   case CONNECTION:
     return pni_connection_live((pn_connection_t *)endpoint);
@@ -919,7 +919,7 @@ PN_FORCE_INLINE static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   }
 }
 
-PN_FORCE_INLINE static bool pni_preserve_child(pn_endpoint_t *endpoint)
+PNI_INLINE static bool pni_preserve_child(pn_endpoint_t *endpoint)
 {
   pn_endpoint_t *parent = pn_ep_parent(endpoint);
   if (pni_endpoint_live(parent) && (!endpoint->freed || (pn_ep_bound(endpoint)))
@@ -1090,7 +1090,7 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(0);
 }
 
-PN_FORCE_INLINE static void pn_link_incref(void *object)
+PNI_INLINE static void pn_link_incref(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
   if (!link->endpoint.referenced) {
@@ -1384,12 +1384,12 @@ const char *pn_link_name(pn_link_t *link)
   return pn_string_get(link->name);
 }
 
-PN_FORCE_INLINE bool pn_link_is_sender(pn_link_t *link)
+PNI_INLINE bool pn_link_is_sender(pn_link_t *link)
 {
   return link->endpoint.type == SENDER;
 }
 
-PN_FORCE_INLINE bool pn_link_is_receiver(pn_link_t *link)
+PNI_INLINE bool pn_link_is_receiver(pn_link_t *link)
 {
   return link->endpoint.type == RECEIVER;
 }
@@ -1407,7 +1407,7 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
-PN_FORCE_INLINE static void pn_delivery_incref(void *object)
+PNI_INLINE static void pn_delivery_incref(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   if (delivery->link && !delivery->referenced) {
@@ -1480,7 +1480,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   pn_condition_init(&ds->condition);
 }
 
-PN_FORCE_INLINE static void pn_disposition_clear(pn_disposition_t *ds)
+PNI_INLINE static void pn_disposition_clear(pn_disposition_t *ds)
 {
   ds->type = 0;
   ds->section_number = 0;
@@ -1590,7 +1590,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
-PN_FORCE_INLINE bool pn_delivery_buffered(pn_delivery_t *delivery)
+PNI_INLINE bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
   if (delivery->settled) return false;
@@ -1748,7 +1748,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
   }
 }
 
-PN_FORCE_INLINE pn_delivery_t *pn_link_current(pn_link_t *link)
+PNI_INLINE pn_delivery_t *pn_link_current(pn_link_t *link)
 {
   if (!link) return NULL;
   return link->current;
@@ -1818,7 +1818,7 @@ bool pn_link_advance(pn_link_t *link)
   }
 }
 
-PN_INLINE int pn_link_credit(pn_link_t *link)
+PNI_INLINE int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
 }
@@ -2028,7 +2028,7 @@ pn_data_t *pn_link_remote_properties(pn_link_t *link)
 }
 
 
-PN_INLINE pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
+PNI_INLINE pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   assert(delivery);
   return delivery->link;

@@ -114,7 +114,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
   return string;
 }
 
-PN_INLINE const char *pn_string_get(pn_string_t *string)
+PNI_INLINE const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
   if (string->is_null) {
@@ -124,18 +124,18 @@ PN_INLINE const char *pn_string_get(pn_string_t *string)
   }
 }
 
-PN_INLINE size_t pn_string_size(pn_string_t *string)
+PNI_INLINE size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
   return string->size;
 }
 
-PN_FORCE_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
+PNI_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
 {
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
-PN_NO_INLINE int pn_string_grow(pn_string_t *string, size_t capacity)
+int pn_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
   while (string->capacity < (capacity*sizeof(char) + 1)) {
@@ -155,7 +155,7 @@ PN_NO_INLINE int pn_string_grow(pn_string_t *string, size_t capacity)
   return 0;
 }
 
-PN_FORCE_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
+PNI_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
   if (string->capacity < n * sizeof(char) + 1) {
     int err = pn_string_grow(string, n);
@@ -190,7 +190,7 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
 // XXX
 //
 // This one is a surprisingly big win
-PN_INLINE void pn_string_clear(pn_string_t *string)
+PNI_INLINE void pn_string_clear(pn_string_t *string)
 {
   string->size = 0;
   string->is_null = true;
@@ -245,13 +245,13 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
   }
 }
 
-PN_INLINE char *pn_string_buffer(pn_string_t *string)
+PNI_INLINE char *pn_string_buffer(pn_string_t *string)
 {
   assert(string);
   return string->bytes;
 }
 
-PN_INLINE size_t pn_string_capacity(pn_string_t *string)
+PNI_INLINE size_t pn_string_capacity(pn_string_t *string)
 {
   assert(string);
   return string->capacity - 1;
@@ -267,7 +267,7 @@ int pn_string_resize(pn_string_t *string, size_t size)
   return 0;
 }
 
-PN_INLINE int pn_string_copy(pn_string_t *string, pn_string_t *src)
+PNI_INLINE int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));

@@ -98,7 +98,7 @@ static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
   return NULL;
 }
 
-PN_FORCE_INLINE void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
+PNI_INLINE void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
 {
   assert(record);
   assert(clazz);
@@ -147,7 +147,7 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
   }
 }
 
-PN_FORCE_INLINE void pn_record_clear(pn_record_t *record)
+PNI_INLINE void pn_record_clear(pn_record_t *record)
 {
   assert(record);
 

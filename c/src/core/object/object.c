@@ -53,7 +53,7 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
-PN_FORCE_INLINE pn_cid_t pn_class_id(const pn_class_t *clazz)
+PNI_INLINE pn_cid_t pn_class_id(const pn_class_t *clazz)
 {
   return clazz->cid;
 }
@@ -68,7 +68,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-PN_FORCE_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
+PNI_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
@@ -78,14 +78,14 @@ PN_FORCE_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
   return object;
 }
 
-PN_FORCE_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
+PNI_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   clazz = clazz->reify(object);
   return clazz->refcount(object);
 }
 
-PN_FORCE_INLINE int pn_class_decref(const pn_class_t *clazz, void *object)
+PNI_INLINE int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
 
@@ -112,7 +112,7 @@ PN_FORCE_INLINE int pn_class_decref(const pn_class_t *clazz, void *object)
   return 0;
 }
 
-PN_FORCE_INLINE void pn_class_free(const pn_class_t *clazz, void *object)
+PNI_INLINE void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
@@ -131,13 +131,13 @@ PN_FORCE_INLINE void pn_class_free(const pn_class_t *clazz, void *object)
   }
 }
 
-PN_FORCE_INLINE const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
+PNI_INLINE const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   return clazz->reify(object);
 }
 
-PN_FORCE_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
+PNI_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
 
@@ -152,7 +152,7 @@ PN_FORCE_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *objec
   }
 }
 
-PN_FORCE_INLINE intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
+PNI_INLINE intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
 {
   assert(clazz);
 
@@ -167,7 +167,7 @@ PN_FORCE_INLINE intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void
   }
 }
 
-PN_FORCE_INLINE bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
+PNI_INLINE bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
 {
   return pn_class_compare(clazz, a, b) == 0;
 }
@@ -211,7 +211,7 @@ void *pn_object_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-PN_FORCE_INLINE const pn_class_t *pn_object_reify(void *object)
+PNI_INLINE const pn_class_t *pn_object_reify(void *object)
 {
   if (object) {
     return pni_head(object)->clazz;
@@ -220,68 +220,68 @@ PN_FORCE_INLINE const pn_class_t *pn_object_reify(void *object)
   }
 }
 
-PN_FORCE_INLINE void pn_object_incref(void *object)
+PNI_INLINE void pn_object_incref(void *object)
 {
   if (object) {
     pni_head(object)->refcount++;
   }
 }
 
-PN_FORCE_INLINE int pn_object_refcount(void *object)
+PNI_INLINE int pn_object_refcount(void *object)
 {
   assert(object);
   return pni_head(object)->refcount;
 }
 
-PN_FORCE_INLINE void pn_object_decref(void *object)
+PNI_INLINE void pn_object_decref(void *object)
 {
   pni_head_t *head = pni_head(object);
   assert(head->refcount > 0);
   head->refcount--;
 }
 
-PN_FORCE_INLINE void pn_object_free(void *object)
+PNI_INLINE void pn_object_free(void *object)
 {
   pni_head_t *head = pni_head(object);
   pni_mem_deallocate(head->clazz, head);
 }
 
-PN_FORCE_INLINE void *pn_incref(void *object)
+PNI_INLINE void *pn_incref(void *object)
 {
   return pn_class_incref(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE int pn_decref(void *object)
+PNI_INLINE int pn_decref(void *object)
 {
   return pn_class_decref(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE int pn_refcount(void *object)
+PNI_INLINE int pn_refcount(void *object)
 {
   return pn_class_refcount(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE void pn_free(void *object)
+PNI_INLINE void pn_free(void *object)
 {
   pn_class_free(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE const pn_class_t *pn_class(void *object)
+PNI_INLINE const pn_class_t *pn_class(void *object)
 {
   return pn_class_reify(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE uintptr_t pn_hashcode(void *object)
+PNI_INLINE uintptr_t pn_hashcode(void *object)
 {
   return pn_class_hashcode(PN_OBJECT, object);
 }
 
-PN_FORCE_INLINE intptr_t pn_compare(void *a, void *b)
+PNI_INLINE intptr_t pn_compare(void *a, void *b)
 {
   return pn_class_compare(PN_OBJECT, a, b);
 }
 
-PN_FORCE_INLINE bool pn_equals(void *a, void *b)
+PNI_INLINE bool pn_equals(void *a, void *b)
 {
   return !pn_compare(a, b);
 }

@@ -71,17 +71,17 @@ void pn_buffer_free(pn_buffer_t *buf)
   }
 }
 
-PN_INLINE size_t pn_buffer_size(pn_buffer_t *buf)
+PNI_INLINE size_t pn_buffer_size(pn_buffer_t *buf)
 {
   return buf->size;
 }
 
-PN_INLINE size_t pn_buffer_capacity(pn_buffer_t *buf)
+PNI_INLINE size_t pn_buffer_capacity(pn_buffer_t *buf)
 {
   return buf->capacity;
 }
 
-PN_INLINE size_t pn_buffer_available(pn_buffer_t *buf)
+PNI_INLINE size_t pn_buffer_available(pn_buffer_t *buf)
 {
   return buf->capacity - buf->size;
 }
@@ -172,7 +172,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-PN_FORCE_INLINE int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
+PNI_INLINE int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   if (buf->capacity - buf->size < size) {
     int err = pn_buffer_ensure(buf, size);
@@ -225,7 +225,7 @@ static inline size_t pni_buffer_index(pn_buffer_t *buf, size_t index)
   return result;
 }
 
-PN_INLINE size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
+PNI_INLINE size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
 {
   size = pn_min(size, buf->size);
   size_t start = pni_buffer_index(buf, offset);
@@ -251,7 +251,7 @@ PN_INLINE size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, cha
   return sz1 + sz2;
 }
 
-PN_INLINE int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
+PNI_INLINE int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
 {
   if (left + right > buf->size) return PN_ARG_ERR;
 
@@ -270,7 +270,7 @@ PN_INLINE int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
   return 0;
 }
 
-PN_INLINE void pn_buffer_clear(pn_buffer_t *buf)
+PNI_INLINE void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;
   buf->size = 0;
@@ -302,7 +302,7 @@ int pn_buffer_defrag(pn_buffer_t *buf)
   return 0;
 }
 
-PN_FORCE_INLINE pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
+PNI_INLINE pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
   if (buf) {
     pn_buffer_defrag(buf);
@@ -312,7 +312,7 @@ PN_FORCE_INLINE pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
   }
 }
 
-PN_FORCE_INLINE pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
+PNI_INLINE pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
   if (buf) {
     pn_buffer_defrag(buf);

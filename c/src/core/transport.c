@@ -1592,50 +1592,58 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   int err = 0;
   int count = pni_data_node(args, args->parent)->children;
 
-  pni_data_require_first_field(args, &err, PN_UINT, "handle");
-  handle = pni_data_get_uint(args);
+  // Handle
+  pni_data_require_first_field(args, PN_UINT, &err);
   if (err) return err;
+  handle = pni_data_get_uint(args);
   if (count == 1) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_UINT, "delivery_id")) {
+  // Delivery ID
+  if (pni_data_next_field(args, PN_UINT, &err)) {
     id = pni_data_get_uint(args);
     id_set = true;
   }
   if (err) return err;
   if (count == 2) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BINARY, "delivery_tag")) tag = pni_data_get_bytes(args);
+  // Delivery tag
+  if (pni_data_next_field(args, PN_BINARY, &err)) tag = pni_data_get_bytes(args);
   if (err) return err;
   if (count == 3) goto args_end;
 
-  pni_data_next_field(args, &err, PN_UINT, "message_format");
+  // Message format
+  pni_data_next_field(args, PN_UINT, &err); // Skipped
   if (err) return err;
   if (count == 4) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BOOL, "settled")) {
+  // Settled
+  if (pni_data_next_field(args, PN_BOOL, &err)) {
     settled = pni_data_get_bool(args);
     settled_set = true;
   }
   if (err) return err;
   if (count == 5) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BOOL, "more")) more = pni_data_get_bool(args);
+  // More
+  if (pni_data_next_field(args, PN_BOOL, &err)) more = pni_data_get_bool(args);
   if (err) return err;
   if (count == 6) goto args_end;
 
-  pni_data_next_field(args, &err, PN_UINT, "settle_mode"); // Skipped
+  // Settle mode
+  pni_data_next_field(args, PN_UINT, &err); // Skipped
   if (err) return err;
   if (count == 7) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_DESCRIBED, "state")) {
-    if (err) return err;
+  // State
+  if (pni_data_next_field(args, PN_DESCRIBED, &err)) {
     pni_data_enter(args);
 
-    if (pni_data_next_field(args, &err, PN_ULONG, "descriptor")) {
-      if (err) return err;
+    // Descriptor
+    if (pni_data_next_field(args, PN_ULONG, &err)) {
       type = pni_data_get_ulong(args);
       type_set = true;
     }
+    if (err) return err;
 
     pni_data_next(args);
     pni_data_narrow(args);
@@ -1647,11 +1655,13 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   if (err) return err;
   if (count == 8) goto args_end;
 
-  pni_data_next_field(args, &err, PN_BOOL, "resume");
+  // Resume
+  pni_data_next_field(args, PN_BOOL, &err);
   if (err) return err;
   if (count == 9) goto args_end;
 
-  if (pni_data_next_field(args, &err, PN_BOOL, "aborted")) aborted = pni_data_get_bool(args);
+  // Aborted
+  if (pni_data_next_field(args, PN_BOOL, &err)) aborted = pni_data_get_bool(args);
   if (err) return err;
 
 args_end: ;
@@ -2993,7 +3003,7 @@ static void pni_close_head(pn_transport_t *transport)
   }
 }
 
-PN_NO_INLINE static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
+static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
 {
   int more = 0;
 
@@ -3233,7 +3243,7 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
   return 0;
 }
 
-PN_NO_INLINE static ssize_t pni_transport_grow_input_capacity(pn_transport_t *transport, ssize_t capacity)
+static ssize_t pni_transport_grow_input_capacity(pn_transport_t *transport, ssize_t capacity)
 {
   // can we expand the size of the input buffer?
   int more = 0;
@@ -3258,7 +3268,7 @@ PN_NO_INLINE static ssize_t pni_transport_grow_input_capacity(pn_transport_t *tr
 }
 
 // input
-PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+PNI_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -3272,7 +3282,7 @@ PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == don
   return capacity;
 }
 
-PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
+PNI_INLINE char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -3280,7 +3290,7 @@ PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-PN_INLINE ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+PNI_INLINE ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3329,13 +3339,13 @@ int pn_transport_close_tail(pn_transport_t *transport)
 }
 
 // output
-PN_INLINE ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
+PNI_INLINE ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
   return transport_produce( transport );
 }
 
-PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
+PNI_INLINE const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3343,7 +3353,7 @@ PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-PN_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+PNI_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -3408,15 +3418,15 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   return true;
 }
 
-PN_INLINE bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
+PNI_INLINE bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
 
-PN_INLINE bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
+PNI_INLINE bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
 
-PN_INLINE bool pn_transport_closed(pn_transport_t *transport) {
+PNI_INLINE bool pn_transport_closed(pn_transport_t *transport) {
   return transport->head_closed && transport->tail_closed;
 }
 
-PN_INLINE pn_connection_t *pn_transport_connection(pn_transport_t *transport)
+PNI_INLINE pn_connection_t *pn_transport_connection(pn_transport_t *transport)
 {
   assert(transport);
   return transport->connection;

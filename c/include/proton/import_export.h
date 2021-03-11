@@ -89,16 +89,9 @@
 //
 // Perhaps in a compiler/compiler.h?  A root-level config.h?
 #if defined(__GNUC__)
-// For non-static inlined functions
-#  define PN_INLINE inline
-// Tell GCC we really want it to be inlined */
-#  define PN_FORCE_INLINE __attribute__((always_inline)) inline
-// Tell GCC we really don't want inlining
-#  define PN_NO_INLINE __attribute__((noinline))
+#  define PNI_INLINE inline
 #else
-#  define PN_INLINE
-#  define PN_FORCE_INLINE
-#  define PN_NO_INLINE
+#  define PNI_INLINE
 #endif
 
 /**

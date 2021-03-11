@@ -494,11 +494,6 @@ int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
   return pni_data_put_atom(msg->id, id);
 }
 
-static inline int pni_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
-{
-  return pn_string_setn(string, bytes.start, bytes.size);
-}
-
 pn_bytes_t pn_message_get_user_id(pn_message_t *msg)
 {
   assert(msg);
@@ -507,7 +502,7 @@ pn_bytes_t pn_message_get_user_id(pn_message_t *msg)
 int pn_message_set_user_id(pn_message_t *msg, pn_bytes_t user_id)
 {
   assert(msg);
-  return pni_string_set_bytes(msg->user_id, user_id);
+  return pn_string_setn(msg->user_id, user_id.start, user_id.size);
 }
 
 const char *pn_message_get_address(pn_message_t *msg)
@@ -642,27 +637,90 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
 
 int pni_data_copy_current_node(pn_data_t *data, pn_data_t *src);
 
-static inline void pni_data_get_message_id(pn_data_t *data, int *err, const char *name, pn_data_t *dst)
+static inline pni_node_t *pni_message_data_first_field(pn_message_t *msg, pn_type_t type, int *err)
 {
-  pn_type_t type = pni_data_type(data);
+  pni_node_t *node = pni_data_first_node(msg->data);
+
+  if (node) {
+    pn_type_t node_type = node->atom.type;
+
+    // if (node_type != type) {
+    //   fprintf(stderr, "nt=%s t=%s\n", pn_type_name(node_type), pn_type_name(type));
+    //   pn_data_dump(data);
+    //   exit(1);
+    // }
+
+    if (node_type == type) {
+      return node;
+    } else if (node_type != PN_NULL) {
+      *err = pn_error_format(pn_message_error(msg), PN_ERR, "Gaah");
+    }
+  }
+
+  return NULL;
+}
+
+static inline pni_node_t *pni_message_data_next_field(pn_message_t *msg, pn_type_t type, int *err)
+{
+  pni_node_t *node = pni_data_next_node(msg->data);
+
+  if (node) {
+    pn_type_t node_type = node->atom.type;
+
+    if (node_type == type) {
+      return node;
+    } else if (node_type != PN_NULL) {
+      *err = pn_error_format(pn_message_error(msg), PN_ERR, "mismatched types! AAA");
+    }
+  }
+
+  return NULL;
+}
+
+static inline void pni_message_data_require_first_field(pn_message_t *msg, pn_type_t type, int *err)
+{
+  pni_node_t *node = pni_message_data_first_field(msg, type, err);
+
+  if (!node && !(*err)) {
+    *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! BBB");
+  }
+}
+
+static inline void pni_message_data_require_next_field(pn_message_t *msg, pn_type_t type, int *err)
+{
+  pni_node_t *node = pni_message_data_next_field(msg, type, err);
+
+  if (!node && !(*err)) {
+    *err = pn_error_format(pn_message_error(msg), PN_ERR, "missing! CCC");
+  }
+}
+
+static inline void pni_message_data_set_message_id(pn_message_t *msg, pn_data_t *dst, int *err)
+{
+  pn_type_t type = pni_data_type(msg->data);
 
   if (type == PN_NULL) {
     return;
   }
 
   if (type == PN_STRING || type == PN_BINARY || type == PN_UUID || type == PN_ULONG || type == PN_INT) {
-    *err = pni_data_copy_current_node(dst, data);
+    *err = pni_data_copy_current_node(dst, msg->data);
   } else {
-    *err = pn_error_format(pn_data_error(data), PN_ERR, "data error: %s: illegal ID type: %s", name,
-                           pn_type_name(type));
+    *err = pn_error_format(pn_message_error(msg), PN_ERR, "data error: illegal ID type: %s", pn_type_name(type));
   }
+}
+
+static inline void pni_string_set_bytes_from_node(pn_string_t *str, pni_node_t *node, int *err)
+{
+  pn_bytes_t bytes = pni_node_get_bytes(node);
+  pn_string_setn(str, bytes.start, bytes.size);
 }
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg && bytes && size);
 
-  pn_message_clear(msg);
+  pn_message_clear(msg); // XXX
 
   while (size) {
     pni_data_clear(msg->data);
@@ -680,129 +738,137 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
     int err = 0;
     size_t field_count;
+    pni_node_t *node;
 
-    pni_data_require_first_field(msg->data, &err, PN_DESCRIBED, "described");
+    pni_message_data_require_first_field(msg, PN_DESCRIBED, &err);
     if (err) return err;
     pni_data_enter(msg->data);
 
     uint64_t descriptor = 0;
-    if (pni_data_first_field(msg->data, &err, PN_ULONG, "descriptor")) descriptor = pni_data_get_ulong(msg->data);
+    node = pni_message_data_first_field(msg, PN_ULONG, &err);
+    if (node) descriptor = pni_node_get_ulong(node);
     if (err) return err;
 
     switch (descriptor) {
     case HEADER:
-      pni_data_require_next_field(msg->data, &err, PN_LIST, "header");
+      pni_message_data_require_next_field(msg, PN_LIST, &err);
       if (err) return err;
       pni_data_enter(msg->data);
 
       field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
-      if (pni_data_first_field(msg->data, &err, PN_BOOL, "durable")) msg->durable = pni_data_get_bool(msg->data);
+      // Durable
+      node = pni_message_data_first_field(msg, PN_BOOL, &err);
+      if (node) msg->durable = pni_node_get_bool(node);
       if (err) return err;
       if (field_count == 1) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UBYTE, "priority")) msg->priority = pni_data_get_ubyte(msg->data);
+      // Priority
+      node = pni_message_data_next_field(msg, PN_UBYTE, &err);
+      if (node) msg->priority = pni_node_get_ubyte(node);
       if (err) return err;
       if (field_count == 2) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UINT, "ttl")) msg->ttl = pni_data_get_uint(msg->data);
+      // TTL
+      node = pni_message_data_next_field(msg, PN_UINT, &err);
+      if (node) msg->ttl = pni_node_get_uint(node);
       if (err) return err;
       if (field_count == 3) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_BOOL, "first_acquirer")) msg->first_acquirer = pni_data_get_bool(msg->data);
+      // First acquirer
+      node = pni_message_data_next_field(msg, PN_BOOL, &err);
+      if (node) msg->first_acquirer = pni_node_get_bool(node);
       if (err) return err;
       if (field_count == 4) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UINT, "delivery_count")) msg->delivery_count = pni_data_get_uint(msg->data);
+      // Delivery count
+      node = pni_message_data_next_field(msg, PN_UINT, &err);
+      if (node) msg->delivery_count = pni_node_get_uint(node);
       if (err) return err;
 
       break;
     case PROPERTIES:
-      pni_data_require_next_field(msg->data, &err, PN_LIST, "properties");
+      pni_message_data_require_next_field(msg, PN_LIST, &err);
       if (err) return err;
       pni_data_enter(msg->data);
 
       field_count = pni_data_node(msg->data, msg->data->parent)->children;
 
-      if (pni_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "message_id", msg->id);
+      // Message ID
+      if (pni_data_first_node(msg->data)) pni_message_data_set_message_id(msg, msg->id, &err);
       if (err) return err;
       if (field_count == 1) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_BINARY, "user_id")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->user_id, pni_data_get_bytes(msg->data));
-      }
+      // User ID
+      node = pni_message_data_next_field(msg, PN_BINARY, &err);
+      if (node) pni_string_set_bytes_from_node(msg->user_id, node, &err);
       if (err) return err;
       if (field_count == 2) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_STRING, "to")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->address, pni_data_get_bytes(msg->data));
-      }
+      // To
+      node = pni_message_data_next_field(msg, PN_STRING, &err);
+      if (node) pni_string_set_bytes_from_node(msg->address, node, &err);
       if (err) return err;
       if (field_count == 3) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_STRING, "subject")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->subject, pni_data_get_bytes(msg->data));
-      }
+      // Subject
+      node = pni_message_data_next_field(msg, PN_STRING, &err);
+      if (node) pni_string_set_bytes_from_node(msg->subject, node, &err);
       if (err) return err;
       if (field_count == 4) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_STRING, "reply_to")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->reply_to, pni_data_get_bytes(msg->data));
-      }
+      // Reply to
+      node = pni_message_data_next_field(msg, PN_STRING, &err);
+      if (node) pni_string_set_bytes_from_node(msg->reply_to, node, &err);
       if (err) return err;
       if (field_count == 5) break;
 
-      if (pni_data_next(msg->data)) pni_data_get_message_id(msg->data, &err, "correlation_id", msg->correlation_id);
+      // XXX Revisit
+      if (pni_data_next_node(msg->data)) pni_message_data_set_message_id(msg, msg->correlation_id, &err);
       if (err) return err;
       if (field_count == 6) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_SYMBOL, "content_type")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->content_type, pni_data_get_bytes(msg->data));
-      }
+      // Content type
+      node = pni_message_data_next_field(msg, PN_SYMBOL, &err);
+      if (node) pni_string_set_bytes_from_node(msg->content_type, node, &err);
       if (err) return err;
       if (field_count == 7) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_SYMBOL, "content_encoding")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->content_encoding, pni_data_get_bytes(msg->data));
-      }
+      // Content encoding
+      node = pni_message_data_next_field(msg, PN_SYMBOL, &err);
+      if (node) pni_string_set_bytes_from_node(msg->content_encoding, node, &err);
       if (err) return err;
       if (field_count == 8) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_TIMESTAMP, "expiry_time")) {
-        msg->expiry_time = pn_data_get_timestamp(msg->data);
-      }
+      // XXX
+      // Expiry time
+      node = pni_message_data_next_field(msg, PN_TIMESTAMP, &err);
+      if (node) msg->expiry_time = pn_data_get_timestamp(msg->data);
       if (err) return err;
       if (field_count == 9) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_TIMESTAMP, "creation_time")) {
-        msg->creation_time = pn_data_get_timestamp(msg->data);
-      }
+      // XXX
+      // Creation time
+      node = pni_message_data_next_field(msg, PN_TIMESTAMP, &err);
+      if (node) msg->creation_time = pn_data_get_timestamp(msg->data);
       if (err) return err;
       if (field_count == 10) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_STRING, "group_id")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->group_id, pni_data_get_bytes(msg->data));
-      }
+      // Group ID
+      node = pni_message_data_next_field(msg, PN_STRING, &err);
+      if (node) pni_string_set_bytes_from_node(msg->group_id, node, &err);
       if (err) return err;
       if (field_count == 11) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_UINT, "group_sequence")) {
-        msg->group_sequence = pni_data_get_uint(msg->data);
-      }
+      // Group sequence
+      node = pni_message_data_next_field(msg, PN_UINT, &err);
+      if (node) msg->group_sequence = pni_node_get_uint(node);
       if (err) return err;
       if (field_count == 12) break;
 
-      if (pni_data_next_field(msg->data, &err, PN_STRING, "reply_to_group_id")) {
-        if (err) return err;
-        err = pni_string_set_bytes(msg->reply_to_group_id, pni_data_get_bytes(msg->data));
-      }
+      // Reply to group ID
+      node = pni_message_data_next_field(msg, PN_STRING, &err);
+      if (node) pni_string_set_bytes_from_node(msg->reply_to_group_id, node, &err);
       if (err) return err;
 
       break;
@@ -895,7 +961,7 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
   }
 }
 
-PN_FORCE_INLINE static void pni_data_put_variable_or_null(pn_data_t* data, pn_string_t* value, pn_type_t type)
+PNI_INLINE static void pni_data_put_variable_or_null(pn_data_t* data, pn_string_t* value, pn_type_t type)
 {
   size_t size = pn_string_size(value);
 

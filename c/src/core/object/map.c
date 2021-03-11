@@ -395,7 +395,7 @@ static pn_handle_t pni_map_find_next(pn_map_t *map, pn_handle_t entry, size_t st
   return 0;
 }
 
-PN_INLINE pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
+PNI_INLINE pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
 {
   size_t index = (size_t) entry;
 
@@ -406,14 +406,14 @@ PN_INLINE pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
   }
 }
 
-PN_INLINE void *pn_map_key(pn_map_t *map, pn_handle_t entry)
+PNI_INLINE void *pn_map_key(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
   return map->entries[(size_t)entry - 1].key;
 }
 
-PN_INLINE void *pn_map_value(pn_map_t *map, pn_handle_t entry)
+PNI_INLINE void *pn_map_value(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
@@ -462,42 +462,42 @@ pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
   return hash;
 }
 
-PN_INLINE size_t pn_hash_size(pn_hash_t *hash)
+PNI_INLINE size_t pn_hash_size(pn_hash_t *hash)
 {
   return pn_map_size(&hash->map);
 }
 
-PN_INLINE int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
+PNI_INLINE int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
 {
   return pn_map_put(&hash->map, (void *) key, value);
 }
 
-PN_INLINE void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
+PNI_INLINE void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
 {
   return pn_map_get(&hash->map, (void *) key);
 }
 
-PN_INLINE void pn_hash_del(pn_hash_t *hash, uintptr_t key)
+PNI_INLINE void pn_hash_del(pn_hash_t *hash, uintptr_t key)
 {
   pn_map_del(&hash->map, (void *) key);
 }
 
-PN_INLINE pn_handle_t pn_hash_head(pn_hash_t *hash)
+PNI_INLINE pn_handle_t pn_hash_head(pn_hash_t *hash)
 {
   return pn_map_head(&hash->map);
 }
 
-PN_INLINE pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
+PNI_INLINE pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_next(&hash->map, entry);
 }
 
-PN_INLINE uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
+PNI_INLINE uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
 {
   return (uintptr_t) pn_map_key(&hash->map, entry);
 }
 
-PN_INLINE void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
+PNI_INLINE void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
 {
   return pn_map_value(&hash->map, entry);
 }

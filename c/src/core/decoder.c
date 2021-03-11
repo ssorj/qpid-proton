@@ -424,7 +424,7 @@ static int pni_decoder_decode_variable32(pn_decoder_t *decoder, pn_data_t *data,
   return pni_decoder_decode_variable_value(decoder, data, code, size);
 }
 
-PN_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data,
+PNI_INLINE static inline int pni_decoder_decode_compound_values(pn_decoder_t *decoder, pn_data_t *data,
                                                                      uint8_t code, size_t count)
 {
   pn_type_t type;
@@ -522,6 +522,7 @@ static int pni_decoder_decode_array8(pn_decoder_t *decoder, pn_data_t *data, uin
   // Check that the size is big enough for the count and the array
   // constructor
   if (size < 1 + 1) return PN_ARG_ERR;
+  // XXX This isn't the check I really want
 
   return pni_decoder_decode_array_values(decoder, data, code, count);
 }
@@ -536,6 +537,7 @@ static int pni_decoder_decode_array32(pn_decoder_t *decoder, pn_data_t *data, ui
   // Check that the size is big enough for the count and the array
   // constructor
   if (size < 4 + 1) return PN_ARG_ERR;
+  // XXX This isn't the check I really want
 
   return pni_decoder_decode_array_values(decoder, data, code, count);
 }

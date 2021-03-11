@@ -88,7 +88,7 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-PN_FORCE_INLINE static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
+PNI_INLINE static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
