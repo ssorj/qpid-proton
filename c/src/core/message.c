@@ -733,7 +733,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   pn_message_clear(msg);
 
   while (size) {
-    ssize_t used = pn_data_decode(msg->data, bytes, size);
+    ssize_t used = pni_data_decode(msg->data, bytes, size);
 
     if (used < 0) {
       return pn_error_format(pn_message_error(msg), used, "data error: %s", pn_error_text(pn_data_error(msg->data)));

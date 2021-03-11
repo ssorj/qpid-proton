@@ -1573,13 +1573,18 @@ ssize_t pn_data_encoded_size(pn_data_t *data)
   return r;
 }
 
-ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
+PNI_INLINE ssize_t pni_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   pni_decoder_t decoder;
   pni_decoder_initialize(&decoder);
   ssize_t r = pni_decoder_decode(&decoder, bytes, size, data);
   pni_decoder_finalize(&decoder);
   return r;
+}
+
+ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
+{
+  return pni_data_decode(data, bytes, size);
 }
 
 PNI_INLINE int pni_data_put_compound(pn_data_t *data, pn_type_t type)
