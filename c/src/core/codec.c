@@ -458,7 +458,7 @@ static void pni_data_rebase(pn_data_t *data, const char *base)
   }
 }
 
-static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
+int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   assert(node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL);
 
@@ -1695,6 +1695,12 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
 PNI_INLINE void pni_node_set_type(pni_node_t *node, pn_type_t type)
 {
   node->atom.type = type;
+}
+
+PNI_INLINE void pni_node_set_bytes(pni_node_t *node, pn_type_t type, pn_bytes_t bytes)
+{
+  node->atom.type = type;
+  node->atom.u.as_bytes = bytes;
 }
 
 PNI_INLINE void pni_node_set_bool(pni_node_t *node, bool value)

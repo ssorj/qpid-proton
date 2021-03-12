@@ -88,8 +88,10 @@ int pni_data_put_compound(pn_data_t *data, pn_type_t type);
 int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
 
 pni_node_t *pni_data_add_node(pn_data_t *data);
+int pni_data_intern_node(pn_data_t *data, pni_node_t *node);
 
 void pni_node_set_type(pni_node_t *node, pn_type_t type);
+void pni_node_set_bytes(pni_node_t *node, pn_type_t type, pn_bytes_t bytes);
 
 void pni_node_set_bool(pni_node_t *node, bool value);
 void pni_node_set_byte(pni_node_t *node, int8_t value);
