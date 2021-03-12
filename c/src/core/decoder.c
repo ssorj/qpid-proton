@@ -333,7 +333,7 @@ static int pni_decoder_decode_fixed32(pni_decoder_t *decoder, pn_data_t *data, u
   case PNE_FLOAT: {
     // XXX: this assumes the platform uses IEEE floats
     conv_t conv = { .i = value };
-    return pn_data_put_float(data, conv.f);
+    return pni_data_put_float(data, conv.f);
   }
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
@@ -354,7 +354,7 @@ static int pni_decoder_decode_fixed64(pni_decoder_t *decoder, pn_data_t *data, u
   case PNE_DOUBLE: {
     // XXX: this assumes the platform uses IEEE floats
     conv_t conv = { .l = value };
-    return pn_data_put_double(data, conv.d);
+    return pni_data_put_double(data, conv.d);
   }
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
@@ -424,8 +424,8 @@ static int pni_decoder_decode_variable32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_variable_value(decoder, data, code, size);
 }
 
-PNI_INLINE static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data,
-                                                                     uint8_t code, size_t count)
+static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data,
+                                                     uint8_t code, size_t count)
 {
   pn_type_t type;
 

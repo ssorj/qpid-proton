@@ -1811,7 +1811,7 @@ int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
   return pni_data_put_timestamp(data, t);
 }
 
-int pn_data_put_float(pn_data_t *data, float f)
+PNI_INLINE int pni_data_put_float(pn_data_t *data, float f)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1820,13 +1820,23 @@ int pn_data_put_float(pn_data_t *data, float f)
   return 0;
 }
 
-int pn_data_put_double(pn_data_t *data, double d)
+int pn_data_put_float(pn_data_t *data, float f)
+{
+  return pni_data_put_float(data, f);
+}
+
+PNI_INLINE int pni_data_put_double(pn_data_t *data, double d)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DOUBLE;
   node->atom.u.as_double = d;
   return 0;
+}
+
+int pn_data_put_double(pn_data_t *data, double d)
+{
+  return pni_data_put_double(data, d);
 }
 
 int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d)
