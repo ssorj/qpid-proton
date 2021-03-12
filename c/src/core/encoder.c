@@ -385,6 +385,7 @@ static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t 
   char *pos = encoder->position;
   encoder->position = start;
 
+  // Write the size
   pn_encoder_writef8(encoder, pos - start - 1);
 
   encoder->position = pos;
@@ -420,6 +421,7 @@ static int pni_encoder_encode_compound32(pn_encoder_t *encoder, pn_data_t *data)
   char *pos = encoder->position;
   encoder->position = start;
 
+  // Write the size
   pn_encoder_writef32(encoder, pos - start - 4);
 
   encoder->position = pos;
@@ -469,6 +471,7 @@ static int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data)
   char *pos = encoder->position;
   encoder->position = start;
 
+  // Write the size
   pn_encoder_writef32(encoder, (size_t) (pos - start - 4));
 
   encoder->position = pos;
