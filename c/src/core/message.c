@@ -961,7 +961,7 @@ static inline void pni_data_put_uint_or_null(pn_data_t* data, uint32_t value)
   }
 }
 
-PNI_INLINE static void pni_data_put_variable_or_null(pn_data_t* data, pn_string_t* value, pn_type_t type)
+PNI_FORCE_INLINE static inline void pni_data_put_variable_or_null(pn_data_t* data, pn_string_t* value, pn_type_t type)
 {
   size_t size = pn_string_size(value);
 

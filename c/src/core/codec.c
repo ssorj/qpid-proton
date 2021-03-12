@@ -1644,7 +1644,7 @@ int pn_data_put_described(pn_data_t *data)
   return pni_data_put_described(data);
 }
 
-PNI_INLINE int pni_data_put_null(pn_data_t *data)
+PNI_FORCE_INLINE PNI_INLINE int pni_data_put_null(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -2025,7 +2025,7 @@ int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u)
   return 0;
 }
 
-PNI_INLINE int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type)
+PNI_FORCE_INLINE PNI_INLINE int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
