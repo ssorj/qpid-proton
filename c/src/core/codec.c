@@ -1745,6 +1745,12 @@ PNI_INLINE void pni_node_set_float(pni_node_t *node, float value)
   node->atom.u.as_float = value;
 }
 
+PNI_INLINE void pni_node_set_double(pni_node_t *node, double value)
+{
+  node->atom.type = PN_DOUBLE;
+  node->atom.u.as_double = value;
+}
+
 PNI_INLINE void pni_node_set_char(pni_node_t *node, pn_char_t value)
 {
   node->atom.type = PN_CHAR;
@@ -1757,6 +1763,19 @@ PNI_INLINE void pni_node_set_decimal32(pni_node_t *node, pn_decimal32_t value)
   node->atom.u.as_decimal32 = value;
 }
 
+PNI_INLINE void pni_node_set_decimal64(pni_node_t *node, pn_decimal64_t value)
+{
+  node->atom.type = PN_DECIMAL64;
+  node->atom.u.as_decimal64 = value;
+}
+
+PNI_INLINE void pni_node_set_decimal128(pni_node_t *node, pn_decimal128_t value)
+{
+  node->atom.type = PN_DECIMAL128;
+  // XXX memmove?
+  memmove(node->atom.u.as_decimal128.bytes, value.bytes, 16);
+}
+
 PNI_INLINE void pni_node_set_ulong(pni_node_t *node, uint64_t value)
 {
   node->atom.type = PN_ULONG;
@@ -1767,6 +1786,19 @@ PNI_INLINE void pni_node_set_long(pni_node_t *node, int64_t value)
 {
   node->atom.type = PN_LONG;
   node->atom.u.as_long = value;
+}
+
+PNI_INLINE void pni_node_set_uuid(pni_node_t *node, pn_uuid_t value)
+{
+  node->atom.type = PN_UUID;
+  // XXX memmove?
+  memmove(node->atom.u.as_uuid.bytes, value.bytes, 16);
+}
+
+PNI_INLINE void pni_node_set_timestamp(pni_node_t *node, pn_timestamp_t value)
+{
+  node->atom.type = PN_TIMESTAMP;
+  node->atom.u.as_timestamp = value;
 }
 
 PNI_INLINE int pni_data_put_bool(pn_data_t *data, bool b)
