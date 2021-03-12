@@ -90,9 +90,14 @@ int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
 int pni_data_put_null(pn_data_t *data);
 int pni_data_put_bool(pn_data_t *data, bool b);
 int pni_data_put_ubyte(pn_data_t *data, uint8_t ub);
+int pni_data_put_byte(pn_data_t *data, int8_t b);
+int pni_data_put_ushort(pn_data_t *data, uint16_t us);
+int pni_data_put_short(pn_data_t *data, int16_t s);
 int pni_data_put_uint(pn_data_t *data, uint32_t ui);
-int pni_data_put_long(pn_data_t *data, int64_t l);
+int pni_data_put_int(pn_data_t *data, int32_t i);
 int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
+int pni_data_put_long(pn_data_t *data, int64_t l);
+int pni_data_put_char(pn_data_t *data, pn_char_t c);
 int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
 int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);
 

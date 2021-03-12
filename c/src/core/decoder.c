@@ -292,11 +292,11 @@ static int pni_decoder_decode_fixed8(pni_decoder_t *decoder, pn_data_t *data, ui
 
   switch (code) {
   case PNE_UBYTE:      return pni_data_put_ubyte(data, value);
-  case PNE_BYTE:       return pn_data_put_byte(data, value);
+  case PNE_BYTE:       return pni_data_put_byte(data, value);
   case PNE_SMALLUINT:  return pni_data_put_uint(data, value);
   // Handled in decode_value
   // case PNE_SMALLULONG: return pni_data_put_ulong(data, value);
-  case PNE_SMALLINT:   return pn_data_put_int(data, (int8_t) value);
+  case PNE_SMALLINT:   return pni_data_put_int(data, (int8_t) value);
   case PNE_SMALLLONG:  return pni_data_put_long(data, (int8_t) value);
   case PNE_BOOLEAN:    return pni_data_put_bool(data, value);
   default:
@@ -327,8 +327,8 @@ static int pni_decoder_decode_fixed32(pni_decoder_t *decoder, pn_data_t *data, u
 
   switch (code) {
   case PNE_UINT:      return pni_data_put_uint(data, value);
-  case PNE_INT:       return pn_data_put_int(data, value);
-  case PNE_UTF32:     return pn_data_put_char(data, value);
+  case PNE_INT:       return pni_data_put_int(data, value);
+  case PNE_UTF32:     return pni_data_put_char(data, value);
   case PNE_DECIMAL32: return pn_data_put_decimal32(data, value);
   case PNE_FLOAT: {
     // XXX: this assumes the platform uses IEEE floats

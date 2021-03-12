@@ -1153,12 +1153,6 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
   // Body
 
   if (pni_data_size(msg->body)) {
-    // XXX Optimize this
-    // pni_data_rewind(msg->body);
-    // pni_data_next(msg->body);
-    // pn_type_t body_type = pni_data_type(msg->body);
-    // pni_data_rewind(msg->body);
-
     pn_type_t body_type = pni_data_first_node(msg->body)->atom.type;
 
     pni_data_put_described(data);
