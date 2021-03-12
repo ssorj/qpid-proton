@@ -1657,6 +1657,118 @@ int pn_data_put_null(pn_data_t *data)
   return pni_data_put_null(data);
 }
 
+PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
+{
+  if (data->capacity <= data->size) {
+    int err = pni_data_grow(data);
+    if (err) return NULL;
+  }
+
+  pni_node_t *node = data->nodes + data->size++;
+  pni_nid_t node_id = node - data->nodes + 1;
+
+  *node = (pni_node_t) {0};
+
+  if (data->current) {
+    pni_node_t *current = data->nodes + data->current - 1;
+
+    current->next = node_id;
+    node->prev = data->current;
+  }
+
+  if (data->parent) {
+    pni_node_t *parent = data->nodes + data->parent - 1;
+
+    if (!parent->down) {
+      parent->down = node_id;
+    }
+
+    node->parent = data->parent;
+    parent->children++;
+  }
+
+  data->current = node_id;
+
+  return node;
+}
+
+PNI_INLINE void pni_node_set_type(pni_node_t *node, pn_type_t type)
+{
+  node->atom.type = type;
+}
+
+PNI_INLINE void pni_node_set_bool(pni_node_t *node, bool value)
+{
+  node->atom.type = PN_BOOL;
+  node->atom.u.as_bool = value;
+}
+
+PNI_INLINE void pni_node_set_ubyte(pni_node_t *node, uint8_t value)
+{
+  node->atom.type = PN_UBYTE;
+  node->atom.u.as_ubyte = value;
+}
+
+PNI_INLINE void pni_node_set_byte(pni_node_t *node, int8_t value)
+{
+  node->atom.type = PN_BYTE;
+  node->atom.u.as_byte = value;
+}
+
+PNI_INLINE void pni_node_set_ushort(pni_node_t *node, uint16_t value)
+{
+  node->atom.type = PN_USHORT;
+  node->atom.u.as_ushort = value;
+}
+
+PNI_INLINE void pni_node_set_short(pni_node_t *node, int16_t value)
+{
+  node->atom.type = PN_SHORT;
+  node->atom.u.as_short = value;
+}
+
+PNI_INLINE void pni_node_set_uint(pni_node_t *node, uint32_t value)
+{
+  node->atom.type = PN_UINT;
+  node->atom.u.as_uint = value;
+}
+
+PNI_INLINE void pni_node_set_int(pni_node_t *node, int32_t value)
+{
+  node->atom.type = PN_INT;
+  node->atom.u.as_int = value;
+}
+
+PNI_INLINE void pni_node_set_float(pni_node_t *node, float value)
+{
+  node->atom.type = PN_FLOAT;
+  node->atom.u.as_float = value;
+}
+
+PNI_INLINE void pni_node_set_char(pni_node_t *node, pn_char_t value)
+{
+  node->atom.type = PN_CHAR;
+  node->atom.u.as_char = value;
+}
+
+PNI_INLINE void pni_node_set_decimal32(pni_node_t *node, pn_decimal32_t value)
+{
+  node->atom.type = PN_DECIMAL32;
+  node->atom.u.as_decimal32 = value;
+}
+
+PNI_INLINE void pni_node_set_ulong(pni_node_t *node, uint64_t value)
+{
+  node->atom.type = PN_ULONG;
+  node->atom.u.as_ulong = value;
+}
+
+PNI_INLINE void pni_node_set_long(pni_node_t *node, int64_t value)
+{
+  node->atom.type = PN_LONG;
+  node->atom.u.as_long = value;
+}
+
 PNI_INLINE int pni_data_put_bool(pn_data_t *data, bool b)
 {
   pni_node_t *node = pni_data_add(data);

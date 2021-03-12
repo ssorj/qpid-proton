@@ -87,6 +87,23 @@ int pni_data_put_described(pn_data_t *data);
 int pni_data_put_compound(pn_data_t *data, pn_type_t type);
 int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
 
+pni_node_t *pni_data_add_node(pn_data_t *data);
+
+void pni_node_set_type(pni_node_t *node, pn_type_t type);
+
+void pni_node_set_bool(pni_node_t *node, bool value);
+void pni_node_set_ubyte(pni_node_t *node, uint8_t value);
+void pni_node_set_uint(pni_node_t *node, uint32_t value);
+void pni_node_set_ushort(pni_node_t *node, uint16_t value);
+void pni_node_set_ulong(pni_node_t *node, uint64_t value);
+void pni_node_set_byte(pni_node_t *node, int8_t value);
+void pni_node_set_short(pni_node_t *node, int16_t value);
+void pni_node_set_int(pni_node_t *node, int32_t value);
+void pni_node_set_float(pni_node_t *node, float value);
+void pni_node_set_char(pni_node_t *node, pn_char_t value);
+void pni_node_set_decimal32(pni_node_t *node, pn_decimal32_t value);
+void pni_node_set_long(pni_node_t *node, int64_t value);
+
 int pni_data_put_null(pn_data_t *data);
 int pni_data_put_bool(pn_data_t *data, bool b);
 int pni_data_put_ubyte(pn_data_t *data, uint8_t ub);
