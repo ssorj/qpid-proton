@@ -127,7 +127,7 @@ typedef union {
   double d;
 } conv_t;
 
-static inline pn_type_t pn_code2type(uint8_t code)
+static inline pn_type_t pni_decoder_code2type(uint8_t code)
 {
   switch (code) {
   case PNE_NULL:       return PN_NULL;
@@ -530,7 +530,7 @@ static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pni_no
     if (err) return err;
   }
 
-  pn_type_t type = pn_code2type(array_code);
+  pn_type_t type = pni_decoder_code2type(array_code);
   if ((int) type < 0) return (int) type;
 
   for (size_t i = 0; i < count; i++) {

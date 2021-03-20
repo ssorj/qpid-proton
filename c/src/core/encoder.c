@@ -50,10 +50,9 @@ PNI_INLINE void pni_encoder_finalize(pni_encoder_t *encoder)
   pn_error_free(encoder->error);
 }
 
-static uint8_t pn_type2code(pni_encoder_t *encoder, pn_type_t type)
+static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, pn_type_t type)
 {
-  switch (type)
-  {
+  switch (type) {
   case PN_NULL: return PNE_NULL;
   case PN_BOOL: return PNE_BOOLEAN;
   case PN_UBYTE: return PNE_UBYTE;
@@ -169,7 +168,7 @@ static inline uint8_t pn_node2code(pni_encoder_t *encoder, pni_node_t *node)
   case PN_ARRAY: return PNE_ARRAY32;
   case PN_DESCRIBED: return PNE_DESCRIPTOR;
   default:
-    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u\n", node->atom.type);
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", node->atom.type);
   }
 }
 
@@ -432,7 +431,7 @@ static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data
 static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
-  uint8_t array_code = pn_type2code(encoder, node->type);
+  uint8_t array_code = pni_encoder_type2code(encoder, node->type);
   size_t count = node->children;
   int err;
 
@@ -574,8 +573,7 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   size_t encoded = encoder->position - encoder->output;
 
   if (encoded > size) {
-      pn_error_format(pn_data_error(src), PN_OVERFLOW, "not enough space to encode");
-      return PN_OVERFLOW;
+      return pn_error_format(pn_data_error(src), PN_OVERFLOW, "not enough space to encode");
   }
 
   return (ssize_t) encoded;
