@@ -27,7 +27,6 @@ typedef struct pni_encoder_t {
   char *position;
   pn_error_t *error;
   size_t size;
-  unsigned null_count;
 } pni_encoder_t;
 
 void pni_encoder_initialize(pni_encoder_t *encoder);

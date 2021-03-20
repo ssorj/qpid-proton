@@ -345,7 +345,7 @@ static inline pni_node_t *pni_data_current_node(pn_data_t *data)
 }
 
 static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pni_node_t *node, pn_data_t *data,
-                                                    size_t *null_count)
+                                                     unsigned *null_count)
 {
   data->parent = data->current;
   data->current = node->down;
@@ -382,7 +382,7 @@ static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pni
 static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
-  size_t null_count = 0;
+  unsigned null_count = 0;
   char *start = encoder->position;
 
   // The size and count are backfilled after writing the elements
@@ -407,7 +407,7 @@ static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t
 static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
-  size_t null_count = 0;
+  unsigned null_count = 0;
   char *start = encoder->position;
 
   // The size and count are backfilled after writing the elements
