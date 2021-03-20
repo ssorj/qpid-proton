@@ -53,15 +53,12 @@ static pn_error_t *pni_decoder_error(pni_decoder_t *decoder)
   return decoder->error;
 }
 
-void pni_decoder_initialize(pni_decoder_t *decoder)
+PNI_INLINE void pni_decoder_initialize(pni_decoder_t *decoder)
 {
-  decoder->input = NULL;
-  decoder->size = 0;
-  decoder->position = NULL;
-  decoder->error = NULL;
+  *decoder = (pni_decoder_t) {0};
 }
 
-void pni_decoder_finalize(pni_decoder_t *decoder)
+PNI_INLINE void pni_decoder_finalize(pni_decoder_t *decoder)
 {
   pn_error_free(decoder->error);
 }

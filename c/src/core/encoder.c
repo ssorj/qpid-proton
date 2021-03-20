@@ -40,16 +40,12 @@ static pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
   return encoder->error;
 }
 
-void pn_encoder_initialize(pn_encoder_t *encoder)
+PNI_INLINE void pn_encoder_initialize(pn_encoder_t *encoder)
 {
-  encoder->output = NULL;
-  encoder->position = NULL;
-  encoder->error = NULL;
-  encoder->size = 0;
-  encoder->null_count = 0;
+  *encoder = (pn_encoder_t) {0};
 }
 
-void pn_encoder_finalize(pn_encoder_t *encoder)
+PNI_INLINE void pn_encoder_finalize(pn_encoder_t *encoder)
 {
   pn_error_free(encoder->error);
 }
