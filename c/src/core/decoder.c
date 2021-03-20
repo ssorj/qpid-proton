@@ -276,7 +276,8 @@ static int pni_decoder_decode_fixed128(pni_decoder_t *decoder, pni_node_t *node,
   return 0;
 }
 
-static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, size_t size, pn_data_t *data)
+static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
+                                                    const uint8_t code, const size_t size)
 {
   char *start = (char *) decoder->position;
   pn_bytes_t bytes = {size, start};
@@ -304,30 +305,32 @@ static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pni_
   return 0;
 }
 
-static int pni_decoder_decode_variable8(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_variable8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (!pni_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 1) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf8(decoder);
 
-  if (pni_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+  if (remaining < size + 1) return PN_UNDERFLOW;
 
-  return pni_decoder_decode_variable_value(decoder, node, code, size, data);
+  return pni_decoder_decode_variable_value(decoder, data, node, code, size);
 }
 
-static int pni_decoder_decode_variable32(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_variable32(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (pni_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 4) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf32(decoder);
 
-  if (pni_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+  if (remaining < size + 4) return PN_UNDERFLOW;
 
-  return pni_decoder_decode_variable_value(decoder, node, code, size, data);
+  return pni_decoder_decode_variable_value(decoder, data, node, code, size);
 }
 
-static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pni_node_t *node,
-                                                     uint8_t code, size_t count, pn_data_t *data)
+static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
+                                                     const uint8_t code, const size_t count)
 {
   pn_type_t type;
 
@@ -340,7 +343,6 @@ static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pni
   }
 
   pni_node_set_type(node, type);
-
   pni_data_enter(data);
 
   for (size_t i = 0; i < count; i++) {
@@ -353,35 +355,35 @@ static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pni
   return 0;
 }
 
-static int pni_decoder_decode_compound8(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (pni_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 1) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf8(decoder);
 
-  if (pni_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
-
+  if (remaining < size + 1) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf8(decoder);
 
-  return pni_decoder_decode_compound_values(decoder, node, code, count, data);
+  return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
 
-static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (pni_decoder_remaining(decoder) < 4) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 4) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf32(decoder);
 
-  if (pni_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
-
+  if (remaining < size + 4) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf32(decoder);
 
-  return pni_decoder_decode_compound_values(decoder, node, code, count, data);
+  return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
 
 // XXX Needs work
-static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pni_node_t *node, uint8_t code,
-                                                  size_t count, pn_data_t *data)
+static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
+                                                  const uint8_t code, const size_t count)
 {
   int err;
   bool described = (*decoder->position == PNE_DESCRIPTOR);
@@ -422,34 +424,39 @@ static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pni_no
   return 0;
 }
 
-static int pni_decoder_decode_array8(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_array8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (pni_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 1) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf8(decoder);
+
+  if (remaining < size + 1) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf8(decoder);
 
-  // Check that the size is big enough for the count and the array
-  // constructor
-  if (size < 1 + 1) return PN_ARG_ERR;
-  // XXX This isn't the check I really want
-
-  return pni_decoder_decode_array_values(decoder, node, code, count, data);
+  return pni_decoder_decode_array_values(decoder, data, node, code, count);
 }
 
-static int pni_decoder_decode_array32(pni_decoder_t *decoder, pni_node_t *node, uint8_t code, pn_data_t *data)
+static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
-  if (pni_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
+  size_t remaining = pni_decoder_remaining(decoder);
 
+  if (remaining < 4) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf32(decoder);
+
+  if (remaining < size + 4) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf32(decoder);
 
-  // Check that the size is big enough for the count and the array
-  // constructor
-  if (size < 4 + 1) return PN_ARG_ERR;
-  // XXX This isn't the check I really want
+  // if (pni_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
 
-  return pni_decoder_decode_array_values(decoder, node, code, count, data);
+  // size_t size = pni_decoder_readf32(decoder);
+  // size_t count = pni_decoder_readf32(decoder);
+
+  // // Check that the size is big enough for the count and the array
+  // // constructor
+  // if (size < 4 + 1) return PN_ARG_ERR;
+
+  return pni_decoder_decode_array_values(decoder, data, node, code, count);
 }
 
 // // We disallow using any compound type as a described descriptor to avoid recursion
@@ -490,12 +497,12 @@ static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, con
   case 0x70: return pni_decoder_decode_fixed32(decoder, node, code);
   case 0x80: return pni_decoder_decode_fixed64(decoder, node, code);
   case 0x90: return pni_decoder_decode_fixed128(decoder, node, code);
-  case 0xA0: return pni_decoder_decode_variable8(decoder, node, code, data);
-  case 0xB0: return pni_decoder_decode_variable32(decoder, node, code, data);
-  case 0xC0: return pni_decoder_decode_compound8(decoder, node, code, data);
-  case 0xD0: return pni_decoder_decode_compound32(decoder, node, code, data);
-  case 0xE0: return pni_decoder_decode_array8(decoder, node, code, data);
-  case 0xF0: return pni_decoder_decode_array32(decoder, node, code, data);
+  case 0xA0: return pni_decoder_decode_variable8(decoder, data, node, code);
+  case 0xB0: return pni_decoder_decode_variable32(decoder, data, node, code);
+  case 0xC0: return pni_decoder_decode_compound8(decoder, data, node, code);
+  case 0xD0: return pni_decoder_decode_compound32(decoder, data, node, code);
+  case 0xE0: return pni_decoder_decode_array8(decoder, data, node, code);
+  case 0xF0: return pni_decoder_decode_array32(decoder, data, node, code);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
