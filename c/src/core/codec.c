@@ -1564,19 +1564,19 @@ PNI_INLINE static pni_node_t *pni_data_add(pn_data_t *data)
 
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
-  pn_encoder_t encoder;
-  pn_encoder_initialize(&encoder);
-  ssize_t r = pn_encoder_encode(&encoder, data, bytes, size);
-  pn_encoder_finalize(&encoder);
+  pni_encoder_t encoder;
+  pni_encoder_initialize(&encoder);
+  ssize_t r = pni_encoder_encode(&encoder, data, bytes, size);
+  pni_encoder_finalize(&encoder);
   return r;
 }
 
 ssize_t pn_data_encoded_size(pn_data_t *data)
 {
-  pn_encoder_t encoder;
-  pn_encoder_initialize(&encoder);
-  ssize_t r = pn_encoder_size(&encoder, data);
-  pn_encoder_finalize(&encoder);
+  pni_encoder_t encoder;
+  pni_encoder_initialize(&encoder);
+  ssize_t r = pni_encoder_size(&encoder, data);
+  pni_encoder_finalize(&encoder);
   return r;
 }
 

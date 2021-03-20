@@ -31,26 +31,26 @@
 
 #include "data.h"
 
-static int pni_encoder_encode_current_node(pn_encoder_t *encoder, pn_data_t *data);
-static int pni_encoder_encode_current_node_in_array(pn_encoder_t *encoder, pn_data_t *data, uint8_t code);
+static int pni_encoder_encode_current_node(pni_encoder_t *encoder, pn_data_t *data);
+static int pni_encoder_encode_current_node_in_array(pni_encoder_t *encoder, pn_data_t *data, uint8_t code);
 
-static pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
+static pn_error_t *pni_encoder_error(pni_encoder_t *encoder)
 {
   if (!encoder->error) encoder->error = pn_error();
   return encoder->error;
 }
 
-PNI_INLINE void pn_encoder_initialize(pn_encoder_t *encoder)
+PNI_INLINE void pni_encoder_initialize(pni_encoder_t *encoder)
 {
-  *encoder = (pn_encoder_t) {0};
+  *encoder = (pni_encoder_t) {0};
 }
 
-PNI_INLINE void pn_encoder_finalize(pn_encoder_t *encoder)
+PNI_INLINE void pni_encoder_finalize(pni_encoder_t *encoder)
 {
   pn_error_free(encoder->error);
 }
 
-static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
+static uint8_t pn_type2code(pni_encoder_t *encoder, pn_type_t type)
 {
   switch (type)
   {
@@ -84,7 +84,7 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   }
 }
 
-static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
+static inline uint8_t pn_node2code(pni_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -173,29 +173,29 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
+static inline size_t pni_encoder_remaining(pni_encoder_t *encoder) {
   return (encoder->output + encoder->size) - encoder->position;
 }
 
-static inline void pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
+static inline void pni_encoder_writef8(pni_encoder_t *encoder, uint8_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= 1);
+  assert(pni_encoder_remaining(encoder) >= 1);
 
   *encoder->position++ = value;
 }
 
-static inline void pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
+static inline void pni_encoder_writef16(pni_encoder_t *encoder, uint16_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= 2);
+  assert(pni_encoder_remaining(encoder) >= 2);
 
   encoder->position[0] = 0xFF & (value >> 8);
   encoder->position[1] = 0xFF & (value     );
   encoder->position += 2;
 }
 
-static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
+static inline void pni_encoder_writef32(pni_encoder_t *encoder, uint32_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= 4);
+  assert(pni_encoder_remaining(encoder) >= 4);
 
   encoder->position[0] = 0xFF & (value >> 24);
   encoder->position[1] = 0xFF & (value >> 16);
@@ -204,8 +204,8 @@ static inline void pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
   encoder->position += 4;
 }
 
-static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
-  assert(pn_encoder_remaining(encoder) >= 8);
+static inline void pni_encoder_writef64(pni_encoder_t *encoder, uint64_t value) {
+  assert(pni_encoder_remaining(encoder) >= 8);
 
   encoder->position[0] = 0xFF & (value >> 56);
   encoder->position[1] = 0xFF & (value >> 48);
@@ -218,27 +218,27 @@ static inline void pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   encoder->position += 8;
 }
 
-static inline void pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
-  assert(pn_encoder_remaining(encoder) >= 16);
+static inline void pni_encoder_writef128(pni_encoder_t *encoder, char *value) {
+  assert(pni_encoder_remaining(encoder) >= 16);
 
   memcpy(encoder->position, value, 16);
   encoder->position += 16;
 }
 
-static inline void pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t value)
+static inline void pni_encoder_writev8(pni_encoder_t *encoder, const pn_bytes_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= value.size + 1);
+  assert(pni_encoder_remaining(encoder) >= value.size + 1);
 
-  pn_encoder_writef8(encoder, value.size);
+  pni_encoder_writef8(encoder, value.size);
   memcpy(encoder->position, value.start, value.size);
   encoder->position += value.size;
 }
 
-static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t value)
+static inline void pni_encoder_writev32(pni_encoder_t *encoder, const pn_bytes_t value)
 {
-  assert(pn_encoder_remaining(encoder) >= value.size + 4);
+  assert(pni_encoder_remaining(encoder) >= value.size + 4);
 
-  pn_encoder_writef32(encoder, value.size);
+  pni_encoder_writef32(encoder, value.size);
   memcpy(encoder->position, value.start, value.size);
   encoder->position += value.size;
 }
@@ -251,60 +251,60 @@ typedef union {
   double d;
 } conv_t;
 
-static inline int pni_encoder_encode_fixed8(pn_encoder_t *encoder, pn_atom_t *atom)
+static inline int pni_encoder_encode_fixed8(pni_encoder_t *encoder, pn_atom_t *atom)
 {
-  if (pn_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
 
-  pn_encoder_writef8(encoder, atom->u.as_ubyte);
+  pni_encoder_writef8(encoder, atom->u.as_ubyte);
 
   return 0;
 }
 
-static int pni_encoder_encode_fixed16(pn_encoder_t *encoder, pn_atom_t *atom)
+static int pni_encoder_encode_fixed16(pni_encoder_t *encoder, pn_atom_t *atom)
 {
-  if (pn_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
 
-  pn_encoder_writef16(encoder, atom->u.as_ushort);
+  pni_encoder_writef16(encoder, atom->u.as_ushort);
 
   return 0;
 }
 
-static int pni_encoder_encode_fixed32(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed32(pni_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
-  if (pn_encoder_remaining(encoder) < 4) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 4) return PN_OVERFLOW;
 
   if (code == PNE_FLOAT) {
     conv_t conv = { .f = atom->u.as_float };
-    pn_encoder_writef32(encoder, conv.i);
+    pni_encoder_writef32(encoder, conv.i);
   } else {
-    pn_encoder_writef32(encoder, atom->u.as_uint);
+    pni_encoder_writef32(encoder, atom->u.as_uint);
   }
 
   return 0;
 }
 
-static int pni_encoder_encode_fixed64(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed64(pni_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
-  if (pn_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
 
   if (code == PNE_DOUBLE) {
     conv_t conv = { .d = atom->u.as_double };
-    pn_encoder_writef64(encoder, conv.l);
+    pni_encoder_writef64(encoder, conv.l);
   } else {
-    pn_encoder_writef64(encoder, atom->u.as_ulong);
+    pni_encoder_writef64(encoder, atom->u.as_ulong);
   }
 
   return 0;
 }
 
-static int pni_encoder_encode_fixed128(pn_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
+static int pni_encoder_encode_fixed128(pni_encoder_t *encoder, pn_atom_t *atom, uint8_t code)
 {
-  if (pn_encoder_remaining(encoder) < 16) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 16) return PN_OVERFLOW;
 
   if (code == PNE_UUID) {
-    pn_encoder_writef128(encoder, atom->u.as_uuid.bytes);
+    pni_encoder_writef128(encoder, atom->u.as_uuid.bytes);
   } else if (code == PNE_DECIMAL128) {
-    pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes);
+    pni_encoder_writef128(encoder, atom->u.as_decimal128.bytes);
   } else {
     return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
@@ -312,28 +312,28 @@ static int pni_encoder_encode_fixed128(pn_encoder_t *encoder, pn_atom_t *atom, u
   return 0;
 }
 
-static inline int pni_encoder_encode_variable8(pn_encoder_t *encoder, pn_atom_t *atom)
+static inline int pni_encoder_encode_variable8(pni_encoder_t *encoder, pn_atom_t *atom)
 {
   // XXX Assert string length
 
   pn_bytes_t value = atom->u.as_bytes;
 
-  if (pn_encoder_remaining(encoder) < value.size + 1) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < value.size + 1) return PN_OVERFLOW;
 
-  pn_encoder_writev8(encoder, value);
+  pni_encoder_writev8(encoder, value);
 
   return 0;
 }
 
-static int pni_encoder_encode_variable32(pn_encoder_t *encoder, pn_atom_t *atom)
+static int pni_encoder_encode_variable32(pni_encoder_t *encoder, pn_atom_t *atom)
 {
   // XXX Assert string length
 
   pn_bytes_t value = atom->u.as_bytes; // XXX Pointer?
 
-  if (pn_encoder_remaining(encoder) < value.size + 4) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < value.size + 4) return PN_OVERFLOW;
 
-  pn_encoder_writev32(encoder, value);
+  pni_encoder_writev32(encoder, value);
 
   return 0;
 }
@@ -344,7 +344,7 @@ static inline pni_node_t *pni_data_current_node(pn_data_t *data)
   return data->nodes + data->current - 1;
 }
 
-static inline int pni_encoder_encode_compound_values(pn_encoder_t *encoder, pni_node_t *node, pn_data_t *data,
+static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pni_node_t *node, pn_data_t *data,
                                                     size_t *null_count)
 {
   data->parent = data->current;
@@ -358,10 +358,10 @@ static inline int pni_encoder_encode_compound_values(pn_encoder_t *encoder, pni_
       data->current = child->next;
       continue;
     } else if (*null_count) {
-      if (pn_encoder_remaining(encoder) < *null_count) return PN_OVERFLOW;
+      if (pni_encoder_remaining(encoder) < *null_count) return PN_OVERFLOW;
 
       for (size_t i = 0; i < *null_count; i++) {
-        pn_encoder_writef8(encoder, PNE_NULL);
+        pni_encoder_writef8(encoder, PNE_NULL);
       }
 
       *null_count = 0;
@@ -379,14 +379,14 @@ static inline int pni_encoder_encode_compound_values(pn_encoder_t *encoder, pni_
   return 0;
 }
 
-static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t *data)
+static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
   size_t null_count = 0;
   char *start = encoder->position;
 
   // The size and count are backfilled after writing the elements
-  if (pn_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
   encoder->position += 2;
 
   int err = pni_encoder_encode_compound_values(encoder, node, data, &null_count);
@@ -396,22 +396,22 @@ static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t 
   encoder->position = start;
 
   // Backfill the size and count
-  pn_encoder_writef8(encoder, pos - start - 1);
-  pn_encoder_writef8(encoder, node->children - null_count);
+  pni_encoder_writef8(encoder, pos - start - 1);
+  pni_encoder_writef8(encoder, node->children - null_count);
 
   encoder->position = pos;
 
   return 0;
 }
 
-static int pni_encoder_encode_compound32(pn_encoder_t *encoder, pn_data_t *data)
+static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
   size_t null_count = 0;
   char *start = encoder->position;
 
   // The size and count are backfilled after writing the elements
-  if (pn_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+  if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
   encoder->position += 8;
 
   int err = pni_encoder_encode_compound_values(encoder, node, data, &null_count);
@@ -421,15 +421,15 @@ static int pni_encoder_encode_compound32(pn_encoder_t *encoder, pn_data_t *data)
   encoder->position = start;
 
   // Backfill the size and count
-  pn_encoder_writef32(encoder, pos - start - 4);
-  pn_encoder_writef32(encoder, node->children - null_count);
+  pni_encoder_writef32(encoder, pos - start - 4);
+  pni_encoder_writef32(encoder, node->children - null_count);
 
   encoder->position = pos;
 
   return 0;
 }
 
-static int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data)
+static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
   uint8_t array_code = pn_type2code(encoder, node->type);
@@ -439,21 +439,21 @@ static int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data)
   char *start = encoder->position;
 
   if (node->described) {
-    if (pn_encoder_remaining(encoder) < 9) return PN_OVERFLOW;
+    if (pni_encoder_remaining(encoder) < 9) return PN_OVERFLOW;
 
     encoder->position += 4; // The size is backfilled after writing the elements
-    pn_encoder_writef32(encoder, node->children - 1);
-    pn_encoder_writef8(encoder, 0);
+    pni_encoder_writef32(encoder, node->children - 1);
+    pni_encoder_writef8(encoder, 0);
   } else {
-    if (pn_encoder_remaining(encoder) < 5) return PN_OVERFLOW;
+    if (pni_encoder_remaining(encoder) < 5) return PN_OVERFLOW;
 
     encoder->position += 4; // The size is backfilled after writing the elements
-    pn_encoder_writef32(encoder, node->children);
+    pni_encoder_writef32(encoder, node->children);
   }
 
   // XXX Need to handle described values here? Yes.
-  if (pn_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-  pn_encoder_writef8(encoder, array_code);
+  if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+  pni_encoder_writef8(encoder, array_code);
 
   data->parent = data->current;
   data->current = node->down;
@@ -472,14 +472,14 @@ static int pni_encoder_encode_array32(pn_encoder_t *encoder, pn_data_t *data)
   encoder->position = start;
 
   // Write the size
-  pn_encoder_writef32(encoder, (size_t) (pos - start - 4));
+  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
 
   encoder->position = pos;
 
   return 0;
 }
 
-static inline int pni_encoder_encode_described(pn_encoder_t *encoder, pn_data_t *data)
+static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
   int err;
@@ -501,14 +501,14 @@ static inline int pni_encoder_encode_described(pn_encoder_t *encoder, pn_data_t 
   return 0;
 }
 
-static int pni_encoder_encode_current_node(pn_encoder_t *encoder, pn_data_t *data)
+static int pni_encoder_encode_current_node(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
   uint8_t code = pn_node2code(encoder, node);
   pn_atom_t *atom = &node->atom;
 
-  if (pn_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-  pn_encoder_writef8(encoder, code);
+  if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+  pni_encoder_writef8(encoder, code);
 
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data);
@@ -528,7 +528,7 @@ static int pni_encoder_encode_current_node(pn_encoder_t *encoder, pn_data_t *dat
   }
 }
 
-static int pni_encoder_encode_current_node_in_array(pn_encoder_t *encoder, pn_data_t *data, uint8_t code)
+static int pni_encoder_encode_current_node_in_array(pni_encoder_t *encoder, pn_data_t *data, uint8_t code)
 {
   pni_node_t *node = pni_data_current_node(data);
   pn_atom_t *atom = &node->atom;
@@ -551,7 +551,7 @@ static int pni_encoder_encode_current_node_in_array(pn_encoder_t *encoder, pn_da
   }
 }
 
-ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
+ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
 {
   if (!src->size) return 0;
 
@@ -584,14 +584,14 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
 #include <stdlib.h>
 
 // XXX Use memory alloc functions in here
-ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)
+ssize_t pni_encoder_size(pni_encoder_t *encoder, pn_data_t *src)
 {
   size_t buf_size = 64;
   char *buf = malloc(buf_size);
   int err;
 
   while (true) {
-    err = pn_encoder_encode(encoder, src, buf, buf_size);
+    err = pni_encoder_encode(encoder, src, buf, buf_size);
 
     if (err == PN_OVERFLOW) {
       buf_size = buf_size * 2;
