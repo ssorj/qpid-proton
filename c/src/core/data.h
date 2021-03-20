@@ -23,7 +23,9 @@
  */
 
 #include <proton/codec.h>
+
 #include "buffer.h"
+#include "config.h"
 #include "decoder.h"
 #include "encoder.h"
 
@@ -42,15 +44,13 @@ typedef struct {
   pni_nid_t down;
   pni_nid_t parent;
   pni_nid_t children;
-  // for arrays
-  bool described;
+  bool described; // For arrays
   bool data;
-  bool small;
 } pni_node_t;
 
 struct pn_data_t {
   pni_node_t *nodes;
-  pn_buffer_t *buf;
+  pn_buffer_t *intern_buf;
   pn_error_t *error;
   pni_nid_t capacity;
   pni_nid_t size;
@@ -58,12 +58,78 @@ struct pn_data_t {
   pni_nid_t current;
   pni_nid_t base_parent;
   pni_nid_t base_current;
+  bool intern;
 };
 
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
-{
-  return nd ? (data->nodes + nd - 1) : NULL;
-}
+pn_data_t* pni_data(size_t capacity, bool intern);
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id);
+
+size_t pni_data_size(pn_data_t *data);
+void pni_data_clear(pn_data_t *data);
+
+pn_type_t pni_data_type(pn_data_t *data);
+pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id);
+
+bool pni_data_enter(pn_data_t *data);
+bool pni_data_exit(pn_data_t *data);
+bool pni_data_next(pn_data_t *data);
+
+void pni_data_rewind(pn_data_t *data);
+void pni_data_narrow(pn_data_t *data);
+void pni_data_widen(pn_data_t *data);
+pn_handle_t pni_data_point(pn_data_t *data);
+bool pni_data_restore(pn_data_t *data, pn_handle_t point);
+
+int pni_data_put_described(pn_data_t *data);
+int pni_data_put_compound(pn_data_t *data, pn_type_t type);
+int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
+
+pni_node_t *pni_data_add_node(pn_data_t *data);
+int pni_data_intern_node(pn_data_t *data, pni_node_t *node);
+
+void pni_node_set_type(pni_node_t *node, pn_type_t type);
+void pni_node_set_bytes(pni_node_t *node, pn_type_t type, pn_bytes_t bytes);
+
+void pni_node_set_bool(pni_node_t *node, bool value);
+void pni_node_set_byte(pni_node_t *node, int8_t value);
+void pni_node_set_char(pni_node_t *node, pn_char_t value);
+void pni_node_set_decimal32(pni_node_t *node, pn_decimal32_t value);
+void pni_node_set_decimal64(pni_node_t *node, pn_decimal64_t value);
+void pni_node_set_decimal128(pni_node_t *node, pn_decimal128_t value);
+void pni_node_set_double(pni_node_t *node, double value);
+void pni_node_set_float(pni_node_t *node, float value);
+void pni_node_set_int(pni_node_t *node, int32_t value);
+void pni_node_set_long(pni_node_t *node, int64_t value);
+void pni_node_set_short(pni_node_t *node, int16_t value);
+void pni_node_set_timestamp(pni_node_t *node, pn_timestamp_t value);
+void pni_node_set_ubyte(pni_node_t *node, uint8_t value);
+void pni_node_set_uint(pni_node_t *node, uint32_t value);
+void pni_node_set_ulong(pni_node_t *node, uint64_t value);
+void pni_node_set_ushort(pni_node_t *node, uint16_t value);
+void pni_node_set_uuid(pni_node_t *node, pn_uuid_t value);
+
+int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);
+int pni_data_put_bool(pn_data_t *data, bool b);
+int pni_data_put_byte(pn_data_t *data, int8_t b);
+int pni_data_put_char(pn_data_t *data, pn_char_t c);
+int pni_data_put_double(pn_data_t *data, double d);
+int pni_data_put_float(pn_data_t *data, float f);
+int pni_data_put_int(pn_data_t *data, int32_t i);
+int pni_data_put_long(pn_data_t *data, int64_t l);
+int pni_data_put_null(pn_data_t *data);
+int pni_data_put_short(pn_data_t *data, int16_t s);
+int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
+int pni_data_put_ubyte(pn_data_t *data, uint8_t ub);
+int pni_data_put_uint(pn_data_t *data, uint32_t ui);
+int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
+int pni_data_put_ushort(pn_data_t *data, uint16_t us);
+
+int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
+int pni_data_copy(pn_data_t *data, pn_data_t *src);
+
+void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
+
+ssize_t pni_data_decode(pn_data_t *data, const char *bytes, size_t size);
 
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
