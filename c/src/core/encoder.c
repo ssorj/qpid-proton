@@ -304,8 +304,6 @@ static int pni_encoder_encode_fixed128(pni_encoder_t *encoder, pni_node_t *node,
 
 static inline int pni_encoder_encode_variable8(pni_encoder_t *encoder, pni_node_t *node)
 {
-  // XXX Assert string length
-
   pn_bytes_t value = node->atom.u.as_bytes;
 
   if (pni_encoder_remaining(encoder) < value.size + 1) return PN_OVERFLOW;
@@ -317,8 +315,6 @@ static inline int pni_encoder_encode_variable8(pni_encoder_t *encoder, pni_node_
 
 static int pni_encoder_encode_variable32(pni_encoder_t *encoder, pni_node_t *node)
 {
-  // XXX Assert string length
-
   pn_bytes_t value = node->atom.u.as_bytes;
 
   if (pni_encoder_remaining(encoder) < value.size + 4) return PN_OVERFLOW;
