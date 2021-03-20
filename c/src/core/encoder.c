@@ -27,6 +27,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "data.h"
@@ -579,9 +580,6 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   return (ssize_t) encoded;
 }
 
-#include <stdlib.h>
-
-// XXX Use memory alloc functions in here
 ssize_t pni_encoder_size(pni_encoder_t *encoder, pn_data_t *src)
 {
   size_t buf_size = 64;
