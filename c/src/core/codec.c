@@ -1330,7 +1330,6 @@ PNI_INLINE bool pni_data_next(pn_data_t *data)
   } else if (data->parent) {
     pni_node_t *parent = data->nodes + data->parent - 1;
 
-    // XXX When is down not set?
     if (parent->down) {
       data->current = parent->down;
       return true;

@@ -24,6 +24,8 @@
 
 #include <proton/codec.h>
 
+#include <assert.h>
+
 #include "buffer.h"
 #include "config.h"
 #include "decoder.h"
@@ -135,5 +137,11 @@ int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
+
+static inline pni_node_t *pni_data_current_node(pn_data_t *data)
+{
+  assert(data->current);
+  return data->nodes + data->current - 1;
+}
 
 #endif /* data.h */
