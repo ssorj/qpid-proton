@@ -595,7 +595,7 @@ PNI_INLINE ssize_t pni_decoder_decode(pni_decoder_t *decoder, const char *src, s
   int err = pni_decoder_decode_item(decoder, dst);
 
   if (err == PN_UNDERFLOW) {
-    return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");
+    return pn_error_format(pni_decoder_error(decoder), PN_UNDERFLOW, "not enough data to decode");
   }
 
   if (err) return err;

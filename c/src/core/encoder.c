@@ -513,7 +513,7 @@ static int pni_encoder_encode_current_node(pni_encoder_t *encoder, pn_data_t *da
   case 0xD0: return pni_encoder_encode_compound32(encoder, data);
   case 0xE0:
   case 0xF0: return pni_encoder_encode_array32(encoder, data);
-  default:   return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
+  default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 
@@ -536,7 +536,7 @@ static int pni_encoder_encode_current_node_in_array(pni_encoder_t *encoder, pn_d
   case 0xD0: return pni_encoder_encode_compound32(encoder, data);
   case 0xE0:
   case 0xF0: return pni_encoder_encode_array32(encoder, data);
-  default:   return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
+  default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 
@@ -573,7 +573,7 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   size_t encoded = encoder->position - encoder->output;
 
   if (encoded > size) {
-      return pn_error_format(pn_data_error(src), PN_OVERFLOW, "not enough space to encode");
+      return pn_error_format(pni_encoder_error(encoder), PN_OVERFLOW, "not enough space to encode");
   }
 
   return (ssize_t) encoded;
