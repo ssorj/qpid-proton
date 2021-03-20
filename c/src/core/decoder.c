@@ -53,16 +53,6 @@ static pn_error_t *pni_decoder_error(pni_decoder_t *decoder)
   return decoder->error;
 }
 
-PNI_INLINE void pni_decoder_initialize(pni_decoder_t *decoder)
-{
-  *decoder = (pni_decoder_t) {0};
-}
-
-PNI_INLINE void pni_decoder_finalize(pni_decoder_t *decoder)
-{
-  pn_error_free(decoder->error);
-}
-
 static inline uint8_t pni_decoder_readf8(pni_decoder_t *decoder)
 {
   return *decoder->position++;
@@ -586,7 +576,17 @@ static int pni_decoder_decode_array32(pni_decoder_t *decoder, pni_node_t *node, 
 //     code != PNE_MAP8 && code != PNE_MAP32;
 // }
 
-ssize_t pni_decoder_decode(pni_decoder_t *decoder, const char *src, size_t size, pn_data_t *dst)
+PNI_INLINE void pni_decoder_initialize(pni_decoder_t *decoder)
+{
+  *decoder = (pni_decoder_t) {0};
+}
+
+PNI_INLINE void pni_decoder_finalize(pni_decoder_t *decoder)
+{
+  pn_error_free(decoder->error);
+}
+
+PNI_INLINE ssize_t pni_decoder_decode(pni_decoder_t *decoder, const char *src, size_t size, pn_data_t *dst)
 {
   decoder->input = src;
   decoder->size = size;

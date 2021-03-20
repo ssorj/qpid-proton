@@ -40,16 +40,6 @@ static pn_error_t *pni_encoder_error(pni_encoder_t *encoder)
   return encoder->error;
 }
 
-PNI_INLINE void pni_encoder_initialize(pni_encoder_t *encoder)
-{
-  *encoder = (pni_encoder_t) {0};
-}
-
-PNI_INLINE void pni_encoder_finalize(pni_encoder_t *encoder)
-{
-  pn_error_free(encoder->error);
-}
-
 static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, pn_type_t type)
 {
   switch (type) {
@@ -83,7 +73,7 @@ static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, pn_type_t type)
   }
 }
 
-static inline uint8_t pn_node2code(pni_encoder_t *encoder, pni_node_t *node)
+static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -503,7 +493,7 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
 static int pni_encoder_encode_current_node(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
-  uint8_t code = pn_node2code(encoder, node);
+  uint8_t code = pni_encoder_node2code(encoder, node);
   pn_atom_t *atom = &node->atom;
 
   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
@@ -548,6 +538,16 @@ static int pni_encoder_encode_current_node_in_array(pni_encoder_t *encoder, pn_d
   case 0xF0: return pni_encoder_encode_array32(encoder, data);
   default:   return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }
+}
+
+PNI_INLINE void pni_encoder_initialize(pni_encoder_t *encoder)
+{
+  *encoder = (pni_encoder_t) {0};
+}
+
+PNI_INLINE void pni_encoder_finalize(pni_encoder_t *encoder)
+{
+  pn_error_free(encoder->error);
 }
 
 ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
