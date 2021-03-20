@@ -177,17 +177,6 @@ static inline uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
   }
 }
 
-// static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
-//   char *end = encoder->output + encoder->size;
-
-//   if (end > encoder->position) {
-//     return end - encoder->position;
-//   } else {
-//     return 0;
-//   }
-// }
-
-// XXX Consider indexes instead of pointer math
 static inline size_t pn_encoder_remaining(pn_encoder_t *encoder) {
   return (encoder->output + encoder->size) - encoder->position;
 }
@@ -320,6 +309,8 @@ static int pni_encoder_encode_fixed128(pn_encoder_t *encoder, pn_atom_t *atom, u
     pn_encoder_writef128(encoder, atom->u.as_uuid.bytes);
   } else if (code == PNE_DECIMAL128) {
     pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes);
+  } else {
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
 
   return 0;
@@ -357,36 +348,60 @@ static inline pni_node_t *pni_data_current_node(pn_data_t *data)
   return data->nodes + data->current - 1;
 }
 
-static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t *data)
+static inline int pni_encoder_encode_compound_values(pn_encoder_t *encoder, pni_node_t *node, pn_data_t *data,
+                                                    size_t *null_count)
 {
-  pni_node_t *node = pni_data_current_node(data);
-  size_t count = node->children;
-  char *start = encoder->position;
-  int err;
-
-  if (pn_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
-
-  encoder->position += 1; // The size is backfilled after writing the elements
-  pn_encoder_writef8(encoder, node->children);
-
   data->parent = data->current;
   data->current = node->down;
 
-  for (size_t i = 0; i < count; i++) {
-    err = pni_encoder_encode_current_node(encoder, data);
+  for (size_t i = 0; i < node->children; i++) {
+    pni_node_t *child = pni_data_current_node(data);
+
+    if (child->atom.type == PN_NULL) {
+      *null_count += 1;
+      data->current = child->next;
+      continue;
+    } else if (*null_count) {
+      if (pn_encoder_remaining(encoder) < *null_count) return PN_OVERFLOW;
+
+      for (size_t i = 0; i < *null_count; i++) {
+        pn_encoder_writef8(encoder, PNE_NULL);
+      }
+
+      *null_count = 0;
+    }
+
+    int err = pni_encoder_encode_current_node(encoder, data);
     if (err) return err;
 
-    data->current = pni_data_current_node(data)->next;
+    data->current = child->next;
   }
 
   data->current = data->parent;
   data->parent = node->parent;
 
+  return 0;
+}
+
+static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t *data)
+{
+  pni_node_t *node = pni_data_current_node(data);
+  size_t null_count = 0;
+  char *start = encoder->position;
+
+  // The size and count are backfilled after writing the elements
+  if (pn_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
+  encoder->position += 2;
+
+  int err = pni_encoder_encode_compound_values(encoder, node, data, &null_count);
+  if (err) return err;
+
   char *pos = encoder->position;
   encoder->position = start;
 
-  // Write the size
+  // Backfill the size and count
   pn_encoder_writef8(encoder, pos - start - 1);
+  pn_encoder_writef8(encoder, node->children - null_count);
 
   encoder->position = pos;
 
@@ -396,33 +411,22 @@ static inline int pni_encoder_encode_compound8(pn_encoder_t *encoder, pn_data_t 
 static int pni_encoder_encode_compound32(pn_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
-  size_t count = node->children;
+  size_t null_count = 0;
   char *start = encoder->position;
-  int err;
 
+  // The size and count are backfilled after writing the elements
   if (pn_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+  encoder->position += 8;
 
-  encoder->position += 4; // The size is backfilled after writing the elements
-  pn_encoder_writef32(encoder, node->children);
-
-  data->parent = data->current;
-  data->current = node->down;
-
-  for (size_t i = 0; i < count; i++) {
-    err = pni_encoder_encode_current_node(encoder, data);
-    if (err) return err;
-
-    data->current = pni_data_current_node(data)->next;
-  }
-
-  data->current = data->parent;
-  data->parent = node->parent;
+  int err = pni_encoder_encode_compound_values(encoder, node, data, &null_count);
+  if (err) return err;
 
   char *pos = encoder->position;
   encoder->position = start;
 
-  // Write the size
+  // Backfill the size and count
   pn_encoder_writef32(encoder, pos - start - 4);
+  pn_encoder_writef32(encoder, node->children - null_count);
 
   encoder->position = pos;
 
