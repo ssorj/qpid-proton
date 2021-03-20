@@ -43,33 +43,33 @@ static pn_error_t *pni_encoder_error(pni_encoder_t *encoder)
 static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, pn_type_t type)
 {
   switch (type) {
-  case PN_NULL: return PNE_NULL;
-  case PN_BOOL: return PNE_BOOLEAN;
-  case PN_UBYTE: return PNE_UBYTE;
-  case PN_BYTE: return PNE_BYTE;
-  case PN_USHORT: return PNE_USHORT;
-  case PN_SHORT: return PNE_SHORT;
-  case PN_UINT: return PNE_UINT;
-  case PN_INT: return PNE_INT;
-  case PN_CHAR: return PNE_UTF32;
-  case PN_FLOAT: return PNE_FLOAT;
-  case PN_LONG: return PNE_LONG;
-  case PN_TIMESTAMP: return PNE_MS64;
-  case PN_DOUBLE: return PNE_DOUBLE;
-  case PN_DECIMAL32: return PNE_DECIMAL32;
-  case PN_DECIMAL64: return PNE_DECIMAL64;
+  case PN_NULL:       return PNE_NULL;
+  case PN_BOOL:       return PNE_BOOLEAN;
+  case PN_UBYTE:      return PNE_UBYTE;
+  case PN_BYTE:       return PNE_BYTE;
+  case PN_USHORT:     return PNE_USHORT;
+  case PN_SHORT:      return PNE_SHORT;
+  case PN_UINT:       return PNE_UINT;
+  case PN_INT:        return PNE_INT;
+  case PN_CHAR:       return PNE_UTF32;
+  case PN_FLOAT:      return PNE_FLOAT;
+  case PN_LONG:       return PNE_LONG;
+  case PN_TIMESTAMP:  return PNE_MS64;
+  case PN_DOUBLE:     return PNE_DOUBLE;
+  case PN_DECIMAL32:  return PNE_DECIMAL32;
+  case PN_DECIMAL64:  return PNE_DECIMAL64;
   case PN_DECIMAL128: return PNE_DECIMAL128;
-  case PN_UUID: return PNE_UUID;
-  case PN_ULONG: return PNE_ULONG;
-  case PN_BINARY: return PNE_VBIN32;
-  case PN_STRING: return PNE_STR32_UTF8;
-  case PN_SYMBOL: return PNE_SYM32;
-  case PN_LIST: return PNE_LIST32;
-  case PN_ARRAY: return PNE_ARRAY32;
-  case PN_MAP: return PNE_MAP32;
-  case PN_DESCRIBED: return PNE_DESCRIPTOR;
+  case PN_UUID:       return PNE_UUID;
+  case PN_ULONG:      return PNE_ULONG;
+  case PN_BINARY:     return PNE_VBIN32;
+  case PN_STRING:     return PNE_STR32_UTF8;
+  case PN_SYMBOL:     return PNE_SYM32;
+  case PN_LIST:       return PNE_LIST32;
+  case PN_ARRAY:      return PNE_ARRAY32;
+  case PN_MAP:        return PNE_MAP32;
+  case PN_DESCRIBED:  return PNE_DESCRIPTOR;
   default:
-    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u\n", type);
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", type);
   }
 }
 
@@ -142,21 +142,21 @@ static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *
     } else {
       return PNE_MAP32;
     }
-  case PN_NULL: return PNE_NULL;
-  case PN_UBYTE: return PNE_UBYTE;
-  case PN_BYTE: return PNE_BYTE;
-  case PN_USHORT: return PNE_USHORT;
-  case PN_SHORT: return PNE_SHORT;
-  case PN_CHAR: return PNE_UTF32;
-  case PN_FLOAT: return PNE_FLOAT;
-  case PN_TIMESTAMP: return PNE_MS64;
-  case PN_DOUBLE: return PNE_DOUBLE;
-  case PN_DECIMAL32: return PNE_DECIMAL32;
-  case PN_DECIMAL64: return PNE_DECIMAL64;
+  case PN_NULL:       return PNE_NULL;
+  case PN_UBYTE:      return PNE_UBYTE;
+  case PN_BYTE:       return PNE_BYTE;
+  case PN_USHORT:     return PNE_USHORT;
+  case PN_SHORT:      return PNE_SHORT;
+  case PN_CHAR:       return PNE_UTF32;
+  case PN_FLOAT:      return PNE_FLOAT;
+  case PN_TIMESTAMP:  return PNE_MS64;
+  case PN_DOUBLE:     return PNE_DOUBLE;
+  case PN_DECIMAL32:  return PNE_DECIMAL32;
+  case PN_DECIMAL64:  return PNE_DECIMAL64;
   case PN_DECIMAL128: return PNE_DECIMAL128;
-  case PN_UUID: return PNE_UUID;
-  case PN_ARRAY: return PNE_ARRAY32;
-  case PN_DESCRIBED: return PNE_DESCRIPTOR;
+  case PN_UUID:       return PNE_UUID;
+  case PN_ARRAY:      return PNE_ARRAY32;
+  case PN_DESCRIBED:  return PNE_DESCRIPTOR;
   default:
     return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", node->atom.type);
   }
