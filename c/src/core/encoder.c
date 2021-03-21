@@ -407,55 +407,6 @@ static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data
   return 0;
 }
 
-static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
-{
-  const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
-  size_t count = node->children;
-
-  char *start = encoder->position;
-
-  if (node->described) {
-    if (pni_encoder_remaining(encoder) < 9) return PN_OVERFLOW;
-
-    encoder->position += 4; // The size is backfilled after writing the elements
-    pni_encoder_writef32(encoder, node->children - 1);
-    pni_encoder_writef8(encoder, 0);
-  } else {
-    if (pni_encoder_remaining(encoder) < 5) return PN_OVERFLOW;
-
-    encoder->position += 4; // The size is backfilled after writing the elements
-    pni_encoder_writef32(encoder, node->children);
-  }
-
-  // XXX Need to handle described values here? Yes.
-  if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-  pni_encoder_writef8(encoder, array_code);
-
-  data->parent = data->current;
-  data->current = node->down;
-
-  for (size_t i = 0; i < count; i++) {
-    pni_node_t *child = pni_data_current_node(data);
-    int err = pni_encoder_encode_array_element(encoder, data, child, array_code);
-    if (err) return err;
-
-    data->current = pni_data_current_node(data)->next;
-  }
-
-  data->current = data->parent;
-  data->parent = node->parent;
-
-  char *pos = encoder->position;
-  encoder->position = start;
-
-  // Write the size
-  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
-
-  encoder->position = pos;
-
-  return 0;
-}
-
 static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t *data)
 {
   pni_node_t *node = pni_data_current_node(data);
@@ -482,12 +433,157 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
   return 0;
 }
 
+// static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+// {
+//   const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
+//   char *start = encoder->position;
+
+//   if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+//   // The size is backfilled after writing the elements
+//   encoder->position += 4;
+
+//   if (node->described) {
+//     pni_encoder_writef32(encoder, node->children - 1);
+//   } else {
+//     pni_encoder_writef32(encoder, node->children);
+//   }
+
+//   data->parent = data->current;
+//   data->current = node->down;
+
+//   // if (node->described) {
+//   //   pn_data_dump(data);
+
+//   //   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+//   //   pni_encoder_writef8(encoder, PNE_DESCRIPTOR); // XXX Move this up?
+
+//   //   pni_encoder_encode_described(encoder, data);
+//   // }
+
+//   // pn_data_dump(data);
+
+//   if (node->described) {
+//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+//     pni_encoder_writef8(encoder, PNE_DESCRIPTOR);
+
+//     pni_node_t *child = pni_data_current_node(data);
+//     int err = pni_encoder_encode_node(encoder, data, child);
+//     if (err) return err;
+
+//     data->current = child->next;
+
+//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+//     pni_encoder_writef8(encoder, array_code);
+
+//     for (size_t i = 1; i < node->children; i++) {
+//       child = pni_data_current_node(data);
+//       err = pni_encoder_encode_array_element(encoder, data, child, array_code);
+//       if (err) return err;
+
+//       data->current = child->next;
+//     }
+//   } else {
+//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+//     pni_encoder_writef8(encoder, array_code);
+
+//     pni_node_t *child;
+
+//     for (size_t i = 0; i < node->children; i++) {
+//       child = pni_data_current_node(data);
+//       int err = pni_encoder_encode_array_element(encoder, data, child, array_code);
+//       if (err) return err;
+
+//       data->current = child->next;
+//     }
+//   }
+
+//   data->current = data->parent;
+//   data->parent = node->parent;
+
+//   char *pos = encoder->position;
+//   encoder->position = start;
+
+//   // Write the size
+//   pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
+
+//   encoder->position = pos;
+
+//   return 0;
+// }
+
+static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
+  char *start = encoder->position;
+
+  if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+  // The size is backfilled after writing the elements
+  encoder->position += 4;
+
+  if (node->described) {
+    pni_encoder_writef32(encoder, node->children - 1);
+  } else {
+    pni_encoder_writef32(encoder, node->children);
+  }
+
+  fprintf(stdout, "STARTING with currrent %d\n", data->current);
+
+  data->parent = data->current;
+  data->current = node->down;
+
+  pni_node_t *child;
+  size_t i = 0;
+  int err;
+
+  if (node->described) {
+    if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
+    pni_encoder_writef8(encoder, PNE_DESCRIPTOR);
+
+    child = pni_data_current_node(data);
+    err = pni_encoder_encode_node(encoder, data, child);
+    if (err) return err;
+
+    data->current = child->next;
+
+    i++;
+  }
+
+  // Write the primitive format code
+  if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW; // XXX?
+  pni_encoder_writef8(encoder, array_code);
+
+  for (; i < node->children; i++) {
+    child = pni_data_current_node(data);
+    err = pni_encoder_encode_array_element(encoder, data, child, array_code);
+    if (err) return err;
+
+    data->current = child->next;
+  }
+
+  data->current = data->parent;
+  data->parent = node->parent;
+
+  fprintf(stdout, "FINISHING with currrent %d\n", data->current);
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  // Backfill the size
+  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
+
+  encoder->position = pos;
+
+  return 0;
+}
+
 static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   const uint8_t code = pni_encoder_node2code(encoder, node);
 
   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
   pni_encoder_writef8(encoder, code);
+
+  // XXX Try smallulong here?
 
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data);

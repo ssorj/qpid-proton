@@ -329,8 +329,9 @@ static int pni_decoder_decode_variable32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_variable_value(decoder, data, node, code, size);
 }
 
-static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
-                                                     const uint8_t code, const size_t count)
+PNI_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data,
+                                                                      pni_node_t *node, const uint8_t code,
+                                                                      const size_t count)
 {
   pn_type_t type;
 
@@ -381,37 +382,43 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
 
-// XXX Needs work
-static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
-                                                  const uint8_t code, const size_t count)
+// // We disallow using any compound type as a described descriptor to avoid recursion
+// // in decoding. Although these seem syntactically valid they don't seem to be of any
+// // conceivable use!
+// static inline bool pni_allowed_descriptor_code(uint8_t code)
+// {
+//   return
+//     code != PNE_DESCRIPTOR &&
+//     code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
+//     code != PNE_LIST8 && code != PNE_LIST32 &&
+//     code != PNE_MAP8 && code != PNE_MAP32;
+// }
+
+static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
+                                           const uint8_t code, const size_t count)
 {
   int err;
-  bool described = (*decoder->position == PNE_DESCRIPTOR);
   uint8_t array_code;
 
-  // err = pn_data_put_array(data, described, (pn_type_t) 0);
-  // if (err) return err;
-
   pni_node_set_type(node, PN_ARRAY);
-
-  // XXX
-  node->described = described;
-  node->type = (pn_type_t) 0;
-  // End XXX
-
-  pni_data_enter(data);
 
   // Get the array type code
   err = pni_decoder_decode_type(decoder, &array_code);
   if (err) return err;
 
+  pni_data_enter(data);
+
   if (array_code == PNE_DESCRIPTOR) {
+    node->described = true;
     err = pni_decoder_decode_described_type(decoder, data, &array_code);
     if (err) return err;
   }
 
-  pn_type_t type = pni_decoder_code2type(array_code);
-  if ((int) type < 0) return (int) type;
+  // XXX Use the out param pattern here too
+  pn_type_t array_type = pni_decoder_code2type(array_code);
+  if ((int) array_type < 0) return (int) array_type;
+
+  node->type = array_type;
 
   for (size_t i = 0; i < count; i++) {
     err = pni_decoder_decode_value(decoder, data, array_code);
@@ -419,7 +426,6 @@ static inline int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_dat
   }
 
   pni_data_exit(data);
-  pni_data_set_array_type(data, type);
 
   return 0;
 }
@@ -447,33 +453,12 @@ static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, p
   if (remaining < size + 4) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf32(decoder);
 
-  // if (pni_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
-
-  // size_t size = pni_decoder_readf32(decoder);
-  // size_t count = pni_decoder_readf32(decoder);
-
-  // // Check that the size is big enough for the count and the array
-  // // constructor
-  // if (size < 4 + 1) return PN_ARG_ERR;
-
   return pni_decoder_decode_array_values(decoder, data, node, code, count);
 }
 
-// // We disallow using any compound type as a described descriptor to avoid recursion
-// // in decoding. Although these seem syntactically valid they don't seem to be of any
-// // conceivable use!
-// static inline bool pni_allowed_descriptor_code(uint8_t code)
-// {
-//   return
-//     code != PNE_DESCRIPTOR &&
-//     code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
-//     code != PNE_LIST8 && code != PNE_LIST32 &&
-//     code != PNE_MAP8 && code != PNE_MAP32;
-// }
-
 static inline int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t *code)
 {
-  if (!pni_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  if (pni_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
   *code = pni_decoder_readf8(decoder);
   return 0;
 }
@@ -540,6 +525,7 @@ static inline int pni_decoder_decode_described_value(pni_decoder_t *decoder, pn_
   int err;
   uint8_t code;
 
+  // XXX Nodify
   err = pni_data_put_described(data);
   if (err) return err;
 
