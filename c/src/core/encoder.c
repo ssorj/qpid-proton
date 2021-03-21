@@ -433,84 +433,6 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
   return 0;
 }
 
-// static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
-// {
-//   const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
-//   char *start = encoder->position;
-
-//   if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
-//   // The size is backfilled after writing the elements
-//   encoder->position += 4;
-
-//   if (node->described) {
-//     pni_encoder_writef32(encoder, node->children - 1);
-//   } else {
-//     pni_encoder_writef32(encoder, node->children);
-//   }
-
-//   data->parent = data->current;
-//   data->current = node->down;
-
-//   // if (node->described) {
-//   //   pn_data_dump(data);
-
-//   //   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-//   //   pni_encoder_writef8(encoder, PNE_DESCRIPTOR); // XXX Move this up?
-
-//   //   pni_encoder_encode_described(encoder, data);
-//   // }
-
-//   // pn_data_dump(data);
-
-//   if (node->described) {
-//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-//     pni_encoder_writef8(encoder, PNE_DESCRIPTOR);
-
-//     pni_node_t *child = pni_data_current_node(data);
-//     int err = pni_encoder_encode_node(encoder, data, child);
-//     if (err) return err;
-
-//     data->current = child->next;
-
-//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-//     pni_encoder_writef8(encoder, array_code);
-
-//     for (size_t i = 1; i < node->children; i++) {
-//       child = pni_data_current_node(data);
-//       err = pni_encoder_encode_array_element(encoder, data, child, array_code);
-//       if (err) return err;
-
-//       data->current = child->next;
-//     }
-//   } else {
-//     if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
-//     pni_encoder_writef8(encoder, array_code);
-
-//     pni_node_t *child;
-
-//     for (size_t i = 0; i < node->children; i++) {
-//       child = pni_data_current_node(data);
-//       int err = pni_encoder_encode_array_element(encoder, data, child, array_code);
-//       if (err) return err;
-
-//       data->current = child->next;
-//     }
-//   }
-
-//   data->current = data->parent;
-//   data->parent = node->parent;
-
-//   char *pos = encoder->position;
-//   encoder->position = start;
-
-//   // Write the size
-//   pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
-
-//   encoder->position = pos;
-
-//   return 0;
-// }
-
 static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
@@ -525,8 +447,6 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
   } else {
     pni_encoder_writef32(encoder, node->children);
   }
-
-  fprintf(stdout, "STARTING with currrent %d\n", data->current);
 
   data->parent = data->current;
   data->current = node->down;
@@ -562,8 +482,6 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
 
   data->current = data->parent;
   data->parent = node->parent;
-
-  fprintf(stdout, "FINISHING with currrent %d\n", data->current);
 
   char *pos = encoder->position;
   encoder->position = start;
@@ -648,7 +566,11 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   while (pni_data_next(src)) { // XXX
     pni_node_t *node = pni_data_current_node(src);
     int err = pni_encoder_encode_node(encoder, src, node);
-    if (err) return err;
+
+    if (err) {
+      pni_data_restore(src, save);
+      return err;
+    }
   }
 
   pni_data_restore(src, save);
@@ -656,7 +578,7 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   size_t encoded = encoder->position - encoder->output;
 
   if (encoded > size) {
-      return pn_error_format(pni_encoder_error(encoder), PN_OVERFLOW, "not enough space to encode");
+    return pn_error_format(pni_encoder_error(encoder), PN_OVERFLOW, "not enough space to encode");
   }
 
   return (ssize_t) encoded;
