@@ -415,16 +415,9 @@ static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t
     data->parent = saved_parent;
 
     // Rewrite the format code
-
     encoder->position = encoder->position - 1;
-
-    assert((uint8_t) *encoder->position == PNE_LIST8 || (uint8_t) *encoder->position == PNE_MAP8);
-
-    if ((uint8_t) *encoder->position == PNE_LIST8) {
-      pni_encoder_writef8(encoder, PNE_LIST32);
-    } else {
-      pni_encoder_writef8(encoder, PNE_MAP32);
-    }
+    uint8_t code = (((uint8_t) *encoder->position) & 0x0F) | (0xD0 & 0xF0);
+    pni_encoder_writef8(encoder, code);
 
     return pni_encoder_encode_compound32(encoder, data, node);
   }
