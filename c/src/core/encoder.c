@@ -390,9 +390,9 @@ static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data
 
 static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
-  char *start = encoder->position;
-  pni_nid_t saved_current = data->current;
-  pni_nid_t saved_parent = data->parent;
+  char *starting_position = encoder->position;
+  pni_nid_t starting_current = data->current;
+  pni_nid_t starting_parent = data->parent;
   unsigned null_count = 0;
 
   // The size and count are backfilled after writing the elements
@@ -403,16 +403,16 @@ static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t
   if (err) return err;
 
   char *pos = encoder->position;
-  encoder->position = start;
+  encoder->position = starting_position;
 
-  size_t size = pos - start - 1;
+  size_t size = pos - starting_position - 1;
 
   if (size >= 256) {
     // The encoded size is too large for compound8.  Fall back to
     // compound32 encoding.
 
-    data->current = saved_current;
-    data->parent = saved_parent;
+    data->current = starting_current;
+    data->parent = starting_parent;
 
     // Rewrite the format code
     encoder->position = encoder->position - 1;
@@ -525,9 +525,9 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
 
 static int pni_encoder_encode_array8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
-  char *start = encoder->position;
-  pni_nid_t saved_current = data->current;
-  pni_nid_t saved_parent = data->parent;
+  char *starting_position = encoder->position;
+  pni_nid_t starting_current = data->current;
+  pni_nid_t starting_parent = data->parent;
 
   // The size and count are backfilled after writing the elements
   if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
@@ -537,16 +537,16 @@ static int pni_encoder_encode_array8(pni_encoder_t *encoder, pn_data_t *data, pn
   if (err) return err;
 
   char *pos = encoder->position;
-  encoder->position = start;
+  encoder->position = starting_position;
 
-  size_t size = pos - start - 1;
+  size_t size = pos - starting_position - 1;
 
   if (size >= 256) {
     // The encoded size is too large for array8.  Fall back to array32
     // encoding.
 
-    data->current = saved_current;
-    data->parent = saved_parent;
+    data->current = starting_current;
+    data->parent = starting_parent;
 
     // Rewrite the format code
     encoder->position = encoder->position - 1;
