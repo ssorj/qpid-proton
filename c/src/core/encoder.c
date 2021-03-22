@@ -22,15 +22,14 @@
 #include <proton/error.h>
 #include <proton/object.h>
 #include <proton/codec.h>
+
+#include "data.h"
 #include "encodings.h"
 #include "encoder.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "data.h"
 
 static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node);
 static int pni_encoder_encode_array_element(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node, const uint8_t code);

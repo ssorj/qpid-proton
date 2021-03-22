@@ -154,17 +154,15 @@ static inline pn_type_t pni_decoder_code2type(uint8_t code)
 static inline int pni_decoder_decode_fixed0(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
 {
   switch (code) {
-  case PNE_NULL:   pni_node_set_type(node, PN_NULL); break;
-  case PNE_TRUE:   pni_node_set_bool(node, true); break;
-  case PNE_FALSE:  pni_node_set_bool(node, false); break;
-  case PNE_UINT0:  pni_node_set_uint(node, 0); break;
-  case PNE_ULONG0: pni_node_set_ulong(node, 0); break;
-  case PNE_LIST0:  pni_node_set_type(node, PN_LIST); break;
+  case PNE_NULL:   pni_node_set_type(node, PN_NULL); return 0;
+  case PNE_TRUE:   pni_node_set_bool(node, true); return 0;
+  case PNE_FALSE:  pni_node_set_bool(node, false); return 0;
+  case PNE_UINT0:  pni_node_set_uint(node, 0); return 0;
+  case PNE_ULONG0: pni_node_set_ulong(node, 0); return 0;
+  case PNE_LIST0:  pni_node_set_type(node, PN_LIST); return 0;
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static inline int pni_decoder_decode_fixed8(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
@@ -174,18 +172,16 @@ static inline int pni_decoder_decode_fixed8(pni_decoder_t *decoder, pni_node_t *
   uint8_t value = pni_decoder_readf8(decoder);
 
   switch (code) {
-  case PNE_UBYTE:      pni_node_set_ubyte(node, value); break;
-  case PNE_BYTE:       pni_node_set_byte(node, value); break;
-  case PNE_SMALLUINT:  pni_node_set_uint(node, value); break;
-  case PNE_SMALLULONG: pni_node_set_ulong(node, value); break;
-  case PNE_SMALLINT:   pni_node_set_int(node, (int8_t) value); break;
-  case PNE_SMALLLONG:  pni_node_set_long(node, (int8_t) value); break;
-  case PNE_BOOLEAN:    pni_node_set_bool(node, value); break;
+  case PNE_UBYTE:      pni_node_set_ubyte(node, value); return 0;
+  case PNE_BYTE:       pni_node_set_byte(node, value); return 0;
+  case PNE_SMALLUINT:  pni_node_set_uint(node, value); return 0;
+  case PNE_SMALLULONG: pni_node_set_ulong(node, value); return 0;
+  case PNE_SMALLINT:   pni_node_set_int(node, (int8_t) value); return 0;
+  case PNE_SMALLLONG:  pni_node_set_long(node, (int8_t) value); return 0;
+  case PNE_BOOLEAN:    pni_node_set_bool(node, value); return 0;
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static int pni_decoder_decode_fixed16(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
@@ -195,13 +191,11 @@ static int pni_decoder_decode_fixed16(pni_decoder_t *decoder, pni_node_t *node, 
   uint16_t value = pni_decoder_readf16(decoder);
 
   switch (code) {
-  case PNE_USHORT: pni_node_set_ushort(node, value); break;
-  case PNE_SHORT:  pni_node_set_short(node, (int16_t) value); break;
+  case PNE_USHORT: pni_node_set_ushort(node, value); return 0;
+  case PNE_SHORT:  pni_node_set_short(node, (int16_t) value); return 0;
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static int pni_decoder_decode_fixed32(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
@@ -211,21 +205,19 @@ static int pni_decoder_decode_fixed32(pni_decoder_t *decoder, pni_node_t *node, 
   uint32_t value = pni_decoder_readf32(decoder);
 
   switch (code) {
-  case PNE_UINT:      pni_node_set_uint(node, value); break;
-  case PNE_INT:       pni_node_set_int(node, value); break;
-  case PNE_UTF32:     pni_node_set_char(node, value); break;
-  case PNE_DECIMAL32: pni_node_set_decimal32(node, value); break;
+  case PNE_UINT:      pni_node_set_uint(node, value); return 0;
+  case PNE_INT:       pni_node_set_int(node, value); return 0;
+  case PNE_UTF32:     pni_node_set_char(node, value); return 0;
+  case PNE_DECIMAL32: pni_node_set_decimal32(node, value); return 0;
   case PNE_FLOAT: {
     // XXX: this assumes the platform uses IEEE floats
     conv_t conv = { .i = value };
     pni_node_set_float(node, conv.f);
-    break;
+    return 0;
   }
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static int pni_decoder_decode_fixed64(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
@@ -235,21 +227,19 @@ static int pni_decoder_decode_fixed64(pni_decoder_t *decoder, pni_node_t *node, 
   uint64_t value = pni_decoder_readf64(decoder);
 
   switch (code) {
-  case PNE_ULONG:     pni_node_set_ulong(node, value); break;
-  case PNE_LONG:      pni_node_set_long(node, value); break;
-  case PNE_MS64:      pni_node_set_timestamp(node, value); break;
-  case PNE_DECIMAL64: pni_node_set_decimal64(node, value); break;
+  case PNE_ULONG:     pni_node_set_ulong(node, value); return 0;
+  case PNE_LONG:      pni_node_set_long(node, value); return 0;
+  case PNE_MS64:      pni_node_set_timestamp(node, value); return 0;
+  case PNE_DECIMAL64: pni_node_set_decimal64(node, value); return 0;
   case PNE_DOUBLE: {
     // XXX: this assumes the platform uses IEEE floats
     conv_t conv = { .l = value };
     pni_node_set_double(node, conv.d);
-    break;
+    return 0;
   }
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static int pni_decoder_decode_fixed128(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
@@ -261,19 +251,17 @@ static int pni_decoder_decode_fixed128(pni_decoder_t *decoder, pni_node_t *node,
     pn_uuid_t uuid;
     pni_decoder_readf128(decoder, &uuid);
     pni_node_set_uuid(node, uuid);
-    break;
+    return 0;
   }
   case PNE_DECIMAL128: {
     pn_decimal128_t dec128;
     pni_decoder_readf128(decoder, &dec128);
     pni_node_set_decimal128(node, dec128);
-    break;
+    return 0;
   }
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
-
-  return 0;
 }
 
 static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
