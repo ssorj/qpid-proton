@@ -65,12 +65,8 @@ class InteropTest(common.Test):
 
     def decode_data_file(self, name):
         encoded = self.get_data(name)
-
-        print(111, encoded)
-
         self.decode_data(encoded)
         encoded_size = self.data.encoded_size()
-        #assert self.data.prev() is None # XXX
         # Re-encode and verify pre-computed and actual encoded size match.
         reencoded = self.data.encode()
         assert encoded_size == len(reencoded), "%d != %d" % (encoded_size, len(reencoded))
