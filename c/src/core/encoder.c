@@ -41,7 +41,7 @@ static pn_error_t *pni_encoder_error(pni_encoder_t *encoder)
   return encoder->error;
 }
 
-static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, const pn_type_t type)
+static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, const pn_type_t type, int *error)
 {
   switch (type) {
   case PN_NULL:       return PNE_NULL;
@@ -70,11 +70,12 @@ static uint8_t pni_encoder_type2code(pni_encoder_t *encoder, const pn_type_t typ
   case PN_MAP:        return PNE_MAP32;
   case PN_DESCRIBED:  return PNE_DESCRIPTOR;
   default:
-    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", type);
+    *error = pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", type);
+    return 0;
   }
 }
 
-static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *node)
+static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *node, int *error)
 {
   switch (node->atom.type) {
   case PN_LONG:
@@ -164,7 +165,8 @@ static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *
   case PN_UUID:       return PNE_UUID;
   case PN_DESCRIBED:  return PNE_DESCRIPTOR;
   default:
-    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", node->atom.type);
+    *error = pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", node->atom.type);
+    return 0;
   }
 }
 
@@ -457,9 +459,11 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
 
 static inline int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
-  const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
+  int err = 0;
   pni_node_t *child;
-  int err;
+
+  const uint8_t array_code = pni_encoder_type2code(encoder, node->type, &err);
+  if (err) return err;
 
   data->parent = data->current;
   data->current = node->down;
@@ -581,7 +585,7 @@ static inline int pni_encoder_encode_type(pni_encoder_t *encoder, const uint8_t 
 static int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   switch (code & 0xF0) {
-  case 0x00:
+  case 0x00: // XXX
   case 0x40:
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
@@ -600,9 +604,12 @@ static int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni
 
 static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
-  const uint8_t code = pni_encoder_node2code(encoder, node);
+  int err = 0;
 
-  int err = pni_encoder_encode_type(encoder, code);
+  const uint8_t code = pni_encoder_node2code(encoder, node, &err);
+  if (err) return err;
+
+  err = pni_encoder_encode_type(encoder, code);
   if (err) return err;
 
   switch (code & 0xF0) {

@@ -39,6 +39,54 @@ static pn_error_t *pni_decoder_error(pni_decoder_t *decoder)
   return decoder->error;
 }
 
+static inline pn_type_t pni_decoder_code2type(pni_decoder_t *decoder, const uint8_t code, int *error)
+{
+  switch (code) {
+  case PNE_NULL:       return PN_NULL;
+  case PNE_TRUE:
+  case PNE_FALSE:
+  case PNE_BOOLEAN:    return PN_BOOL;
+  case PNE_UBYTE:      return PN_UBYTE;
+  case PNE_BYTE:       return PN_BYTE;
+  case PNE_USHORT:     return PN_USHORT;
+  case PNE_SHORT:      return PN_SHORT;
+  case PNE_UINT0:
+  case PNE_SMALLUINT:
+  case PNE_UINT:       return PN_UINT;
+  case PNE_SMALLINT:
+  case PNE_INT:        return PN_INT;
+  case PNE_UTF32:      return PN_CHAR;
+  case PNE_FLOAT:      return PN_FLOAT;
+  case PNE_LONG:
+  case PNE_SMALLLONG:  return PN_LONG;
+  case PNE_MS64:       return PN_TIMESTAMP;
+  case PNE_DOUBLE:     return PN_DOUBLE;
+  case PNE_DECIMAL32:  return PN_DECIMAL32;
+  case PNE_DECIMAL64:  return PN_DECIMAL64;
+  case PNE_DECIMAL128: return PN_DECIMAL128;
+  case PNE_UUID:       return PN_UUID;
+  case PNE_ULONG0:
+  case PNE_SMALLULONG:
+  case PNE_ULONG:      return PN_ULONG;
+  case PNE_VBIN8:
+  case PNE_VBIN32:     return PN_BINARY;
+  case PNE_STR8_UTF8:
+  case PNE_STR32_UTF8: return PN_STRING;
+  case PNE_SYM8:
+  case PNE_SYM32:      return PN_SYMBOL;
+  case PNE_LIST0:
+  case PNE_LIST8:
+  case PNE_LIST32:     return PN_LIST;
+  case PNE_ARRAY8:
+  case PNE_ARRAY32:    return PN_ARRAY;
+  case PNE_MAP8:
+  case PNE_MAP32:      return PN_MAP;
+  default:
+    *error = pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+    return PN_INVALID;
+  }
+}
+
 static inline uint8_t pni_decoder_readf8(pni_decoder_t *decoder)
 {
   return *decoder->position++;
@@ -102,52 +150,6 @@ typedef union {
   float f;
   double d;
 } conv_t;
-
-static inline pn_type_t pni_decoder_code2type(uint8_t code)
-{
-  switch (code) {
-  case PNE_NULL:       return PN_NULL;
-  case PNE_TRUE:
-  case PNE_FALSE:
-  case PNE_BOOLEAN:    return PN_BOOL;
-  case PNE_UBYTE:      return PN_UBYTE;
-  case PNE_BYTE:       return PN_BYTE;
-  case PNE_USHORT:     return PN_USHORT;
-  case PNE_SHORT:      return PN_SHORT;
-  case PNE_UINT0:
-  case PNE_SMALLUINT:
-  case PNE_UINT:       return PN_UINT;
-  case PNE_SMALLINT:
-  case PNE_INT:        return PN_INT;
-  case PNE_UTF32:      return PN_CHAR;
-  case PNE_FLOAT:      return PN_FLOAT;
-  case PNE_LONG:
-  case PNE_SMALLLONG:  return PN_LONG;
-  case PNE_MS64:       return PN_TIMESTAMP;
-  case PNE_DOUBLE:     return PN_DOUBLE;
-  case PNE_DECIMAL32:  return PN_DECIMAL32;
-  case PNE_DECIMAL64:  return PN_DECIMAL64;
-  case PNE_DECIMAL128: return PN_DECIMAL128;
-  case PNE_UUID:       return PN_UUID;
-  case PNE_ULONG0:
-  case PNE_SMALLULONG:
-  case PNE_ULONG:      return PN_ULONG;
-  case PNE_VBIN8:
-  case PNE_VBIN32:     return PN_BINARY;
-  case PNE_STR8_UTF8:
-  case PNE_STR32_UTF8: return PN_STRING;
-  case PNE_SYM8:
-  case PNE_SYM32:      return PN_SYMBOL;
-  case PNE_LIST0:
-  case PNE_LIST8:
-  case PNE_LIST32:     return PN_LIST;
-  case PNE_ARRAY8:
-  case PNE_ARRAY32:    return PN_ARRAY;
-  case PNE_MAP8:
-  case PNE_MAP32:      return PN_MAP;
-  default:             return (pn_type_t) PN_ARG_ERR;
-  }
-}
 
 static inline int pni_decoder_decode_fixed0(pni_decoder_t *decoder, pni_node_t *node, uint8_t code)
 {
@@ -383,7 +385,7 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
 static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
                                            const size_t count)
 {
-  int err;
+  int err = 0;
   uint8_t array_code;
 
   pni_node_set_type(node, PN_ARRAY);
@@ -402,11 +404,8 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
     if (err) return err;
   }
 
-  // XXX Use the out param pattern here too
-  pn_type_t array_type = pni_decoder_code2type(array_code);
-  if ((int) array_type < 0) return (int) array_type;
-
-  node->type = array_type;
+  node->type = pni_decoder_code2type(decoder, array_code, &err);
+  if (err) return err;
 
   for (size_t i = 0; i < count; i++) {
     err = pni_decoder_decode_value(decoder, data, array_code);
