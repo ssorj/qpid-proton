@@ -465,9 +465,11 @@ static inline int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_dat
   data->current = node->down;
 
   if (node->described) {
-    pni_encoder_encode_type(encoder, PNE_DESCRIPTOR);
-
     child = pni_data_current_node(data);
+
+    err = pni_encoder_encode_type(encoder, PNE_DESCRIPTOR);
+    if (err) return err;
+
     err = pni_encoder_encode_node(encoder, data, child);
     if (err) return err;
 

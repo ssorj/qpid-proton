@@ -501,7 +501,10 @@ static inline int pni_decoder_decode_described_type(pni_decoder_t *decoder, pn_d
   if (err) return err;
 
   // No nested descriptors
-  if (next == PNE_DESCRIPTOR) return PN_ARG_ERR;
+  if (next == PNE_DESCRIPTOR) {
+    // XXX Add an error message
+    return PN_ARG_ERR;
+  }
 
   *code = next;
 
