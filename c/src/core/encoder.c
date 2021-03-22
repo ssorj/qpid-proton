@@ -132,16 +132,22 @@ static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *
   case PN_LIST:
     if (node->children == 0) {
       return PNE_LIST0;
-    } else if (node->children < 256) {
+    } else if (node->children < 16) {
       return PNE_LIST8;
     } else {
       return PNE_LIST32;
     }
   case PN_MAP:
-    if (node->children < 256) {
+    if (node->children < 16) {
       return PNE_MAP8;
     } else {
       return PNE_MAP32;
+    }
+  case PN_ARRAY:
+    if (node->children < 16) {
+      return PNE_ARRAY8;
+    } else {
+      return PNE_ARRAY32;
     }
   case PN_NULL:       return PNE_NULL;
   case PN_UBYTE:      return PNE_UBYTE;
@@ -156,7 +162,6 @@ static inline uint8_t pni_encoder_node2code(pni_encoder_t *encoder, pni_node_t *
   case PN_DECIMAL64:  return PNE_DECIMAL64;
   case PN_DECIMAL128: return PNE_DECIMAL128;
   case PN_UUID:       return PNE_UUID;
-  case PN_ARRAY:      return PNE_ARRAY32;
   case PN_DESCRIBED:  return PNE_DESCRIPTOR;
   default:
     return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u", node->atom.type);
@@ -359,34 +364,10 @@ static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pn_
   return 0;
 }
 
-static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
-{
-  unsigned null_count = 0;
-  char *start = encoder->position;
-
-  // The size and count are backfilled after writing the elements
-  if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
-  encoder->position += 2;
-
-  int err = pni_encoder_encode_compound_values(encoder, data, node, &null_count);
-  if (err) return err;
-
-  char *pos = encoder->position;
-  encoder->position = start;
-
-  // Backfill the size and count
-  pni_encoder_writef8(encoder, pos - start - 1);
-  pni_encoder_writef8(encoder, node->children - null_count);
-
-  encoder->position = pos;
-
-  return 0;
-}
-
 static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
-  unsigned null_count = 0;
   char *start = encoder->position;
+  unsigned null_count = 0;
 
   // The size and count are backfilled after writing the elements
   if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
@@ -399,8 +380,58 @@ static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data
   encoder->position = start;
 
   // Backfill the size and count
-  pni_encoder_writef32(encoder, pos - start - 4);
+  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
   pni_encoder_writef32(encoder, node->children - null_count);
+
+  encoder->position = pos;
+
+  return 0;
+}
+
+static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  char *start = encoder->position;
+  pni_nid_t saved_current = data->current;
+  pni_nid_t saved_parent = data->parent;
+  unsigned null_count = 0;
+
+  // The size and count are backfilled after writing the elements
+  if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
+  encoder->position += 2;
+
+  int err = pni_encoder_encode_compound_values(encoder, data, node, &null_count);
+  if (err) return err;
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  size_t size = pos - start - 1;
+
+  if (size >= 256) {
+    // The encoded size is too large for compound8.  Fall back to
+    // compound32 encoding.
+
+    data->current = saved_current;
+    data->parent = saved_parent;
+
+    // Rewrite the format code
+
+    encoder->position = encoder->position - 1;
+
+    assert((uint8_t) *encoder->position == PNE_LIST8 || (uint8_t) *encoder->position == PNE_MAP8);
+
+    if ((uint8_t) *encoder->position == PNE_LIST8) {
+      pni_encoder_writef8(encoder, PNE_LIST32);
+    } else {
+      pni_encoder_writef8(encoder, PNE_MAP32);
+    }
+
+    return pni_encoder_encode_compound32(encoder, data, node);
+  }
+
+  // Backfill the size and count
+  pni_encoder_writef8(encoder, size);
+  pni_encoder_writef8(encoder, node->children - null_count);
 
   encoder->position = pos;
 
@@ -431,16 +462,11 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
   return 0;
 }
 
-static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+static inline int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   const uint8_t array_code = pni_encoder_type2code(encoder, node->type);
-  char *start = encoder->position;
   pni_node_t *child;
   int err;
-
-  // The size and count are backfilled after writing the elements
-  if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
-  encoder->position += 8;
 
   data->parent = data->current;
   data->current = node->down;
@@ -472,6 +498,20 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
   data->current = data->parent;
   data->parent = node->parent;
 
+  return 0;
+}
+
+static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  char *start = encoder->position;
+
+  // The size and count are backfilled after writing the elements
+  if (pni_encoder_remaining(encoder) < 8) return PN_OVERFLOW;
+  encoder->position += 8;
+
+  int err = pni_encoder_encode_array_values(encoder, data, node);
+  if (err) return err;
+
   char *pos = encoder->position;
   encoder->position = start;
 
@@ -490,10 +530,58 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
   return 0;
 }
 
+static int pni_encoder_encode_array8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+{
+  char *start = encoder->position;
+  pni_nid_t saved_current = data->current;
+  pni_nid_t saved_parent = data->parent;
+
+  // The size and count are backfilled after writing the elements
+  if (pni_encoder_remaining(encoder) < 2) return PN_OVERFLOW;
+  encoder->position += 2;
+
+  int err = pni_encoder_encode_array_values(encoder, data, node);
+  if (err) return err;
+
+  char *pos = encoder->position;
+  encoder->position = start;
+
+  size_t size = pos - start - 1;
+
+  if (size >= 256) {
+    // The encoded size is too large for array8.  Fall back to array32
+    // encoding.
+
+    data->current = saved_current;
+    data->parent = saved_parent;
+
+    // Rewrite the format code
+    encoder->position = encoder->position - 1;
+    pni_encoder_writef8(encoder, PNE_ARRAY32);
+
+    return pni_encoder_encode_array32(encoder, data, node);
+  }
+
+  // Backfill the size and count
+
+  pni_encoder_writef8(encoder, size);
+
+  if (node->described) {
+    pni_encoder_writef8(encoder, node->children - 1);
+  } else {
+    pni_encoder_writef8(encoder, node->children);
+  }
+
+  encoder->position = pos;
+
+  return 0;
+}
+
 static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   const uint8_t code = pni_encoder_node2code(encoder, node);
 
+  // Write the format code
   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
   pni_encoder_writef8(encoder, code);
 
@@ -511,7 +599,7 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
   case 0xB0: return pni_encoder_encode_variable32(encoder, node);
   case 0xC0: return pni_encoder_encode_compound8(encoder, data, node);
   case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
-  case 0xE0:
+  case 0xE0: return pni_encoder_encode_array8(encoder, data, node);
   case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
   default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
@@ -520,7 +608,7 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
 static int pni_encoder_encode_array_element(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   switch (code & 0xF0) {
-  case 0x00:
+  case 0x00: // XXX?
   case 0x40:
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
@@ -531,7 +619,7 @@ static int pni_encoder_encode_array_element(pni_encoder_t *encoder, pn_data_t *d
   case 0xB0: return pni_encoder_encode_variable32(encoder, node);
   case 0xC0: return pni_encoder_encode_compound8(encoder, data, node);
   case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
-  case 0xE0:
+  case 0xE0: return pni_encoder_encode_array8(encoder, data, node);
   case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
   default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
