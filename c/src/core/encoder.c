@@ -443,7 +443,7 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
   err = pni_encoder_encode_node(encoder, data, child);
   if (err) return err;
 
-  data->current = pni_data_current_node(data)->next;
+  data->current = child->next;
 
   child = pni_data_current_node(data);
   err = pni_encoder_encode_node(encoder, data, child);

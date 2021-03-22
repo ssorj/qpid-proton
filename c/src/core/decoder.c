@@ -32,8 +32,6 @@
 static int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t* code);
 static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, uint8_t code);
-static int pni_decoder_decode_described_type(pni_decoder_t *decoder, pn_data_t *data, uint8_t* code);
-static int pni_decoder_decode_described_value(pni_decoder_t *decoder, pn_data_t *data);
 
 static pn_error_t *pni_decoder_error(pni_decoder_t *decoder)
 {
@@ -382,6 +380,7 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
 //     code != PNE_MAP8 && code != PNE_MAP32;
 // }
 
+// XXX Remove code arg? And in parent functions?
 static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
                                            const uint8_t code, const size_t count)
 {
@@ -389,16 +388,18 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
   uint8_t array_code;
 
   pni_node_set_type(node, PN_ARRAY);
+  pni_data_enter(data);
 
-  // Get the array type code
   err = pni_decoder_decode_type(decoder, &array_code);
   if (err) return err;
 
-  pni_data_enter(data);
-
   if (array_code == PNE_DESCRIPTOR) {
     node->described = true;
-    err = pni_decoder_decode_described_type(decoder, data, &array_code);
+
+    err = pni_decoder_decode_node(decoder, data);
+    if (err) return err;
+
+    err = pni_decoder_decode_type(decoder, &array_code);
     if (err) return err;
   }
 
@@ -444,10 +445,30 @@ static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, p
   return pni_decoder_decode_array_values(decoder, data, node, code, count);
 }
 
+static int pni_decoder_decode_described(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
+{
+  int err;
+
+  pni_node_set_type(node, PN_DESCRIBED);
+  pni_data_enter(data);
+
+  err = pni_decoder_decode_node(decoder, data);
+  if (err) return err;
+
+  err = pni_decoder_decode_node(decoder, data);
+  if (err) return err;
+
+  pni_data_exit(data);
+
+  return 0;
+}
+
 static inline int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t *code)
 {
   if (pni_decoder_remaining(decoder) < 1) return PN_UNDERFLOW;
+
   *code = pni_decoder_readf8(decoder);
+
   return 0;
 }
 
@@ -464,6 +485,7 @@ static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, con
   }
 
   switch (code & 0xF0) {
+  case 0x00: return pni_decoder_decode_described(decoder, data, node);
   case 0x40: return pni_decoder_decode_fixed0(decoder, node, code);
   case 0x50: return pni_decoder_decode_fixed8(decoder, node, code);
   case 0x60: return pni_decoder_decode_fixed16(decoder, node, code);
@@ -481,58 +503,6 @@ static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, con
   }
 }
 
-static inline int pni_decoder_decode_described_type(pni_decoder_t *decoder, pn_data_t *data, uint8_t *code)
-{
-  int err;
-  uint8_t next;
-
-  // The descriptor type code
-  err = pni_decoder_decode_type(decoder, &next);
-  if (err) return err;
-
-  // XXX Check nesting here?
-
-  // The descriptor value
-  err = pni_decoder_decode_value(decoder, data, next);
-  if (err) return err;
-
-  // The descriptor primitive type code
-  err = pni_decoder_decode_type(decoder, &next);
-  if (err) return err;
-
-  // No nested descriptors
-  if (next == PNE_DESCRIPTOR) {
-    // XXX Add an error message
-    return PN_ARG_ERR;
-  }
-
-  *code = next;
-
-  return 0;
-}
-
-static inline int pni_decoder_decode_described_value(pni_decoder_t *decoder, pn_data_t *data)
-{
-  int err;
-  uint8_t code;
-
-  // XXX Nodify
-  err = pni_data_put_described(data);
-  if (err) return err;
-
-  pni_data_enter(data);
-
-  err = pni_decoder_decode_described_type(decoder, data, &code);
-  if (err) return err;
-
-  err = pni_decoder_decode_value(decoder, data, code);
-  if (err) return err;
-
-  pni_data_exit(data);
-
-  return 0;
-}
-
 static inline int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data)
 {
   int err;
@@ -541,11 +511,7 @@ static inline int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *dat
   err = pni_decoder_decode_type(decoder, &code);
   if (err) return err;
 
-  if (code == PNE_DESCRIPTOR) {
-    return pni_decoder_decode_described_value(decoder, data);
-  } else {
-    return pni_decoder_decode_value(decoder, data, code);
-  }
+  return pni_decoder_decode_value(decoder, data, code);
 }
 
 PNI_INLINE void pni_decoder_initialize(pni_decoder_t *decoder)
