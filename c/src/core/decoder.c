@@ -380,9 +380,8 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
 //     code != PNE_MAP8 && code != PNE_MAP32;
 // }
 
-// XXX Remove code arg? And in parent functions?
 static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
-                                           const uint8_t code, const size_t count)
+                                           const size_t count)
 {
   int err;
   uint8_t array_code;
@@ -419,7 +418,7 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
   return 0;
 }
 
-static int pni_decoder_decode_array8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
+static int pni_decoder_decode_array8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
@@ -429,10 +428,10 @@ static int pni_decoder_decode_array8(pni_decoder_t *decoder, pn_data_t *data, pn
   if (remaining < size + 1) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf8(decoder);
 
-  return pni_decoder_decode_array_values(decoder, data, node, code, count);
+  return pni_decoder_decode_array_values(decoder, data, node, count);
 }
 
-static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
+static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
@@ -442,7 +441,7 @@ static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, p
   if (remaining < size + 4) return PN_UNDERFLOW;
   size_t count = pni_decoder_readf32(decoder);
 
-  return pni_decoder_decode_array_values(decoder, data, node, code, count);
+  return pni_decoder_decode_array_values(decoder, data, node, count);
 }
 
 static int pni_decoder_decode_described(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
@@ -496,8 +495,8 @@ static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, con
   case 0xB0: return pni_decoder_decode_variable32(decoder, data, node, code);
   case 0xC0: return pni_decoder_decode_compound8(decoder, data, node, code);
   case 0xD0: return pni_decoder_decode_compound32(decoder, data, node, code);
-  case 0xE0: return pni_decoder_decode_array8(decoder, data, node, code);
-  case 0xF0: return pni_decoder_decode_array32(decoder, data, node, code);
+  case 0xE0: return pni_decoder_decode_array8(decoder, data, node);
+  case 0xF0: return pni_decoder_decode_array32(decoder, data, node);
   default:
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
