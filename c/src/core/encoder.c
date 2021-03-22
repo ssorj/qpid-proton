@@ -578,8 +578,6 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
   if (pni_encoder_remaining(encoder) < 1) return PN_OVERFLOW;
   pni_encoder_writef8(encoder, code);
 
-  // XXX Try smallulong here?
-
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data, node);
   case 0x40: return 0;
@@ -601,7 +599,7 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
 static int pni_encoder_encode_array_element(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   switch (code & 0xF0) {
-  case 0x00: // XXX?
+  case 0x00:
   case 0x40:
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
