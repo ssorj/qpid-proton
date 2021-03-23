@@ -693,11 +693,11 @@ ssize_t pni_encoder_size(pni_encoder_t *encoder, pn_data_t *src)
     }
   }
 
+  free(buf);
+
   if (err) return err;
 
   size_t size = encoder->position - encoder->output;
-
-  free(buf);
 
   return size;
 }
