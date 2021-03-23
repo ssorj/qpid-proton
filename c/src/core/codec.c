@@ -29,11 +29,9 @@
 #include <stddef.h>
 #include <ctype.h>
 
-#include "buffer.h"
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
-#include "platform/platform.h"
 #include "platform/platform_fmt.h"
 #include "util.h"
 #include "decoder.h"
@@ -522,21 +520,20 @@ pn_error_t *pn_data_error(pn_data_t *data)
 
 size_t pn_data_size(pn_data_t *data)
 {
-  assert(data);
-  return data->size;
+  return data ? data->size : 0;
 }
 
 void pn_data_clear(pn_data_t *data)
 {
-  assert(data);
+  if (data) {
+    data->size = 0;
+    data->parent = 0;
+    data->current = 0;
+    data->base_parent = 0;
+    data->base_current = 0;
 
-  data->size = 0;
-  data->parent = 0;
-  data->current = 0;
-  data->base_parent = 0;
-  data->base_current = 0;
-
-  if (data->intern_buf) pn_buffer_clear(data->intern_buf);
+    if (data->intern_buf) pn_buffer_clear(data->intern_buf);
+  }
 }
 
 static int pni_data_grow(pn_data_t *data)
@@ -601,10 +598,6 @@ int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   return 0;
 }
 
-// XXX
-//
-// The only thing that uses 'M' and this function are some tests.
-// Remove this?
 /*
    Append src to data after normalizing for "multiple" field encoding.
 
@@ -1392,29 +1385,30 @@ bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 
 static pni_node_t *pni_data_peek(pn_data_t *data)
 {
-  if (data->current) {
-    pni_node_t *current = pni_data_current(data);
+  pni_node_t *current = pni_data_current(data);
+  if (current) {
     return pn_data_node(data, current->next);
-  } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-    return pn_data_node(data, parent->down);
-  // This doesn't handle the no-parent initial state
-  } else {
-    return NULL;
   }
+
+  pni_node_t *parent = pn_data_node(data, data->parent);
+  if (parent) {
+     return pn_data_node(data, parent->down);
+  }
+
+  return NULL;
 }
 
 PNI_INLINE bool pni_data_next(pn_data_t *data)
 {
   if (data->current) {
-    pni_node_t *current = data->nodes + data->current - 1;
+    pni_node_t *current = pni_data_node(data, data->current);
 
     if (current->next) {
       data->current = current->next;
       return true;
     }
   } else if (data->parent) {
-    pni_node_t *parent = data->nodes + data->parent - 1;
+    pni_node_t *parent = pni_data_node(data, data->parent);
 
     if (parent->down) {
       data->current = parent->down;
