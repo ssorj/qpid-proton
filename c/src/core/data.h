@@ -60,31 +60,12 @@ struct pn_data_t {
   pni_nid_t current;
   pni_nid_t base_parent;
   pni_nid_t base_current;
-  bool intern;
 };
-
-pn_data_t* pni_data(size_t capacity, bool intern);
-pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id);
-
-size_t pni_data_size(pn_data_t *data);
-void pni_data_clear(pn_data_t *data);
-
-pn_type_t pni_data_type(pn_data_t *data);
-pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id);
 
 bool pni_data_enter(pn_data_t *data);
 bool pni_data_exit(pn_data_t *data);
 bool pni_data_next(pn_data_t *data);
-
 void pni_data_rewind(pn_data_t *data);
-void pni_data_narrow(pn_data_t *data);
-void pni_data_widen(pn_data_t *data);
-pn_handle_t pni_data_point(pn_data_t *data);
-bool pni_data_restore(pn_data_t *data, pn_handle_t point);
-
-int pni_data_put_described(pn_data_t *data);
-int pni_data_put_compound(pn_data_t *data, pn_type_t type);
-int pni_data_put_variable(pn_data_t *data, pn_bytes_t bytes, pn_type_t type);
 
 pni_node_t *pni_data_add_node(pn_data_t *data);
 int pni_data_intern_node(pn_data_t *data, pni_node_t *node);
@@ -110,25 +91,6 @@ void pni_node_set_ulong(pni_node_t *node, uint64_t value);
 void pni_node_set_ushort(pni_node_t *node, uint16_t value);
 void pni_node_set_uuid(pni_node_t *node, pn_uuid_t value);
 
-int pni_data_put_atom(pn_data_t *data, pn_atom_t atom);
-int pni_data_put_bool(pn_data_t *data, bool value);
-int pni_data_put_byte(pn_data_t *data, int8_t value);
-int pni_data_put_char(pn_data_t *data, pn_char_t value);
-int pni_data_put_double(pn_data_t *data, double value);
-int pni_data_put_float(pn_data_t *data, float value);
-int pni_data_put_int(pn_data_t *data, int32_t value);
-int pni_data_put_long(pn_data_t *data, int64_t value);
-int pni_data_put_null(pn_data_t *data);
-int pni_data_put_short(pn_data_t *data, int16_t value);
-int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t value);
-int pni_data_put_ubyte(pn_data_t *data, uint8_t value);
-int pni_data_put_uint(pn_data_t *data, uint32_t value);
-int pni_data_put_ulong(pn_data_t *data, uint64_t value);
-int pni_data_put_ushort(pn_data_t *data, uint16_t value);
-
-int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
-int pni_data_copy(pn_data_t *data, pn_data_t *src);
-
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
 ssize_t pni_data_decode(pn_data_t *data, const char *bytes, size_t size);
@@ -138,10 +100,16 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
-static inline pni_node_t *pni_data_current_node(pn_data_t *data)
+static inline pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
 {
-  assert(data->current);
-  return data->nodes + data->current - 1;
+  assert(data);
+  assert(node_id);
+
+  pni_node_t *node = data->nodes + node_id - 1;
+
+  assert(node);
+
+  return node;
 }
 
 #endif /* data.h */

@@ -339,7 +339,7 @@ static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pn_
   data->current = node->down;
 
   for (size_t i = 0; i < node->children; i++) {
-    pni_node_t *child = pni_data_current_node(data);
+    pni_node_t *child = pni_data_node(data, data->current);
 
     if (child->atom.type == PN_NULL) {
       *null_count += 1;
@@ -442,13 +442,13 @@ static inline int pni_encoder_encode_described(pni_encoder_t *encoder, pn_data_t
   data->parent = data->current;
   data->current = node->down;
 
-  child = pni_data_current_node(data);
+  child = pni_data_node(data, data->current);
   err = pni_encoder_encode_node(encoder, data, child);
   if (err) return err;
 
   data->current = child->next;
 
-  child = pni_data_current_node(data);
+  child = pni_data_node(data, data->current);
   err = pni_encoder_encode_node(encoder, data, child);
   if (err) return err;
 
@@ -470,7 +470,7 @@ static inline int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_dat
   data->current = node->down;
 
   if (node->described) {
-    child = pni_data_current_node(data);
+    child = pni_data_node(data, data->current);
 
     err = pni_encoder_encode_type(encoder, PNE_DESCRIPTOR);
     if (err) return err;
@@ -484,7 +484,7 @@ static inline int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_dat
   pni_encoder_encode_type(encoder, array_code);
 
   while (data->current) {
-    child = pni_data_current_node(data);
+    child = pni_data_node(data, data->current);
 
     err = pni_encoder_encode_value(encoder, data, child, array_code);
     if (err) return err;
@@ -651,21 +651,21 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
   encoder->position = dst;
   encoder->size = size;
 
-  pn_handle_t save = pni_data_point(src);
+  pn_handle_t save = pn_data_point(src);
 
   pni_data_rewind(src);
 
   while (pni_data_next(src)) {
-    pni_node_t *node = pni_data_current_node(src);
+    pni_node_t *node = pni_data_node(src, src->current);
     int err = pni_encoder_encode_node(encoder, src, node);
 
     if (err) {
-      pni_data_restore(src, save);
+      pn_data_restore(src, save);
       return err;
     }
   }
 
-  pni_data_restore(src, save);
+  pn_data_restore(src, save);
 
   size_t encoded = encoder->position - encoder->output;
 
