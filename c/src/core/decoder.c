@@ -87,13 +87,22 @@ static inline pn_type_t pni_decoder_code2type(pni_decoder_t *decoder, const uint
   }
 }
 
+static inline size_t pni_decoder_remaining(pni_decoder_t *decoder)
+{
+  return decoder->input + decoder->size - decoder->position;
+}
+
 static inline uint8_t pni_decoder_readf8(pni_decoder_t *decoder)
 {
+  assert(pni_decoder_remaining(decoder) >= 1);
+
   return *decoder->position++;
 }
 
 static inline uint16_t pni_decoder_readf16(pni_decoder_t *decoder)
 {
+  assert(pni_decoder_remaining(decoder) >= 2);
+
   uint16_t a = (uint8_t) decoder->position[0];
   uint16_t b = (uint8_t) decoder->position[1];
 
@@ -104,6 +113,8 @@ static inline uint16_t pni_decoder_readf16(pni_decoder_t *decoder)
 
 static inline uint32_t pni_decoder_readf32(pni_decoder_t *decoder)
 {
+  assert(pni_decoder_remaining(decoder) >= 4);
+
   uint32_t a = (uint8_t) decoder->position[0];
   uint32_t b = (uint8_t) decoder->position[1];
   uint32_t c = (uint8_t) decoder->position[2];
@@ -116,7 +127,7 @@ static inline uint32_t pni_decoder_readf32(pni_decoder_t *decoder)
 
 static inline uint64_t pni_decoder_readf64(pni_decoder_t *decoder)
 {
-  // Asserts XXX
+  assert(pni_decoder_remaining(decoder) >= 8);
 
   uint64_t a = (uint8_t) decoder->position[0];
   uint64_t b = (uint8_t) decoder->position[1];
@@ -134,13 +145,10 @@ static inline uint64_t pni_decoder_readf64(pni_decoder_t *decoder)
 
 static inline void pni_decoder_readf128(pni_decoder_t *decoder, void *dst)
 {
+  assert(pni_decoder_remaining(decoder) >= 16);
+
   memcpy(dst, decoder->position, 16);
   decoder->position += 16;
-}
-
-static inline size_t pni_decoder_remaining(pni_decoder_t *decoder)
-{
-  return decoder->input + decoder->size - decoder->position;
 }
 
 typedef union {
@@ -470,7 +478,7 @@ static inline int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t *code)
   return 0;
 }
 
-static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
+PNI_FORCE_INLINE static inline int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
 {
   pni_node_t *node = pni_data_add_node(data);
 
@@ -501,7 +509,7 @@ static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, con
   }
 }
 
-static inline int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data)
+static int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data)
 {
   int err;
   uint8_t code;
