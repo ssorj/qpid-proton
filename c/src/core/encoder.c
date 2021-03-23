@@ -586,7 +586,7 @@ static inline int pni_encoder_encode_type(pni_encoder_t *encoder, const uint8_t 
 static int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   switch (code & 0xF0) {
-  case 0x00: // XXX
+  case 0x00: return pni_encoder_encode_described(encoder, data, node);
   case 0x40:
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
@@ -599,7 +599,8 @@ static int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni
   case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
   case 0xE0: return pni_encoder_encode_array8(encoder, data, node);
   case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
-  default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
+  default:
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 
@@ -627,7 +628,8 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
   case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
   case 0xE0: return pni_encoder_encode_array8(encoder, data, node);
   case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
-  default:   return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
+  default:
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 
