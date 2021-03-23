@@ -1443,10 +1443,10 @@ int pni_data_traverse(pn_data_t *data,
                       void *ctx)
 {
   pni_node_t *node = data->size ? pn_data_node(data, 1) : NULL;
-  int err;
 
   while (node) {
-    err = enter(ctx, data, node);
+    pni_node_t *parent = pn_data_node(data, node->parent);
+    int err = enter(ctx, data, node);
     if (err) return err;
 
     size_t next = 0;
@@ -1459,7 +1459,6 @@ int pni_data_traverse(pn_data_t *data,
     } else {
       err = exit(ctx, data, node);
       if (err) return err;
-      pni_node_t *parent = pn_data_node(data, node->parent);
       while (parent) {
         err = exit(ctx, data, parent);
         if (err) return err;
