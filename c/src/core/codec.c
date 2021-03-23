@@ -28,7 +28,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <ctype.h>
-
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
@@ -203,7 +202,7 @@ static void pn_data_finalize(void *object)
 {
   pn_data_t *data = (pn_data_t *) object;
   pni_mem_subdeallocate(pn_class(data), data, data->nodes);
-  pn_buffer_free(data->intern_buf);
+  pn_buffer_free(data->buf);
   pn_error_free(data->error);
 }
 
@@ -494,7 +493,7 @@ pn_data_t *pn_data(size_t capacity)
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
-  data->intern_buf = NULL;
+  data->buf = NULL;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -532,7 +531,7 @@ void pn_data_clear(pn_data_t *data)
     data->base_parent = 0;
     data->base_current = 0;
 
-    if (data->intern_buf) pn_buffer_clear(data->intern_buf);
+    if (data->buf) pn_buffer_clear(data->buf);
   }
 }
 
@@ -569,29 +568,29 @@ int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 
   assert(bytes);
 
-  if (!data->intern_buf) {
+  if (!data->buf) {
     // A heuristic to avoid growing small buffers too much.  Set to
     // size + 1 to allow for zero termination.
-    data->intern_buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
-    if (!data->intern_buf) return PN_OUT_OF_MEMORY;
+    data->buf = pn_buffer(pn_max(bytes->size + 1, PNI_INTERN_MINSIZE));
+    if (!data->buf) return PN_OUT_OF_MEMORY;
   }
 
-  size_t old_capacity = pn_buffer_capacity(data->intern_buf);
-  size_t old_size = pn_buffer_size(data->intern_buf);
+  size_t old_capacity = pn_buffer_capacity(data->buf);
+  size_t old_size = pn_buffer_size(data->buf);
 
-  pn_buffer_append(data->intern_buf, bytes->start, bytes->size);
-  pn_buffer_append(data->intern_buf, "\0", 1);
+  pn_buffer_append(data->buf, bytes->start, bytes->size);
+  pn_buffer_append(data->buf, "\0", 1);
 
   node->data = true;
   node->data_offset = old_size;
   node->data_size = bytes->size;
 
-  pn_bytes_t interned_bytes = pn_buffer_bytes(data->intern_buf);
+  pn_bytes_t interned_bytes = pn_buffer_bytes(data->buf);
 
   // Set the atom pointer to the interned string
   bytes->start = interned_bytes.start + old_size;
 
-  if (pn_buffer_capacity(data->intern_buf) != old_capacity) {
+  if (pn_buffer_capacity(data->buf) != old_capacity) {
     pni_data_rebase(data, interned_bytes.start);
   }
 

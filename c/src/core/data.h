@@ -24,12 +24,12 @@
 
 #include <proton/codec.h>
 
-#include <assert.h>
-
 #include "buffer.h"
 #include "config.h"
 #include "decoder.h"
 #include "encoder.h"
+
+#include <assert.h>
 
 typedef uint16_t pni_nid_t;
 #define PNI_NID_MAX ((pni_nid_t)-1)
@@ -46,13 +46,14 @@ typedef struct {
   pni_nid_t down;
   pni_nid_t parent;
   pni_nid_t children;
-  bool described; // For arrays
+  // for arrays
+  bool described;
   bool data;
 } pni_node_t;
 
 struct pn_data_t {
   pni_node_t *nodes;
-  pn_buffer_t *intern_buf;
+  pn_buffer_t *buf;
   pn_error_t *error;
   pni_nid_t capacity;
   pni_nid_t size;
