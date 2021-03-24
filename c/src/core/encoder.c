@@ -419,7 +419,7 @@ static int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data,
 
     // Rewrite the format code
     encoder->position = encoder->position - 1;
-    uint8_t code = (((uint8_t) *encoder->position) & 0x0F) | (0xD0 & 0xF0);
+    uint8_t code = (((uint8_t) *encoder->position) & 0x0F) | 0xD0;
     pni_encoder_writef8(encoder, code);
 
     return pni_encoder_encode_compound32(encoder, data, node);
@@ -514,13 +514,16 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
 
   // Backfill the size and count
 
-  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
+  size_t count;
 
   if (node->described) {
-    pni_encoder_writef32(encoder, node->children - 1);
+    count = node->children - 1;
   } else {
-    pni_encoder_writef32(encoder, node->children);
+    count = node->children;
   }
+
+  pni_encoder_writef32(encoder, (size_t) (pos - start - 4));
+  pni_encoder_writef32(encoder, count);
 
   encoder->position = pos;
 
@@ -561,13 +564,16 @@ static int pni_encoder_encode_array8(pni_encoder_t *encoder, pn_data_t *data, pn
 
   // Backfill the size and count
 
-  pni_encoder_writef8(encoder, size);
+  size_t count;
 
   if (node->described) {
-    pni_encoder_writef8(encoder, node->children - 1);
+    count = node->children - 1;
   } else {
-    pni_encoder_writef8(encoder, node->children);
+    count = node->children;
   }
+
+  pni_encoder_writef8(encoder, size);
+  pni_encoder_writef8(encoder, count);
 
   encoder->position = pos;
 

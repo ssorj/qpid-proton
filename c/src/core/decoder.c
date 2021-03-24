@@ -290,6 +290,7 @@ static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_d
   }
 
   pni_node_set_bytes(node, type, bytes);
+
   int err = pni_data_intern_node(data, node);
   if (err) return err;
 
