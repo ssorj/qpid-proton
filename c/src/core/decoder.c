@@ -299,7 +299,7 @@ static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_d
   return 0;
 }
 
-static int pni_decoder_decode_variable8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
+static inline int pni_decoder_decode_variable8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
@@ -323,9 +323,9 @@ static int pni_decoder_decode_variable32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_variable_value(decoder, data, node, code, size);
 }
 
-PNI_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data,
-                                                                      pni_node_t *node, const uint8_t code,
-                                                                      const size_t count)
+static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_data_t *data,
+                                                     pni_node_t *node, const uint8_t code,
+                                                     const size_t count)
 {
   pn_type_t type;
 
@@ -350,7 +350,7 @@ PNI_FORCE_INLINE static inline int pni_decoder_decode_compound_values(pni_decode
   return 0;
 }
 
-static int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
+static inline int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
