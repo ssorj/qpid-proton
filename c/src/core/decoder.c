@@ -375,17 +375,23 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
 
-// // We disallow using any compound type as a described descriptor to avoid recursion
-// // in decoding. Although these seem syntactically valid they don't seem to be of any
-// // conceivable use!
-// static inline bool pni_allowed_descriptor_code(uint8_t code)
-// {
-//   return
-//     code != PNE_DESCRIPTOR &&
-//     code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
-//     code != PNE_LIST8 && code != PNE_LIST32 &&
-//     code != PNE_MAP8 && code != PNE_MAP32;
-// }
+static int pni_decoder_decode_descriptor(pni_decoder_t *decoder, pn_data_t *data)
+{
+  int err;
+  uint8_t code;
+
+  err = pni_decoder_decode_type(decoder, &code);
+  if (err) return err;
+
+  // We disallow using any compound type as a described descriptor to
+  // avoid recursion in decoding. Although these seem syntactically
+  // valid, they don't seem to be of any conceivable use!
+  if (code >= 0xC0) {
+      return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unsupported descriptor typecode: %u", code);
+  }
+
+  return pni_decoder_decode_value(decoder, data, code);
+}
 
 static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
                                            const size_t count)
@@ -402,7 +408,7 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
   if (array_code == PNE_DESCRIPTOR) {
     node->described = true;
 
-    err = pni_decoder_decode_node(decoder, data);
+    err = pni_decoder_decode_descriptor(decoder, data);
     if (err) return err;
 
     err = pni_decoder_decode_type(decoder, &array_code);
@@ -455,7 +461,7 @@ static int pni_decoder_decode_described(pni_decoder_t *decoder, pn_data_t *data,
   pni_node_set_type(node, PN_DESCRIBED);
   pni_data_enter(data);
 
-  err = pni_decoder_decode_node(decoder, data);
+  err = pni_decoder_decode_descriptor(decoder, data);
   if (err) return err;
 
   err = pni_decoder_decode_node(decoder, data);
