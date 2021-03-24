@@ -108,7 +108,6 @@ TEST_CASE("data_multiple") {
   CHECK("{\"foo\"=[1, 987, 3], \"bar\"=965}" == inspect(data));
 }
 
-
 #define BUFSIZE 1024
 static void check_encode_decode(auto_free<pn_data_t, pn_data_free>& src) {
 	char buf[BUFSIZE];
@@ -155,4 +154,53 @@ TEST_CASE("array_list") {
 	check_array("@T[[Sid][oooo][]]", PN_LIST, "aaa", 123, double(3.2415), true, true, false, true);
 	// only empty lists
 	check_array("@T[[][][][][]]", PN_LIST);
+}
+
+TEST_CASE("prev_next") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  pn_data_put_int(data, 1);
+  pn_data_put_int(data, 2);
+
+  pn_data_put_list(data);
+  pn_data_enter(data);
+
+  pn_data_put_int(data, 3);
+  pn_data_put_int(data, 4);
+
+  pn_data_exit(data);
+
+  pn_data_rewind(data);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 1);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 2);
+
+  pn_data_prev(data);
+  CHECK(pn_data_get_int(data) == 1);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 2);
+
+  pn_data_next(data);
+  pn_data_enter(data);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 3);
+
+  pn_data_exit(data);
+
+  pn_data_prev(data);
+  CHECK(pn_data_get_int(data) == 2);
+
+  pn_data_next(data);
+  pn_data_enter(data);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 3);
+
+  pn_data_next(data);
+  CHECK(pn_data_get_int(data) == 4);
 }
