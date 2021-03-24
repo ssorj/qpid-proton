@@ -1341,7 +1341,7 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
 
   if (!data->current) return NULL;
 
-  return data->nodes + data->current - 1;
+  return pni_data_node(data, data->current);
 }
 
 void pn_data_narrow(pn_data_t *data)
@@ -1587,14 +1587,14 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
   *node = (pni_node_t) {0};
 
   if (data->current) {
-    pni_node_t *current = data->nodes + data->current - 1;
+    pni_node_t *current = pni_data_node(data, data->current);
 
     current->next = node_id;
     node->prev = data->current;
   }
 
   if (data->parent) {
-    pni_node_t *parent = data->nodes + data->parent - 1;
+    pni_node_t *parent = pni_data_node(data, data->parent);
 
     if (!parent->down) {
       parent->down = node_id;
@@ -1627,18 +1627,13 @@ ssize_t pn_data_encoded_size(pn_data_t *data)
   return r;
 }
 
-PNI_INLINE ssize_t pni_data_decode(pn_data_t *data, const char *bytes, size_t size)
+ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   pni_decoder_t decoder;
   pni_decoder_initialize(&decoder);
   ssize_t r = pni_decoder_decode(&decoder, bytes, size, data);
   pni_decoder_finalize(&decoder);
   return r;
-}
-
-ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
-{
-  return pni_data_decode(data, bytes, size);
 }
 
 static inline int pni_data_put_compound(pn_data_t *data, pn_type_t type)
@@ -2175,7 +2170,7 @@ static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   return err;
 }
 
-static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   int err = 0;
   int level = 0;

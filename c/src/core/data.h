@@ -94,8 +94,6 @@ void pni_node_set_uuid(pni_node_t *node, pn_uuid_t value);
 
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
 
-ssize_t pni_data_decode(pn_data_t *data, const char *bytes, size_t size);
-
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
