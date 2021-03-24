@@ -57,7 +57,7 @@ def amqp_bytes(*items):
         if type(item) is int:
             out.append(bchr(item))
         elif type(item) is _text_type:
-            out.append(item.encode("latin-1")) # raw_unicode_escape"))
+            out.append(item.encode("latin-1"))
         elif type(item) is _binary_type:
             out.append(item)
         else:
