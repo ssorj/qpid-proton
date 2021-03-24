@@ -63,8 +63,8 @@ struct pn_data_t {
   pni_nid_t base_current;
 };
 
-bool pni_data_enter(pn_data_t *data);
-bool pni_data_exit(pn_data_t *data);
+void pni_data_enter(pn_data_t *data);
+void pni_data_exit(pn_data_t *data);
 bool pni_data_next(pn_data_t *data);
 void pni_data_rewind(pn_data_t *data);
 
@@ -107,6 +107,7 @@ static inline pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
   pni_node_t *node = data->nodes + node_id - 1;
 
   assert(node);
+  assert(node >= data->nodes && node <= data->nodes + data->size);
 
   return node;
 }

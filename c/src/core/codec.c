@@ -617,7 +617,7 @@ int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
   int err = 0;
   pn_handle_t point = pn_data_point(src);
-  pni_data_rewind(src);
+  pn_data_rewind(src);
   pn_data_next(src);
   if (pn_data_type(src) == PN_ARRAY) {
     switch (pn_data_get_array(src)) {
@@ -625,7 +625,7 @@ static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
       err = pn_data_put_null(data);
       break;
      case 1:          /* Single-element array => encode the element */
-      pni_data_enter(src);
+      pn_data_enter(src);
       pn_data_narrow(src);
       err = pn_data_appendn(data, src, 1);
       pn_data_widen(src);
@@ -762,7 +762,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case 'D':
       /* The next 2 args are the descriptor, value for a described value. */
       err = pn_data_put_described(data);
-      pni_data_enter(data);
+      pn_data_enter(data);
       break;
     case 'T':                   /* Set type of open array */
       {
@@ -784,31 +784,31 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           described = false;
         }
         err = pn_data_put_array(data, described, (pn_type_t) 0);
-        pni_data_enter(data);
+        pn_data_enter(data);
       }
       break;
     case '[':                   /* begin list */
       if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pn_data_put_list(data);
         if (err) return err;
-        pni_data_enter(data);
+        pn_data_enter(data);
       }
       break;
     case '{':                   /* begin map */
       err = pn_data_put_map(data);
       if (err) return err;
-      pni_data_enter(data);
+      pn_data_enter(data);
       break;
     case '}':
     case ']':
-      if (!pni_data_exit(data))
+      if (!pn_data_exit(data))
         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
       break;
     case '?':
       if (!va_arg(ap, int)) {
         err = pn_data_put_null(data);
         if (err) return err;
-        pni_data_enter(data);
+        pn_data_enter(data);
       }
       break;
     case '*':
@@ -868,11 +868,11 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     while (parent) {
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
         current->described = true;
-        pni_data_exit(data);
+        pn_data_exit(data);
         current = pn_data_node(data, data->current);
         parent = pn_data_node(data, data->parent);
       } else if (parent->atom.type == PN_NULL && parent->children == 1) {
-        pni_data_exit(data);
+        pn_data_exit(data);
         current = pn_data_node(data, data->current);
         current->down = 0;
         current->children = 0;
@@ -906,7 +906,7 @@ static bool pn_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
   } else {
     pni_node_t *parent = pn_data_node(data, data->parent);
     if (parent && parent->atom.type == PN_DESCRIBED) {
-      pni_data_exit(data);
+      pn_data_exit(data);
       return pn_scan_next(data, type, suspend);
     } else {
       *type = PN_INVALID;
@@ -919,7 +919,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data);
 
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
-  pni_data_rewind(data);
+  pn_data_rewind(data);
   bool *scanarg = NULL;
   bool at = false;
   int level = 0;
@@ -1175,7 +1175,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'D':
       found = pn_scan_next(data, &type, suspend);
       if (found && type == PN_DESCRIBED) {
-        pni_data_enter(data);
+        pn_data_enter(data);
         scanned = true;
       } else {
         if (!suspend) {
@@ -1189,7 +1189,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '@':
       found = pn_scan_next(data, &type, suspend);
       if (found && type == PN_ARRAY) {
-        pni_data_enter(data);
+        pn_data_enter(data);
         scanned = true;
         at = true;
       } else {
@@ -1208,7 +1208,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       } else {
         found = pn_scan_next(data, &type, suspend);
         if (found && type == PN_LIST) {
-          pni_data_enter(data);
+          pn_data_enter(data);
           scanned = true;
         } else {
           if (!suspend) {
@@ -1223,7 +1223,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '{':
       found = pn_scan_next(data, &type, suspend);
       if (found && type == PN_MAP) {
-        pni_data_enter(data);
+        pn_data_enter(data);
         scanned = true;
       } else {
         if (resume_count) {
@@ -1237,7 +1237,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case ']':
     case '}':
       level--;
-      if (!suspend && !pni_data_exit(data))
+      if (!suspend && !pn_data_exit(data))
         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
       if (resume_count && level == count_level) resume_count--;
       break;
@@ -1487,37 +1487,42 @@ pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-PNI_INLINE bool pni_data_enter(pn_data_t *data)
+PNI_INLINE void pni_data_enter(pn_data_t *data)
 {
-  if (data->current) {
-    data->parent = data->current;
-    data->current = 0;
-    return true;
-  } else {
-    return false;
-  }
+  assert(data->current);
+
+  data->parent = data->current;
+  data->current = 0;
 }
 
 bool pn_data_enter(pn_data_t *data)
 {
-  return pni_data_enter(data);
-}
-
-PNI_INLINE bool pni_data_exit(pn_data_t *data)
-{
-  if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-    data->current = data->parent;
-    data->parent = parent->parent;
+  if (data->current) {
+    pni_data_enter(data);
     return true;
   } else {
     return false;
   }
 }
 
+PNI_INLINE void pni_data_exit(pn_data_t *data)
+{
+  assert(data->parent);
+
+  pni_node_t *parent = pni_data_node(data, data->parent);
+
+  data->current = data->parent;
+  data->parent = parent->parent;
+}
+
 bool pn_data_exit(pn_data_t *data)
 {
-  return pni_data_exit(data);
+  if (data->parent) {
+    pni_data_exit(data);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool pn_data_lookup(pn_data_t *data, const char *name)
