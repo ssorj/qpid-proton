@@ -1610,28 +1610,48 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
   pni_encoder_t encoder;
+
   pni_encoder_initialize(&encoder);
-  ssize_t r = pni_encoder_encode(&encoder, data, bytes, size);
+
+  ssize_t result = pni_encoder_encode(&encoder, data, bytes, size);
+
+  if (result < 0) {
+    pn_error_copy(pn_data_error(data), encoder.error);
+  }
+
   pni_encoder_finalize(&encoder);
-  return r;
+
+  return result;
 }
 
 ssize_t pn_data_encoded_size(pn_data_t *data)
 {
   pni_encoder_t encoder;
+
   pni_encoder_initialize(&encoder);
-  ssize_t r = pni_encoder_size(&encoder, data);
+
+  ssize_t result = pni_encoder_size(&encoder, data);
+
   pni_encoder_finalize(&encoder);
-  return r;
+
+  return result;
 }
 
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   pni_decoder_t decoder;
+
   pni_decoder_initialize(&decoder);
-  ssize_t r = pni_decoder_decode(&decoder, bytes, size, data);
+
+  ssize_t result = pni_decoder_decode(&decoder, bytes, size, data);
+
+  if (result < 0) {
+    pn_error_copy(pn_data_error(data), decoder.error);
+  }
+
   pni_decoder_finalize(&decoder);
-  return r;
+
+  return result;
 }
 
 static inline int pni_data_put_compound(pn_data_t *data, pn_type_t type)
@@ -1660,12 +1680,6 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
   node->described = described;
   node->type = type;
   return 0;
-}
-
-void pni_data_set_array_type(pn_data_t *data, pn_type_t type)
-{
-  pni_node_t *array = pni_data_current(data);
-  if (array) array->type = type;
 }
 
 int pn_data_put_described(pn_data_t *data)
