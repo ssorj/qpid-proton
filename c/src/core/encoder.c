@@ -594,7 +594,7 @@ static inline int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *da
 {
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data, node);
-  case 0x40:
+  case 0x40: // Falls through
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
   case 0x70: return pni_encoder_encode_fixed32(encoder, node, code);
@@ -668,6 +668,11 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
 
     if (err) {
       pn_data_restore(src, save);
+
+      if (err == PN_OVERFLOW) {
+        err = pn_error_format(pni_encoder_error(encoder), PN_OVERFLOW, "not enough space to encode");
+      }
+
       return err;
     }
   }
@@ -687,12 +692,12 @@ ssize_t pni_encoder_size(pni_encoder_t *encoder, pn_data_t *src)
 {
   size_t buf_size = 64;
   char *buf = malloc(buf_size);
-  int err;
+  ssize_t size;
 
   while (true) {
-    err = pni_encoder_encode(encoder, src, buf, buf_size);
+    size = pni_encoder_encode(encoder, src, buf, buf_size);
 
-    if (err == PN_OVERFLOW) {
+    if (size == PN_OVERFLOW) {
       buf_size = buf_size * 2;
       buf = realloc(buf, buf_size);
     } else {
@@ -701,10 +706,6 @@ ssize_t pni_encoder_size(pni_encoder_t *encoder, pn_data_t *src)
   }
 
   free(buf);
-
-  if (err) return err;
-
-  size_t size = encoder->position - encoder->output;
 
   return size;
 }

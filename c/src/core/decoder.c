@@ -183,7 +183,8 @@ static inline int pni_decoder_decode_fixed8(pni_decoder_t *decoder, pni_node_t *
   case PNE_UBYTE:      pni_node_set_ubyte(node, value); return 0;
   case PNE_BYTE:       pni_node_set_byte(node, value); return 0;
   case PNE_SMALLUINT:  pni_node_set_uint(node, value); return 0;
-  case PNE_SMALLULONG: pni_node_set_ulong(node, value); return 0;
+  // Handled as a special case at the top of decode_value
+  // case PNE_SMALLULONG: pni_node_set_ulong(node, value); return 0;
   case PNE_SMALLINT:   pni_node_set_int(node, (int8_t) value); return 0;
   case PNE_SMALLLONG:  pni_node_set_long(node, (int8_t) value); return 0;
   case PNE_BOOLEAN:    pni_node_set_bool(node, value); return 0;
@@ -354,11 +355,11 @@ static inline int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
-  if (remaining < 1) return PN_UNDERFLOW;
+  if (remaining < 2) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf8(decoder);
+  size_t count = pni_decoder_readf8(decoder);
 
   if (remaining < size + 1) return PN_UNDERFLOW;
-  size_t count = pni_decoder_readf8(decoder);
 
   return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
@@ -367,11 +368,11 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
-  if (remaining < 4) return PN_UNDERFLOW;
+  if (remaining < 8) return PN_UNDERFLOW;
   size_t size = pni_decoder_readf32(decoder);
+  size_t count = pni_decoder_readf32(decoder);
 
   if (remaining < size + 4) return PN_UNDERFLOW;
-  size_t count = pni_decoder_readf32(decoder);
 
   return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
@@ -542,11 +543,13 @@ PNI_INLINE ssize_t pni_decoder_decode(pni_decoder_t *decoder, const char *src, s
 
   int err = pni_decoder_decode_node(decoder, dst);
 
-  if (err == PN_UNDERFLOW) {
-    return pn_error_format(pni_decoder_error(decoder), PN_UNDERFLOW, "not enough data to decode");
-  }
+  if (err) {
+    if (err == PN_UNDERFLOW) {
+      err = pn_error_format(pni_decoder_error(decoder), PN_UNDERFLOW, "not enough data to decode");
+    }
 
-  if (err) return err;
+    return err;
+  }
 
   return decoder->position - decoder->input;
 }
