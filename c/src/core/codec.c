@@ -41,8 +41,7 @@
 
 const char *pn_type_name(pn_type_t type)
 {
-  switch (type)
-  {
+  switch (type) {
   case PN_NULL: return "PN_NULL";
   case PN_BOOL: return "PN_BOOL";
   case PN_UBYTE: return "PN_UBYTE";
@@ -68,10 +67,8 @@ const char *pn_type_name(pn_type_t type)
   case PN_ARRAY: return "PN_ARRAY";
   case PN_LIST: return "PN_LIST";
   case PN_MAP: return "PN_MAP";
-  default: break;
+  default: return "<UNKNOWN>";
   }
-
-  return "<UNKNOWN>";
 }
 
 static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t node_id)
@@ -413,7 +410,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   }
 }
 
-pni_node_t *pni_next_nonnull(pn_data_t *data, pni_node_t *node)
+static pni_node_t *pni_data_next_nonnull(pn_data_t *data, pni_node_t *node)
 {
   while (node) {
     node = pn_data_node(data, node->next);
@@ -456,7 +453,7 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
         err = pn_string_addf(str, " ");
         if (err) return err;
       } else {
-        if (!grandfields || pni_next_nonnull(data, node)) {
+        if (!grandfields || pni_data_next_nonnull(data, node)) {
           err = pn_string_addf(str, ", ");
           if (err) return err;
         }

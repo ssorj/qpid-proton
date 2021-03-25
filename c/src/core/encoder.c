@@ -466,6 +466,10 @@ static int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_data_t *da
   const uint8_t array_code = pni_encoder_type2code(encoder, node->type, &err);
   if (err) return err;
 
+  if (array_code == PNE_DESCRIPTOR) {
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "arrays of described types are not supported");
+  }
+
   data->parent = data->current;
   data->current = node->down;
 
@@ -594,7 +598,7 @@ static inline int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *da
 {
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data, node);
-  case 0x40: // Falls through
+  case 0x40: return 0;
   case 0x50: return pni_encoder_encode_fixed8(encoder, node);
   case 0x60: return pni_encoder_encode_fixed16(encoder, node);
   case 0x70: return pni_encoder_encode_fixed32(encoder, node, code);
@@ -621,23 +625,10 @@ static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_
   err = pni_encoder_encode_type(encoder, code);
   if (err) return err;
 
-  switch (code & 0xF0) {
-  case 0x00: return pni_encoder_encode_described(encoder, data, node);
-  case 0x40: return 0;
-  case 0x50: return pni_encoder_encode_fixed8(encoder, node);
-  case 0x60: return pni_encoder_encode_fixed16(encoder, node);
-  case 0x70: return pni_encoder_encode_fixed32(encoder, node, code);
-  case 0x80: return pni_encoder_encode_fixed64(encoder, node, code);
-  case 0x90: return pni_encoder_encode_fixed128(encoder, node, code);
-  case 0xA0: return pni_encoder_encode_variable8(encoder, node);
-  case 0xB0: return pni_encoder_encode_variable32(encoder, node);
-  case 0xC0: return pni_encoder_encode_compound8(encoder, data, node);
-  case 0xD0: return pni_encoder_encode_compound32(encoder, data, node);
-  case 0xE0: return pni_encoder_encode_array8(encoder, data, node);
-  case 0xF0: return pni_encoder_encode_array32(encoder, data, node);
-  default:
-    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "unrecognized encoding: %u", code);
-  }
+  err = pni_encoder_encode_value(encoder, data, node, code);
+  if (err) return err;
+
+  return 0;
 }
 
 PNI_INLINE void pni_encoder_initialize(pni_encoder_t *encoder)
