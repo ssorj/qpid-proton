@@ -280,11 +280,11 @@ static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_d
   pn_bytes_t bytes = {size, start};
   pn_type_t type;
 
-  if ((code & 0x0F) == 0x1) {
+  if ((code & 0x0F) == 1) {
     type = PN_STRING;
-  } else if ((code & 0x0F) == 0x0) {
+  } else if ((code & 0x0F) == 0) {
     type = PN_BINARY;
-  } else if ((code & 0x0F) == 0x3) {
+  } else if ((code & 0x0F) == 3) {
     type = PN_SYMBOL;
   } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
@@ -330,7 +330,7 @@ static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_
 {
   pn_type_t type;
 
-  if ((0x0F & code) == 0) {
+  if ((code & 0x0F) == 0) {
     type = PN_LIST;
   } else if ((0x0F & code) == 1) {
     type = PN_MAP;
@@ -377,7 +377,7 @@ static int pni_decoder_decode_compound32(pni_decoder_t *decoder, pn_data_t *data
   return pni_decoder_decode_compound_values(decoder, data, node, code, count);
 }
 
-static int pni_decoder_decode_descriptor(pni_decoder_t *decoder, pn_data_t *data)
+static inline int pni_decoder_decode_descriptor(pni_decoder_t *decoder, pn_data_t *data)
 {
   int err;
   uint8_t code;
@@ -456,7 +456,7 @@ static int pni_decoder_decode_array32(pni_decoder_t *decoder, pn_data_t *data, p
   return pni_decoder_decode_array_values(decoder, data, node, count);
 }
 
-static int pni_decoder_decode_described(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
+static inline int pni_decoder_decode_described(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node)
 {
   int err;
 
@@ -483,7 +483,7 @@ static inline int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t *code)
   return 0;
 }
 
-PNI_FORCE_INLINE static inline int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
+static inline int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
 {
   pni_node_t *node = pni_data_add_node(data);
 

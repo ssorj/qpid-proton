@@ -391,7 +391,7 @@ static int pni_encoder_encode_compound32(pni_encoder_t *encoder, pn_data_t *data
   return 0;
 }
 
-static int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+static inline int pni_encoder_encode_compound8(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   char *starting_position = encoder->position;
   pni_nid_t starting_current = data->current;
