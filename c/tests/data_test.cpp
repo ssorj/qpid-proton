@@ -477,8 +477,8 @@ TEST_CASE("data_type_described") {
   auto_free<pn_data_t, pn_data_free> src(pn_data(0));
   auto_free<pn_data_t, pn_data_free> dst(pn_data(0));
 
-  pn_bytes_t key = pn_bytes("sprinkles");
-  pn_bytes_t value = pn_bytes(".:!:.");
+  pn_bytes_t key = PN_BYTES_LITERAL(sprinkles);
+  pn_bytes_t value = PN_BYTES_LITERAL(.:!:.);
 
   pn_data_put_described(src);
   pn_data_enter(src);
