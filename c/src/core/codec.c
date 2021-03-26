@@ -893,23 +893,26 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static bool pn_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
+static inline bool pni_data_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
 {
   if (suspend) return false;
-  bool found = pn_data_next(data);
-  if (found) {
-    *type = pn_data_type(data);
+
+  if (pni_data_next(data)) {
+    pni_node_t *current = pni_data_node(data, data->current);
+
+    *type = current->atom.type;
     return true;
-  } else {
-    pni_node_t *parent = pn_data_node(data, data->parent);
-    if (parent && parent->atom.type == PN_DESCRIBED) {
-      pn_data_exit(data);
-      return pn_scan_next(data, type, suspend);
-    } else {
-      *type = PN_INVALID;
-      return false;
+  } else if (data->parent) {
+    pni_node_t *parent = pni_data_node(data, data->parent);
+
+    if (parent->atom.type == PN_DESCRIBED) {
+      pni_data_exit(data);
+      return pni_data_scan_next(data, type, suspend);
     }
   }
+
+  *type = PN_INVALID;
+  return false;
 }
 
 static pni_node_t *pni_data_peek(pn_data_t *data);
@@ -934,7 +937,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
     switch (code) {
     case 'n':
-      found = pn_scan_next(data, &type, suspend);
+      found = pni_data_scan_next(data, &type, suspend);
       if (found && type == PN_NULL) {
         scanned = true;
       } else {
@@ -945,7 +948,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'o':
       {
         bool *value = va_arg(ap, bool *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_BOOL) {
           *value = pn_data_get_bool(data);
           scanned = true;
@@ -959,7 +962,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'B':
       {
         uint8_t *value = va_arg(ap, uint8_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_UBYTE) {
           *value = pn_data_get_ubyte(data);
           scanned = true;
@@ -973,7 +976,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'b':
       {
         int8_t *value = va_arg(ap, int8_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_BYTE) {
           *value = pn_data_get_byte(data);
           scanned = true;
@@ -987,7 +990,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'H':
       {
         uint16_t *value = va_arg(ap, uint16_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_USHORT) {
           *value = pn_data_get_ushort(data);
           scanned = true;
@@ -1001,7 +1004,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'h':
       {
         int16_t *value = va_arg(ap, int16_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_SHORT) {
           *value = pn_data_get_short(data);
           scanned = true;
@@ -1015,7 +1018,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'I':
       {
         uint32_t *value = va_arg(ap, uint32_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_UINT) {
           *value = pn_data_get_uint(data);
           scanned = true;
@@ -1029,7 +1032,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'i':
       {
         int32_t *value = va_arg(ap, int32_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_INT) {
           *value = pn_data_get_int(data);
           scanned = true;
@@ -1043,7 +1046,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'c':
       {
         pn_char_t *value = va_arg(ap, pn_char_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_CHAR) {
           *value = pn_data_get_char(data);
           scanned = true;
@@ -1057,7 +1060,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'L':
       {
         uint64_t *value = va_arg(ap, uint64_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_ULONG) {
           *value = pn_data_get_ulong(data);
           scanned = true;
@@ -1071,7 +1074,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'l':
       {
         int64_t *value = va_arg(ap, int64_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_LONG) {
           *value = pn_data_get_long(data);
           scanned = true;
@@ -1085,7 +1088,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 't':
       {
         pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_TIMESTAMP) {
           *value = pn_data_get_timestamp(data);
           scanned = true;
@@ -1099,7 +1102,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'f':
       {
         float *value = va_arg(ap, float *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_FLOAT) {
           *value = pn_data_get_float(data);
           scanned = true;
@@ -1113,7 +1116,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'd':
       {
         double *value = va_arg(ap, double *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_DOUBLE) {
           *value = pn_data_get_double(data);
           scanned = true;
@@ -1127,7 +1130,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'z':
       {
         pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_BINARY) {
           *bytes = pn_data_get_binary(data);
           scanned = true;
@@ -1142,7 +1145,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'S':
       {
         pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_STRING) {
           *bytes = pn_data_get_string(data);
           scanned = true;
@@ -1157,7 +1160,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 's':
       {
         pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_SYMBOL) {
           *bytes = pn_data_get_symbol(data);
           scanned = true;
@@ -1170,7 +1173,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     case 'D':
-      found = pn_scan_next(data, &type, suspend);
+      found = pni_data_scan_next(data, &type, suspend);
       if (found && type == PN_DESCRIBED) {
         pn_data_enter(data);
         scanned = true;
@@ -1184,7 +1187,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     case '@':
-      found = pn_scan_next(data, &type, suspend);
+      found = pni_data_scan_next(data, &type, suspend);
       if (found && type == PN_ARRAY) {
         pn_data_enter(data);
         scanned = true;
@@ -1203,7 +1206,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         scanned = true;
         at = false;
       } else {
-        found = pn_scan_next(data, &type, suspend);
+        found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_LIST) {
           pn_data_enter(data);
           scanned = true;
@@ -1218,7 +1221,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       level++;
       break;
     case '{':
-      found = pn_scan_next(data, &type, suspend);
+      found = pni_data_scan_next(data, &type, suspend);
       if (found && type == PN_MAP) {
         pn_data_enter(data);
         scanned = true;
@@ -1239,7 +1242,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     case '.':
-      found = pn_scan_next(data, &type, suspend);
+      found = pni_data_scan_next(data, &type, suspend);
       scanned = found;
       if (resume_count && level == count_level) resume_count--;
       break;
