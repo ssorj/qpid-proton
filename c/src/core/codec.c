@@ -826,7 +826,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'T':                   /* Set type of open array */
       {
-        pni_node_t *parent = pn_data_node(data, data->parent);
+        pni_node_t *parent = pni_data_node(data, data->parent);
         if (parent->atom.type == PN_ARRAY) {
           parent->type = (pn_type_t) va_arg(ap, int);
         } else {
@@ -904,7 +904,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           err = pni_data_appendn(data, src, 1);
           if (err) return err;
         } else {
-          err = pn_data_put_null(data);
+          err = pni_data_put_null(data);
           if (err) return err;
         }
       }
@@ -923,20 +923,18 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 
     if (err) return err;
 
-    pni_node_t *parent = pn_data_node(data, data->parent);
-    pni_node_t *current = pn_data_node(data, data->current);
-    while (parent) {
+    while (data->parent) {
+      pni_node_t *parent = pni_data_node(data, data->parent);
+
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
+        pni_node_t *current = pni_data_node(data, data->current);
         current->described = true;
         pni_data_exit(data);
-        current = pn_data_node(data, data->current);
-        parent = pn_data_node(data, data->parent);
       } else if (parent->atom.type == PN_NULL && parent->children == 1) {
         pni_data_exit(data);
-        current = pn_data_node(data, data->current);
+        pni_node_t *current = pni_data_node(data, data->current);
         current->down = 0;
         current->children = 0;
-        parent = pn_data_node(data, data->parent);
       } else {
         break;
       }
