@@ -1431,26 +1431,22 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 
 PNI_INLINE bool pni_data_next(pn_data_t *data)
 {
+  pni_nid_t next = 0;
+
   if (data->current) {
-    pni_node_t *current = pni_data_node(data, data->current);
-
-    if (current->next) {
-      data->current = current->next;
-      return true;
-    }
+    next = data->nodes[data->current - 1].next;
   } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-
-    if (parent->down) {
-      data->current = parent->down;
-      return true;
-    }
+    next = data->nodes[data->parent - 1].down;
   } else if (data->size) {
-    data->current = 1;
-    return true;
+    next = 1;
   }
 
-  return false;
+  if (next) {
+    data->current = next;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool pn_data_next(pn_data_t *data)
@@ -1611,20 +1607,20 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
     if (err) return NULL;
   }
 
-  pni_node_t *node = data->nodes + data->size++;
+  pni_node_t *node = &data->nodes[data->size++];
   pni_nid_t node_id = node - data->nodes + 1;
 
   *node = (pni_node_t) {0};
 
   if (data->current) {
-    pni_node_t *current = pni_data_node(data, data->current);
+    pni_node_t *current = &data->nodes[data->current - 1];
 
     current->next = node_id;
     node->prev = data->current;
   }
 
   if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
+    pni_node_t *parent = &data->nodes[data->parent - 1];
 
     if (!parent->down) {
       parent->down = node_id;
