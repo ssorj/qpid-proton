@@ -473,6 +473,36 @@ TEST_CASE("data_type_long") {
   }
 }
 
+TEST_CASE("data_type_timestamp") {
+  auto_free<pn_data_t, pn_data_free> src(pn_data(0));
+  auto_free<pn_data_t, pn_data_free> dst(pn_data(0));
+
+  CHECK(pn_data_get_timestamp(src) == 0);
+
+  const pn_timestamp_t values[] = {
+    LLONG_MIN, INT_MIN, SHRT_MIN, CHAR_MIN, -1, 0, 1, CHAR_MAX, SHRT_MAX, INT_MAX, LLONG_MAX
+  };
+
+  const size_t value_count = sizeof(values) / sizeof(int64_t);
+
+  pn_data_put_list(src);
+  pn_data_enter(src);
+
+  for (size_t i = 0; i < value_count; i++) {
+    pn_data_put_timestamp(src, values[i]);
+  }
+
+  check_encode_decode(src, dst);
+
+  pn_data_next(dst);
+  pn_data_enter(dst);
+
+  for (size_t i = 0; i < value_count; i++) {
+    CHECK(pn_data_next(dst) == true);
+    CHECK(pn_data_get_timestamp(dst) == values[i]);
+  }
+}
+
 TEST_CASE("data_type_described") {
   auto_free<pn_data_t, pn_data_free> src(pn_data(0));
   auto_free<pn_data_t, pn_data_free> dst(pn_data(0));
