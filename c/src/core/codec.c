@@ -529,15 +529,14 @@ pn_data_t *pn_data(size_t capacity)
 {
   static const pn_class_t clazz = PN_CLASS(pn_data);
   pn_data_t *data = (pn_data_t *) pn_class_new(&clazz, sizeof(pn_data_t));
-  data->capacity = capacity;
-  data->size = 0;
-  data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
-  data->buf = NULL;
-  data->parent = 0;
-  data->current = 0;
-  data->base_parent = 0;
-  data->base_current = 0;
-  data->error = NULL;
+  pni_node_t *nodes = NULL;
+
+  if (capacity) {
+    nodes = (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t));
+  }
+
+  *data = (pn_data_t) { 0, .capacity = capacity, .nodes = nodes };
+
   return data;
 }
 
@@ -1443,10 +1442,9 @@ PNI_INLINE bool pni_data_next(pn_data_t *data)
 
   if (next) {
     data->current = next;
-    return true;
-  } else {
-    return false;
   }
+
+  return next;
 }
 
 bool pn_data_next(pn_data_t *data)
