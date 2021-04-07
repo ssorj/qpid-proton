@@ -32,7 +32,7 @@
 #include <assert.h>
 
 typedef uint16_t pni_nid_t;
-#define PNI_NID_MAX ((pni_nid_t)-1)
+#define PNI_NID_MAX ((pni_nid_t) - 1)
 #define PNI_INTERN_MINSIZE 64
 
 typedef struct {

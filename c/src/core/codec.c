@@ -584,14 +584,20 @@ void pn_data_clear(pn_data_t *data)
 static int pni_data_grow(pn_data_t *data)
 {
   size_t capacity = data->capacity ? data->capacity : 2;
-  if (capacity >= PNI_NID_MAX) return PN_OUT_OF_MEMORY;
-  else if (capacity < PNI_NID_MAX/2) capacity *= 2;
-  else capacity = PNI_NID_MAX;
 
-  pni_node_t *new_nodes = (pni_node_t *) pni_mem_subreallocate(pn_class(data), data, data->nodes, capacity * sizeof(pni_node_t));
+  capacity *= 2;
+
+  if (capacity == PNI_NID_MAX + 1) capacity = PNI_NID_MAX;
+  else if (capacity > PNI_NID_MAX) return PN_OUT_OF_MEMORY;
+
+  pni_node_t *new_nodes = (pni_node_t *) pni_mem_subreallocate(pn_class(data), data, data->nodes,
+                                                               capacity * sizeof(pni_node_t));
+
   if (new_nodes == NULL) return PN_OUT_OF_MEMORY;
+
   data->capacity = capacity;
   data->nodes = new_nodes;
+
   return 0;
 }
 
