@@ -102,7 +102,7 @@ static inline pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
   assert(data);
   assert(node_id);
 
-  pni_node_t *node = data->nodes + node_id - 1;
+  pni_node_t *node = &data->nodes[node_id - 1];
 
   assert(node);
   assert(node >= data->nodes && node <= data->nodes + data->size);

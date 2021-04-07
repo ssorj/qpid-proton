@@ -414,9 +414,9 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
 {
   assert(data);
 
-  if (!data->current) return NULL;
+  if (data->current) return &data->nodes[data->current - 1];
 
-  return pni_data_node(data, data->current);
+  return NULL;
 }
 
 static pni_node_t *pni_data_next_nonnull(pn_data_t *data, pni_node_t *node)
