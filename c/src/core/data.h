@@ -65,7 +65,7 @@ struct pn_data_t {
 
 void pni_data_enter(pn_data_t *data);
 void pni_data_exit(pn_data_t *data);
-bool pni_data_next(pn_data_t *data);
+pni_nid_t pni_data_next(pn_data_t *data);
 void pni_data_rewind(pn_data_t *data);
 
 pni_node_t *pni_data_add_node(pn_data_t *data);

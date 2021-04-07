@@ -182,37 +182,46 @@ static inline void pni_encoder_writef8(pni_encoder_t *encoder, const uint8_t val
   *encoder->position++ = value;
 }
 
-static inline void pni_encoder_writef16(pni_encoder_t *encoder, const uint16_t value)
+static inline void pni_encoder_writef16(pni_encoder_t *encoder, uint16_t value)
 {
   assert(pni_encoder_remaining(encoder) >= 2);
 
-  encoder->position[0] = 0xFF & (value >> 8);
-  encoder->position[1] = 0xFF & (value     );
+  // encoder->position[0] = 0xFF & (value >> 8);
+  // encoder->position[1] = 0xFF & (value     );
+
+  *(uint16_t*) encoder->position = __builtin_bswap16(value);
+
   encoder->position += 2;
 }
 
-static inline void pni_encoder_writef32(pni_encoder_t *encoder, const uint32_t value)
+static inline void pni_encoder_writef32(pni_encoder_t *encoder, uint32_t value)
 {
   assert(pni_encoder_remaining(encoder) >= 4);
 
-  encoder->position[0] = 0xFF & (value >> 24);
-  encoder->position[1] = 0xFF & (value >> 16);
-  encoder->position[2] = 0xFF & (value >>  8);
-  encoder->position[3] = 0xFF & (value      );
+  // encoder->position[0] = 0xFF & (value >> 24);
+  // encoder->position[1] = 0xFF & (value >> 16);
+  // encoder->position[2] = 0xFF & (value >>  8);
+  // encoder->position[3] = 0xFF & (value      );
+
+  *(uint32_t*) encoder->position = __builtin_bswap32(value);
+
   encoder->position += 4;
 }
 
-static inline void pni_encoder_writef64(pni_encoder_t *encoder, const uint64_t value) {
+static inline void pni_encoder_writef64(pni_encoder_t *encoder, uint64_t value) {
   assert(pni_encoder_remaining(encoder) >= 8);
 
-  encoder->position[0] = 0xFF & (value >> 56);
-  encoder->position[1] = 0xFF & (value >> 48);
-  encoder->position[2] = 0xFF & (value >> 40);
-  encoder->position[3] = 0xFF & (value >> 32);
-  encoder->position[4] = 0xFF & (value >> 24);
-  encoder->position[5] = 0xFF & (value >> 16);
-  encoder->position[6] = 0xFF & (value >>  8);
-  encoder->position[7] = 0xFF & (value      );
+  // encoder->position[0] = 0xFF & (value >> 56);
+  // encoder->position[1] = 0xFF & (value >> 48);
+  // encoder->position[2] = 0xFF & (value >> 40);
+  // encoder->position[3] = 0xFF & (value >> 32);
+  // encoder->position[4] = 0xFF & (value >> 24);
+  // encoder->position[5] = 0xFF & (value >> 16);
+  // encoder->position[6] = 0xFF & (value >>  8);
+  // encoder->position[7] = 0xFF & (value      );
+
+  *(uint64_t*) encoder->position = __builtin_bswap64(value);
+
   encoder->position += 8;
 }
 
@@ -338,21 +347,24 @@ static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pn_
   data->parent = data->current;
   data->current = node->down;
 
-  for (size_t i = 0; i < node->children; i++) {
+  size_t children = node->children;
+  size_t nulls = 0;
+
+  for (size_t i = 0; i < children; i++) {
     pni_node_t *child = pni_data_node(data, data->current);
 
     if (child->atom.type == PN_NULL) {
-      *null_count += 1;
+      nulls += 1;
       data->current = child->next;
       continue;
-    } else if (*null_count) {
-      if (pni_encoder_remaining(encoder) < *null_count) return PN_OVERFLOW;
+    } else if (nulls) {
+      if (pni_encoder_remaining(encoder) < nulls) return PN_OVERFLOW;
 
-      for (size_t i = 0; i < *null_count; i++) {
+      for (size_t i = 0; i < nulls; i++) {
         pni_encoder_writef8(encoder, PNE_NULL);
       }
 
-      *null_count = 0;
+      nulls = 0;
     }
 
     int err = pni_encoder_encode_node(encoder, data, child);
@@ -363,6 +375,8 @@ static inline int pni_encoder_encode_compound_values(pni_encoder_t *encoder, pn_
 
   data->current = data->parent;
   data->parent = node->parent;
+
+  *null_count = nulls;
 
   return 0;
 }
