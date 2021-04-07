@@ -790,7 +790,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 	// For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
         char *start = va_arg(ap, char *);
-        err = pn_data_put_binary(data, pn_bytes(size, start));
+        err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
       }
       break;
     case 'z':                   /* encode binary or null if pointer is NULL */
@@ -799,29 +799,27 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         size_t size = va_arg(ap, size_t);
         char *start = va_arg(ap, char *);
         if (start) {
-          err = pn_data_put_binary(data, pn_bytes(size, start));
+          err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
         } else {
           err = pni_data_put_null(data);
         }
       }
       break;
     case 'S':                   /* encode string or null if NULL */
+      {
+        char *start = va_arg(ap, char *);
+        if (start) {
+          err = pni_data_put_variable(data, PN_STRING, pn_bytes(strlen(start), start));
+        } else {
+          err = pni_data_put_null(data);
+        }
+      }
+      break;
     case 's':                   /* encode symbol or null if NULL */
       {
         char *start = va_arg(ap, char *);
-        size_t size;
-        pn_type_t type;
-
         if (start) {
-          size = strlen(start);
-
-          if (code == 'S') {
-            type = PN_STRING;
-          } else {
-            type = PN_SYMBOL;
-          }
-
-          err = pni_data_put_variable(data, type, pn_bytes(size, start));
+          err = pni_data_put_variable(data, PN_SYMBOL, pn_bytes(strlen(start), start));
         } else {
           err = pni_data_put_null(data);
         }
@@ -962,31 +960,36 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static inline bool pni_data_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
+int counter = 0;
+
+static bool pni_data_scan_next(pn_data_t *data, pn_type_t *type, bool suspend);
+
+static bool pni_data_scan_next_recursive(pn_data_t *data, pn_type_t *type, bool suspend)
+{
+  return pni_data_scan_next(data, type, suspend);
+}
+
+PNI_FORCE_INLINE static inline bool pni_data_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
 {
   if (suspend) return false;
 
-  if (pni_data_next(data)) {
-    pni_node_t *current = pni_data_node(data, data->current);
+  pni_nid_t node_id = pni_data_next(data);
 
-    *type = current->atom.type;
+  if (node_id) {
+    *type = data->nodes[node_id - 1].atom.type;
     return true;
   } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
+    if (data->nodes[node_id - 1].atom.type == PN_DESCRIBED) {
+      // parent is a described node
 
-    if (parent->atom.type == PN_DESCRIBED) {
       pni_data_exit(data);
 
-      if (pni_data_next(data)) {
-        pni_node_t *current = pni_data_node(data, data->current);
-
-        *type = current->atom.type;
-        return true;
-      }
+      return pni_data_scan_next_recursive(data, type, suspend);
     }
   }
 
   *type = PN_INVALID;
+
   return false;
 }
 
@@ -2168,8 +2171,7 @@ static inline pn_bytes_t pni_data_get_variable(pn_data_t *data, pn_type_t type)
   if (node && node->atom.type == type) {
     return node->atom.u.as_bytes;
   } else {
-    pn_bytes_t t = {0};
-    return t;
+    return pn_bytes_null;
   }
 }
 
