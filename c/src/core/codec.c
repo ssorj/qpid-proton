@@ -71,6 +71,101 @@ const char *pn_type_name(pn_type_t type)
   }
 }
 
+static inline pn_type_t pni_node_get_type(pni_node_t *node)
+{
+  return node->atom.type;
+}
+
+static inline pn_bytes_t pni_node_get_bytes(pni_node_t *node)
+{
+  return node->atom.u.as_bytes;
+}
+
+static inline bool pni_node_get_bool(pni_node_t *node)
+{
+  return node->atom.u.as_bool;
+}
+
+static inline uint8_t pni_node_get_ubyte(pni_node_t *node)
+{
+  return node->atom.u.as_ubyte;
+}
+
+static inline int8_t pni_node_get_byte(pni_node_t *node)
+{
+  return node->atom.u.as_byte;
+}
+
+static inline uint16_t pni_node_get_ushort(pni_node_t *node)
+{
+  return node->atom.u.as_ushort;
+}
+
+static inline int16_t pni_node_get_short(pni_node_t *node)
+{
+  return node->atom.u.as_short;
+}
+
+static inline uint32_t pni_node_get_uint(pni_node_t *node)
+{
+  return node->atom.u.as_uint;
+}
+
+static inline int32_t pni_node_get_int(pni_node_t *node)
+{
+  return node->atom.u.as_int;
+}
+
+static inline float pni_node_get_float(pni_node_t *node)
+{
+  return node->atom.u.as_float;
+}
+
+static inline double pni_node_get_double(pni_node_t *node)
+{
+  return node->atom.u.as_double;
+}
+
+static inline pn_char_t pni_node_get_char(pni_node_t *node)
+{
+  return node->atom.u.as_char;
+}
+
+static inline pn_decimal32_t pni_node_get_decimal32(pni_node_t *node)
+{
+  return node->atom.u.as_decimal32;
+}
+
+static inline pn_decimal64_t pni_node_get_decimal64(pni_node_t *node)
+{
+  return node->atom.u.as_decimal64;
+}
+
+static inline pn_decimal128_t pni_node_get_decimal128(pni_node_t *node)
+{
+  return node->atom.u.as_decimal128;
+}
+
+static inline uint64_t pni_node_get_ulong(pni_node_t *node)
+{
+  return node->atom.u.as_ulong;
+}
+
+static inline int64_t pni_node_get_long(pni_node_t *node)
+{
+  return node->atom.u.as_long;
+}
+
+static inline pn_uuid_t pni_node_get_uuid(pni_node_t *node)
+{
+  return node->atom.u.as_uuid;
+}
+
+static inline pn_timestamp_t pni_node_get_timestamp(pni_node_t *node)
+{
+  return node->atom.u.as_timestamp;
+}
+
 PNI_INLINE void pni_node_set_type(pni_node_t *node, pn_type_t type)
 {
   node->atom.type = type;
@@ -993,6 +1088,37 @@ PNI_FORCE_INLINE static inline bool pni_data_scan_next(pn_data_t *data, pn_type_
   return false;
 }
 
+static pni_node_t *pni_data_scan_next_node(pn_data_t *data, pn_type_t *type, bool suspend);
+
+static pni_node_t *pni_data_scan_next_node_recursive(pn_data_t *data, pn_type_t *type, bool suspend)
+{
+  return pni_data_scan_next_node(data, type, suspend);
+}
+PNI_FORCE_INLINE static inline pni_node_t *pni_data_scan_next_node(pn_data_t *data, pn_type_t *type, bool suspend)
+{
+  if (suspend) return NULL;
+
+  pni_nid_t node_id = pni_data_next(data);
+
+  if (node_id) {
+    pni_node_t *node = &data->nodes[node_id - 1];
+    *type = pni_node_get_type(node);
+    return node;
+  } else if (data->parent) {
+    if (data->nodes[node_id - 1].atom.type == PN_DESCRIBED) {
+      // parent is a described node
+
+      pni_data_exit(data);
+
+      return pni_data_scan_next_node_recursive(data, type, suspend);
+    }
+  }
+
+  *type = PN_INVALID;
+
+  return NULL;
+}
+
 static pni_node_t *pni_data_peek(pn_data_t *data);
 static bool pni_data_get_bool(pn_data_t *data);
 static uint32_t pni_data_get_uint(pn_data_t *data);
@@ -1033,7 +1159,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         bool *value = va_arg(ap, bool *);
         found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_BOOL) {
-          *value = pni_data_get_bool(data);
+          //*value = pni_data_get_bool(data);
+          *value = pni_data_current(data)->atom.u.as_bool;
           scanned = true;
         } else {
           *value = 0;
@@ -1103,7 +1230,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         uint32_t *value = va_arg(ap, uint32_t *);
         found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_UINT) {
-          *value = pni_data_get_uint(data);
+          //*value = pni_data_get_uint(data);
+          *value = pni_data_current(data)->atom.u.as_uint;
           scanned = true;
         } else {
           *value = 0;
@@ -1145,7 +1273,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         uint64_t *value = va_arg(ap, uint64_t *);
         found = pni_data_scan_next(data, &type, suspend);
         if (found && type == PN_ULONG) {
-          *value = pni_data_get_ulong(data);
+          //*value = pni_data_get_ulong(data);
+          *value = pni_data_current(data)->atom.u.as_ulong;
           scanned = true;
         } else {
           *value = 0;
@@ -1982,7 +2111,7 @@ static inline bool pni_data_get_bool(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_BOOL) {
-    return node->atom.u.as_bool;
+    return pni_node_get_bool(node);
   } else {
     return false;
   }
@@ -1997,7 +2126,7 @@ uint8_t pn_data_get_ubyte(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UBYTE) {
-    return node->atom.u.as_ubyte;
+    return pni_node_get_ubyte(node);
   } else {
     return 0;
   }
@@ -2007,7 +2136,7 @@ int8_t pn_data_get_byte(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_BYTE) {
-    return node->atom.u.as_byte;
+    return pni_node_get_byte(node);
   } else {
     return 0;
   }
@@ -2017,7 +2146,7 @@ uint16_t pn_data_get_ushort(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_USHORT) {
-    return node->atom.u.as_ushort;
+    return pni_node_get_ushort(node);
   } else {
     return 0;
   }
@@ -2027,7 +2156,7 @@ int16_t pn_data_get_short(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_SHORT) {
-    return node->atom.u.as_short;
+    return pni_node_get_short(node);
   } else {
     return 0;
   }
@@ -2037,7 +2166,7 @@ static inline uint32_t pni_data_get_uint(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UINT) {
-    return node->atom.u.as_uint;
+    return pni_node_get_uint(node);
   } else {
     return 0;
   }
@@ -2052,7 +2181,7 @@ int32_t pn_data_get_int(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_INT) {
-    return node->atom.u.as_int;
+    return pni_node_get_int(node);
   } else {
     return 0;
   }
@@ -2062,7 +2191,7 @@ pn_char_t pn_data_get_char(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_CHAR) {
-    return node->atom.u.as_char;
+    return pni_node_get_char(node);
   } else {
     return 0;
   }
@@ -2072,7 +2201,7 @@ static inline uint64_t pni_data_get_ulong(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ULONG) {
-    return node->atom.u.as_ulong;
+    return pni_node_get_ulong(node);
   } else {
     return 0;
   }
@@ -2087,7 +2216,7 @@ int64_t pn_data_get_long(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_LONG) {
-    return node->atom.u.as_long;
+    return pni_node_get_long(node);
   } else {
     return 0;
   }
@@ -2097,7 +2226,7 @@ pn_timestamp_t pn_data_get_timestamp(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_TIMESTAMP) {
-    return node->atom.u.as_timestamp;
+    return pni_node_get_timestamp(node);
   } else {
     return 0;
   }
@@ -2107,7 +2236,7 @@ float pn_data_get_float(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_FLOAT) {
-    return node->atom.u.as_float;
+    return pni_node_get_float(node);
   } else {
     return 0;
   }
@@ -2117,7 +2246,7 @@ double pn_data_get_double(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DOUBLE) {
-    return node->atom.u.as_double;
+    return pni_node_get_double(node);
   } else {
     return 0;
   }
@@ -2127,7 +2256,7 @@ pn_decimal32_t pn_data_get_decimal32(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL32) {
-    return node->atom.u.as_decimal32;
+    return pni_node_get_decimal32(node);
   } else {
     return 0;
   }
@@ -2137,7 +2266,7 @@ pn_decimal64_t pn_data_get_decimal64(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL64) {
-    return node->atom.u.as_decimal64;
+    return pni_node_get_decimal64(node);
   } else {
     return 0;
   }
@@ -2147,7 +2276,7 @@ pn_decimal128_t pn_data_get_decimal128(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_DECIMAL128) {
-    return node->atom.u.as_decimal128;
+    return pni_node_get_decimal128(node);
   } else {
     pn_decimal128_t t = {{0}};
     return t;
@@ -2158,7 +2287,7 @@ pn_uuid_t pn_data_get_uuid(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_UUID) {
-    return node->atom.u.as_uuid;
+    return pni_node_get_uuid(node);
   } else {
     pn_uuid_t t = {{0}};
     return t;
@@ -2169,7 +2298,7 @@ static inline pn_bytes_t pni_data_get_variable(pn_data_t *data, pn_type_t type)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == type) {
-    return node->atom.u.as_bytes;
+    return pni_node_get_bytes(node);
   } else {
     return pn_bytes_null;
   }
