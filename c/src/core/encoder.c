@@ -667,8 +667,9 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
 
   pni_data_rewind(src);
 
-  while (pni_data_next(src)) {
-    pni_node_t *node = pni_data_node(src, src->current);
+  pni_node_t *node;
+
+  while ((node = pni_data_next(src))) {
     int err = pni_encoder_encode_node(encoder, src, node);
 
     if (err) {

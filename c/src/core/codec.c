@@ -1057,20 +1057,16 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
 
 static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type)
 {
-  pni_nid_t node_id = pni_data_next(data);
+  pni_node_t *node = pni_data_next(data);
 
-  if (node_id) {
-    pni_node_t *node = &data->nodes[node_id - 1];
-
-    if (node->atom.type == type) {
-      return node;
-    }
+  if (node && node->atom.type == type) {
+    return node;
   }
 
   return NULL;
 }
 
-static pni_node_t *pni_data_peek(pn_data_t *data);
+static int pni_data_append_node(pn_data_t *data, pn_data_t *src, pni_node_t *node);
 
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
@@ -1082,7 +1078,6 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   while (*fmt) {
     char code = *(fmt++);
     pni_node_t *node = NULL;
-    bool scanned = false;
 
     switch (code) {
     case 'n':
@@ -1263,7 +1258,6 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case '[':
       if (at) {
-        scanned = true;
         at = false;
       } else {
         node = pni_data_scan_next(data, PN_LIST);
@@ -1287,53 +1281,41 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '.': {
-      pni_nid_t node_id = pni_data_next(data);
-      if (node_id) {
-        scanned = true;
-      }
+      node = pni_data_next(data);
       break;
     }
+    case 'C': {
+      pn_data_t *dst = va_arg(ap, pn_data_t *);
+      node = pni_data_next(data);
+      if (node && node->atom.type != PN_NULL) { // XXX Why the PN_NULL check?
+        int err = pni_data_append_node(dst, data, node);
+        if (err) return err;
+      }
+      break;
     case '?':
       if (!*fmt || *fmt == '?') {
         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
       }
       scan_arg = va_arg(ap, bool *);
-      break;
-    case 'C': {
-      pn_data_t *dst = va_arg(ap, pn_data_t *);
-      size_t old = pni_data_size(dst);
-      pni_node_t *next = pni_data_peek(data);
-
-      if (next && next->atom.type != PN_NULL) {
-        pni_data_narrow(data);
-        int err = pni_data_appendn(dst, data, 1);
-        pni_data_widen(data);
-        if (err) return err;
-        scanned = pni_data_size(dst) > old;
-      } else {
-        scanned = false;
-      }
-
-      pni_data_next(data);
-
-      break;
+      continue;
     }
     default:
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
 
-    // Execute this less
+    if (scan_arg) {
+      *scan_arg = node != NULL;
+      scan_arg = NULL;
+    }
+
     pni_node_t *current = pni_data_current(data);
+
     if (current && !current->next) {
       pni_node_t *parent = pni_data_node(data, data->parent);
+
       if (parent && parent->atom.type == PN_DESCRIBED) {
         pni_data_exit(data);
       }
-    }
-
-    if (scan_arg && code != '?') {
-      *scan_arg = scanned || node != NULL;
-      scan_arg = NULL;
     }
   }
 
@@ -1404,22 +1386,7 @@ bool pn_data_restore(pn_data_t *data, pn_handle_t point)
   }
 }
 
-static pni_node_t *pni_data_peek(pn_data_t *data)
-{
-  pni_node_t *current = pni_data_current(data);
-  if (current) {
-    return pn_data_node(data, current->next);
-  }
-
-  pni_node_t *parent = pn_data_node(data, data->parent);
-  if (parent) {
-     return pn_data_node(data, parent->down);
-  }
-
-  return NULL;
-}
-
-PNI_INLINE pni_nid_t pni_data_next(pn_data_t *data)
+PNI_INLINE pni_node_t *pni_data_next(pn_data_t *data)
 {
   pni_nid_t next = 0;
 
@@ -1433,14 +1400,34 @@ PNI_INLINE pni_nid_t pni_data_next(pn_data_t *data)
 
   if (next) {
     data->current = next;
+    return &data->nodes[next - 1];
   }
 
-  return next;
+  return NULL;
 }
+
+// PNI_INLINE pni_nid_t pni_data_next(pn_data_t *data)
+// {
+//   pni_nid_t next = 0;
+
+//   if (data->current) {
+//     next = data->nodes[data->current - 1].next;
+//   } else if (data->parent) {
+//     next = data->nodes[data->parent - 1].down;
+//   } else if (data->size) {
+//     next = 1;
+//   }
+
+//   if (next) {
+//     data->current = next;
+//   }
+
+//   return next;
+// }
 
 bool pn_data_next(pn_data_t *data)
 {
-  return pni_data_next(data);
+  return pni_data_next(data) != NULL;
 }
 
 bool pn_data_prev(pn_data_t *data)
@@ -2259,6 +2246,67 @@ static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   pn_data_restore(src, point);
 
   return err;
+}
+
+static int pni_data_append_node(pn_data_t *data, pn_data_t *src, pni_node_t *node)
+{
+  int err;
+  pni_node_t *child = NULL;
+
+  // pn_data_dump(data);
+  // pn_data_dump(src);
+  // printf("node id=%ld next=%d parent=%d down=%d\n", node - src->nodes + 1, node->next, node->parent, node->down);
+
+  err = pni_data_copy_node(data, node);
+  if (err) return err;
+
+  if (node->down) {
+    pni_data_enter(data);
+    child = pni_data_node(src, node->down);
+  }
+
+  while (child) {
+    // printf("child id=%ld next=%d parent=%d down=%d\n", child - src->nodes + 1, child->next, child->parent, child->down);
+
+    err = pni_data_copy_node(data, child);
+    if (err) return err;
+
+    size_t next = 0;
+
+    if (child->down) {
+      //printf("down\n");
+      pni_data_enter(data);
+      next = child->down;
+    } else if (child->next) {
+      //printf("next\n");
+      next = child->next;
+    } else {
+      pni_node_t *parent = pn_data_node(src, child->parent);
+
+      while (parent) {
+        //printf("parent\n");
+        pni_data_exit(data);
+
+        if (parent == node) {
+          return 0;
+        }
+
+        if (parent->next) {
+          //printf("next (parent)\n");
+          next = parent->next;
+          break;
+        } else {
+          parent = pn_data_node(src, parent->parent);
+        }
+      }
+    }
+
+    child = pni_data_node(src, next);
+  }
+
+  // pn_data_dump(data);
+
+  return 0;
 }
 
 int pn_data_copy(pn_data_t *data, pn_data_t *src)
