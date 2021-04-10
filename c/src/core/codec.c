@@ -671,7 +671,7 @@ static inline void pni_data_clear(pn_data_t *data)
   if (data->buf) pn_buffer_clear(data->buf);
 }
 
-void pn_data_clear(pn_data_t *data)
+PNI_INLINE void pn_data_clear(pn_data_t *data)
 {
   if (data) pni_data_clear(data);
 }
@@ -1287,7 +1287,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'C': {
       pn_data_t *dst = va_arg(ap, pn_data_t *);
       node = pni_data_next(data);
-      if (node && node->atom.type != PN_NULL) { // XXX Why the PN_NULL check?
+      if (node && node->atom.type != PN_NULL) {
         int err = pni_data_append_node(dst, data, node);
         if (err) return err;
       }
@@ -1360,7 +1360,7 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
   }
 }
 
-pn_handle_t pn_data_point(pn_data_t *data)
+PNI_INLINE pn_handle_t pn_data_point(pn_data_t *data)
 {
   if (data->current) {
     return (pn_handle_t)(uintptr_t)data->current;
@@ -1406,26 +1406,7 @@ PNI_INLINE pni_node_t *pni_data_next(pn_data_t *data)
   return NULL;
 }
 
-// PNI_INLINE pni_nid_t pni_data_next(pn_data_t *data)
-// {
-//   pni_nid_t next = 0;
-
-//   if (data->current) {
-//     next = data->nodes[data->current - 1].next;
-//   } else if (data->parent) {
-//     next = data->nodes[data->parent - 1].down;
-//   } else if (data->size) {
-//     next = 1;
-//   }
-
-//   if (next) {
-//     data->current = next;
-//   }
-
-//   return next;
-// }
-
-bool pn_data_next(pn_data_t *data)
+PNI_INLINE bool pn_data_next(pn_data_t *data)
 {
   return pni_data_next(data) != NULL;
 }
@@ -1499,7 +1480,7 @@ PNI_INLINE void pni_data_enter(pn_data_t *data)
   data->current = 0;
 }
 
-bool pn_data_enter(pn_data_t *data)
+PNI_INLINE bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
     pni_data_enter(data);
@@ -1519,7 +1500,7 @@ PNI_INLINE void pni_data_exit(pn_data_t *data)
   data->parent = parent->parent;
 }
 
-bool pn_data_exit(pn_data_t *data)
+PNI_INLINE bool pn_data_exit(pn_data_t *data)
 {
   if (data->parent) {
     pni_data_exit(data);
