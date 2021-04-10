@@ -526,37 +526,22 @@ static pni_node_t *pni_data_next_nonnull(pn_data_t *data, pni_node_t *node)
   return NULL;
 }
 
-PNI_INLINE void pni_data_rewind(pn_data_t *data)
+PNI_INLINE void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
   data->current = data->base_current;
 }
 
-void pn_data_rewind(pn_data_t *data)
-{
-  pni_data_rewind(data);
-}
-
-static inline void pni_data_narrow(pn_data_t *data)
+PNI_INLINE void pn_data_narrow(pn_data_t *data)
 {
   data->base_parent = data->parent;
   data->base_current = data->current;
 }
 
-void pn_data_narrow(pn_data_t *data)
-{
-  pni_data_narrow(data);
-}
-
-static inline void pni_data_widen(pn_data_t *data)
+PNI_INLINE void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
-}
-
-void pn_data_widen(pn_data_t *data)
-{
-  pni_data_widen(data);
 }
 
 int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
@@ -767,7 +752,7 @@ PNI_INLINE int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
   int err = 0;
   pn_handle_t point = pn_data_point(src);
-  pni_data_rewind(src);
+  pn_data_rewind(src);
   pn_data_next(src);
   if (pn_data_type(src) == PN_ARRAY) {
     switch (pn_data_get_array(src)) {
@@ -1070,7 +1055,7 @@ static int pni_data_append_node(pn_data_t *data, pn_data_t *src, pni_node_t *nod
 
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
-  pni_data_rewind(data);
+  pn_data_rewind(data);
 
   bool *scan_arg = NULL;
   bool at = false;
@@ -2191,7 +2176,7 @@ static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   int count = 0;
   pn_handle_t point = pn_data_point(src);
 
-  pni_data_rewind(src);
+  pn_data_rewind(src);
 
   while (true) {
     if (!pni_data_next(src)) {
@@ -2294,7 +2279,7 @@ int pn_data_copy(pn_data_t *data, pn_data_t *src)
 {
   pni_data_clear(data);
   int err = pni_data_appendn(data, src, -1);
-  pni_data_rewind(data);
+  pn_data_rewind(data);
   return err;
 }
 

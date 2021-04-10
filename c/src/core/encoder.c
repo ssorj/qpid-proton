@@ -665,7 +665,7 @@ ssize_t pni_encoder_encode(pni_encoder_t *encoder, pn_data_t *src, char *dst, si
 
   pn_handle_t save = pn_data_point(src);
 
-  pni_data_rewind(src);
+  pn_data_rewind(src);
 
   pni_node_t *node;
 
