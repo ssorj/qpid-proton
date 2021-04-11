@@ -1550,7 +1550,7 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
   }
 
   pni_node_t *node = &data->nodes[data->size++];
-  pni_nid_t node_id = node - data->nodes + 1;
+  pni_nid_t node_id = data->size;
 
   *node = (pni_node_t) {0};
 
@@ -1564,12 +1564,12 @@ PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
   if (data->parent) {
     pni_node_t *parent = &data->nodes[data->parent - 1];
 
+    node->parent = data->parent;
+    parent->children++;
+
     if (!parent->down) {
       parent->down = node_id;
     }
-
-    node->parent = data->parent;
-    parent->children++;
   }
 
   data->current = node_id;
