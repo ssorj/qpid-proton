@@ -2215,18 +2215,21 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
 
 static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
-  int err;
+  pni_nid_t next;
 
-  const pn_handle_t *point = pn_data_point(src);
-  pn_data_rewind(src);
+  if (src->base_current) {
+    next = src->nodes[src->base_current - 1].next;
+  } else if (src->base_parent) {
+    next = src->nodes[src->base_parent - 1].down;
+  } else if (src->size) {
+    next = 1;
+  } else {
+    return 0;
+  }
 
-  pni_node_t *node = pni_data_next(src);
+  pni_node_t *node = pni_data_node(src, next);
 
-  err = pni_data_append_nodes(data, src, node, limit);
-  if (err) return err;
-
-  pn_data_restore(src, point);
-  return 0;
+  return pni_data_append_nodes(data, src, node, limit);
 }
 
 int pn_data_copy(pn_data_t *data, pn_data_t *src)
