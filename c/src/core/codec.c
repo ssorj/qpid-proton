@@ -2169,23 +2169,7 @@ static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   return err;
 }
 
-static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
-{
-  int err;
-
-  const pn_handle_t *point = pn_data_point(src);
-  pn_data_rewind(src);
-
-  pni_node_t *node = pni_data_next(src);
-
-  err = pni_data_append_nodes(data, src, node, limit);
-  if (err) return err;
-
-  pn_data_restore(src, point);
-  return 0;
-}
-
-static inline int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit)
+static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit)
 {
   int err;
   int level = 0;
@@ -2226,6 +2210,22 @@ static inline int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_nod
     }
   }
 
+  return 0;
+}
+
+static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+{
+  int err;
+
+  const pn_handle_t *point = pn_data_point(src);
+  pn_data_rewind(src);
+
+  pni_node_t *node = pni_data_next(src);
+
+  err = pni_data_append_nodes(data, src, node, limit);
+  if (err) return err;
+
+  pn_data_restore(src, point);
   return 0;
 }
 
