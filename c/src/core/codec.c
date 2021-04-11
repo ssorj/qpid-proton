@@ -1051,7 +1051,7 @@ static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type)
   return NULL;
 }
 
-static int pni_data_append_node(pn_data_t *data, pn_data_t *src, pni_node_t *node);
+static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit);
 
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
@@ -1273,7 +1273,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       pn_data_t *dst = va_arg(ap, pn_data_t *);
       node = pni_data_next(data);
       if (node && node->atom.type != PN_NULL) {
-        int err = pni_data_append_node(dst, data, node);
+        int err = pni_data_append_nodes(dst, data, node, 1);
         if (err) return err;
       }
       break;
@@ -2171,106 +2171,60 @@ static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
 
 static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
-  int err = 0;
-  int level = 0;
-  int count = 0;
-  pn_handle_t point = pn_data_point(src);
+  int err;
 
+  const pn_handle_t *point = pn_data_point(src);
   pn_data_rewind(src);
 
-  while (true) {
-    if (!pni_data_next(src)) {
-      if (level > 0) {
-        pni_data_exit(data);
-        pni_data_exit(src);
-        level--;
-        continue;
-      } else {
-        break;
-      }
-    }
+  pni_node_t *node = pni_data_next(src);
 
-    if (level == 0) {
-      if (count == limit) break;
-      count++;
-    }
-
-    pni_node_t *node = pni_data_current(src);
-
-    err = pni_data_copy_node(data, node);
-    if (err) break;
-
-    pn_type_t type = node->atom.type;
-
-    if (type == PN_DESCRIBED || type == PN_LIST || type == PN_MAP || type == PN_ARRAY) {
-      pni_data_enter(data);
-      pni_data_enter(src);
-      level++;
-    }
-  }
-
-  pn_data_restore(src, point);
-
-  return err;
-}
-
-static int pni_data_append_node(pn_data_t *data, pn_data_t *src, pni_node_t *node)
-{
-  int err;
-  pni_node_t *child = NULL;
-
-  // pn_data_dump(data);
-  // pn_data_dump(src);
-  // printf("node id=%ld next=%d parent=%d down=%d\n", node - src->nodes + 1, node->next, node->parent, node->down);
-
-  err = pni_data_copy_node(data, node);
+  err = pni_data_append_nodes(data, src, node, limit);
   if (err) return err;
 
-  if (node->down) {
-    pni_data_enter(data);
-    child = pni_data_node(src, node->down);
-  }
+  pn_data_restore(src, point);
+  return 0;
+}
 
-  while (child) {
-    // printf("child id=%ld next=%d parent=%d down=%d\n", child - src->nodes + 1, child->next, child->parent, child->down);
+static inline int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit)
+{
+  int err;
+  int level = 0;
+  int count = 0;
 
-    err = pni_data_copy_node(data, child);
+  while (node && count != limit) {
+    err = pni_data_copy_node(data, node);
     if (err) return err;
 
-    size_t next = 0;
+    if (level == 0) count++;
 
-    if (child->down) {
-      //printf("down\n");
+    if (node->down) {
       pni_data_enter(data);
-      next = child->down;
-    } else if (child->next) {
-      //printf("next\n");
-      next = child->next;
-    } else {
-      pni_node_t *parent = pn_data_node(src, child->parent);
+      level++;
 
-      while (parent) {
-        //printf("parent\n");
+      node = pni_data_node(src, node->down);
+    } else if (node->next) {
+      node = pni_data_node(src, node->next);
+    } else if (node->parent) {
+      pni_node_t *parent = pni_data_node(src, node->parent);
+      node = NULL;
+
+      while (level > 0) {
         pni_data_exit(data);
-
-        if (parent == node) {
-          return 0;
-        }
+        level--;
 
         if (parent->next) {
-          //printf("next (parent)\n");
-          next = parent->next;
+          node = pni_data_node(src, parent->next);
           break;
-        } else {
-          parent = pn_data_node(src, parent->parent);
+        }
+
+        if (parent->parent) {
+          parent = pni_data_node(src, parent->parent);
         }
       }
+    } else {
+      node = NULL;
     }
-
-    child = pni_data_node(src, next);
   }
-
-  // pn_data_dump(data);
 
   return 0;
 }
