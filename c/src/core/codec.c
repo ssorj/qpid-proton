@@ -2189,22 +2189,23 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
     } else if (node->next) {
       node = pni_data_node(src, node->next);
     } else if (node->parent) {
-      pni_node_t *parent = pni_data_node(src, node->parent);
-      node = NULL;
+      node = pni_data_node(src, node->parent);
 
       while (level > 0) {
         pni_data_exit(data);
         level--;
 
-        if (parent->next) {
-          node = pni_data_node(src, parent->next);
+        if (node->next) {
+          node = pni_data_node(src, node->next);
           break;
         }
 
-        if (parent->parent) {
-          parent = pni_data_node(src, parent->parent);
+        if (node->parent) {
+          node = pni_data_node(src, node->parent);
         }
       }
+
+      node = NULL;
     } else {
       node = NULL;
     }
