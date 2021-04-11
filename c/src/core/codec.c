@@ -2174,20 +2174,21 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
   int err;
   int level = 0;
   int count = 0;
+  pni_nid_t next;
 
   while (node && count != limit) {
     err = pni_data_copy_node(data, node);
     if (err) return err;
 
-    if (level == 0) count++;
-
     if (node->down) {
       pni_data_enter(data);
       level++;
 
-      node = pni_data_node(src, node->down);
+      next = node->down;
     } else if (node->next) {
-      node = pni_data_node(src, node->next);
+      if (level == 0) count++;
+
+      next = node->next;
     } else if (node->parent) {
       node = pni_data_node(src, node->parent);
 
@@ -2196,8 +2197,9 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
         level--;
 
         if (node->next) {
-          node = pni_data_node(src, node->next);
-          break;
+          if (level == 0) count++;
+          next = node->next;
+          goto outer;
         }
 
         if (node->parent) {
@@ -2205,10 +2207,13 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
         }
       }
 
-      node = NULL;
+      break;
     } else {
-      node = NULL;
+      break;
     }
+
+  outer:
+    node = pni_data_node(src, next);
   }
 
   return 0;
