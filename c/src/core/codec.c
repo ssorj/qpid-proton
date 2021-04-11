@@ -2217,7 +2217,9 @@ static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   pni_nid_t next;
 
-  if (src->base_current) {
+  if (src->size == 1) {
+    next = 1;
+  } else if (src->base_current) {
     next = src->nodes[src->base_current - 1].next;
   } else if (src->base_parent) {
     next = src->nodes[src->base_parent - 1].down;
@@ -2232,7 +2234,7 @@ static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   return pni_data_append_nodes(data, src, node, limit);
 }
 
-int pn_data_copy(pn_data_t *data, pn_data_t *src)
+PNI_INLINE int pn_data_copy(pn_data_t *data, pn_data_t *src)
 {
   pni_data_clear(data);
   int err = pni_data_appendn(data, src, -1);
@@ -2240,12 +2242,12 @@ int pn_data_copy(pn_data_t *data, pn_data_t *src)
   return err;
 }
 
-int pn_data_append(pn_data_t *data, pn_data_t *src)
+PNI_INLINE int pn_data_append(pn_data_t *data, pn_data_t *src)
 {
   return pni_data_appendn(data, src, -1);
 }
 
-int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+PNI_INLINE int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
   return pni_data_appendn(data, src, limit);
 }

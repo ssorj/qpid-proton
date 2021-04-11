@@ -439,6 +439,8 @@ class DataTest(Test):
         self._test("decimal128", decimal128(b"fdsaasdf;lkjjkl;"), decimal128(b"x" * 16))
 
     def testCopy(self):
+        print("hey!")
+
         self.data.put_described()
         self.data.enter()
         self.data.put_ulong(123)
@@ -447,8 +449,12 @@ class DataTest(Test):
         self.data.put_string("pi")
         self.data.put_double(3.14159265359)
 
+        self.data.dump()
+
         dst = Data()
         dst.copy(self.data)
+
+        dst.dump()
 
         copy = dst.format()
         orig = self.data.format()
