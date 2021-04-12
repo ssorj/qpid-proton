@@ -1307,7 +1307,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   return 0;
 }
 
-int pn_data_scan(pn_data_t *data, const char *fmt, ...)
+PNI_INLINE int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -1447,7 +1447,7 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-pn_type_t pn_data_type(pn_data_t *data)
+PNI_INLINE pn_type_t pn_data_type(pn_data_t *data)
 {
   if (data->current) {
     pni_node_t *node = pni_data_node(data, data->current);
