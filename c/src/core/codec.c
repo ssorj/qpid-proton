@@ -1312,7 +1312,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   return 0;
 }
 
-PNI_INLINE int pn_data_scan(pn_data_t *data, const char *fmt, ...)
+int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
