@@ -1275,6 +1275,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (node && node->atom.type != PN_NULL) {
         int err = pni_data_append_nodes(dst, data, node, 1);
         if (err) return err;
+      } else {
+        node = NULL;
       }
       break;
     case '?':
@@ -1293,13 +1295,16 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       scan_arg = NULL;
     }
 
-    pni_node_t *current = pni_data_current(data);
+    // This performs a data exit at the end of a described type
+    if (data->current) {
+      pni_node_t *current = pni_data_node(data, data->current);
 
-    if (current && !current->next) {
-      pni_node_t *parent = pni_data_node(data, data->parent);
+      if (!current->next) {
+        pni_node_t *parent = pni_data_node(data, data->parent);
 
-      if (parent && parent->atom.type == PN_DESCRIBED) {
-        pni_data_exit(data);
+        if (parent->atom.type == PN_DESCRIBED) {
+          pni_data_exit(data);
+        }
       }
     }
   }
