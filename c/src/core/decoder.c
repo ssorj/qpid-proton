@@ -231,7 +231,7 @@ static int pni_decoder_decode_fixed32(pni_decoder_t *decoder, pni_node_t *node, 
   case PNE_UTF32:     pni_node_set_char(node, value); return 0;
   case PNE_DECIMAL32: pni_node_set_decimal32(node, value); return 0;
   case PNE_FLOAT: {
-    // XXX: this assumes the platform uses IEEE floats
+    // Note that this assumes the platform uses IEEE floats
     conv_t conv = { .i = value };
     pni_node_set_float(node, conv.f);
     return 0;
@@ -253,7 +253,7 @@ static int pni_decoder_decode_fixed64(pni_decoder_t *decoder, pni_node_t *node, 
   case PNE_MS64:      pni_node_set_timestamp(node, value); return 0;
   case PNE_DECIMAL64: pni_node_set_decimal64(node, value); return 0;
   case PNE_DOUBLE: {
-    // XXX: this assumes the platform uses IEEE floats
+    // Note that this assumes the platform uses IEEE floats
     conv_t conv = { .l = value };
     pni_node_set_double(node, conv.d);
     return 0;
