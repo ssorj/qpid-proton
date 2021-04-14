@@ -1039,26 +1039,6 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resume_count)
-{
-  if (resume_count > 0) return NULL;
-
-  pni_node_t *node = pni_data_next(data);
-
-  if (node) {
-    return node;
-  } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-
-    if (parent->atom.type == PN_DESCRIBED) {
-      pni_data_exit(data);
-      return pni_data_scan_next_any_type(data, resume_count);
-    }
-  }
-
-  return NULL;
-}
-
 static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, int resume_count)
 {
   if (resume_count > 0) return NULL;
@@ -1075,6 +1055,26 @@ static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, in
     if (parent->atom.type == PN_DESCRIBED) {
       pni_data_exit(data);
       return pni_data_scan_next(data, type, resume_count);
+    }
+  }
+
+  return NULL;
+}
+
+static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resume_count)
+{
+  if (resume_count > 0) return NULL;
+
+  pni_node_t *node = pni_data_next(data);
+
+  if (node) {
+    return node;
+  } else if (data->parent) {
+    pni_node_t *parent = pni_data_node(data, data->parent);
+
+    if (parent->atom.type == PN_DESCRIBED) {
+      pni_data_exit(data);
+      return pni_data_scan_next_any_type(data, resume_count);
     }
   }
 
@@ -1101,10 +1101,11 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     bool scanned = false;
 
     switch (code) {
-    case 'n':
+    case 'n': {
       node = pni_data_scan_next(data, PN_NULL, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
+    }
     case 'o': {
       bool *value = va_arg(ap, bool *);
       node = pni_data_scan_next(data, PN_BOOL, resume_count);
@@ -1281,7 +1282,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     }
-    case 'D':
+    case 'D': {
       node = pni_data_scan_next(data, PN_DESCRIBED, resume_count);
       if (node) {
         pni_data_enter(data);
@@ -1291,7 +1292,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case '@':
+    }
+    case '@': {
       node = pni_data_scan_next(data, PN_ARRAY, resume_count);
       if (node) {
         pni_data_enter(data);
@@ -1302,7 +1304,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case '[':
+    }
+    case '[': {
       if (at) {
         scanned = true;
         at = false;
@@ -1317,7 +1320,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       level++;
       break;
-    case '{':
+    }
+    case '{': {
       node = pni_data_scan_next(data, PN_MAP, resume_count);
       if (node) {
         pni_data_enter(data);
@@ -1329,8 +1333,9 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       level++;
       break;
+    }
     case ']':
-    case '}':
+    case '}': {
       level--;
       if (!data->parent) {
         return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
@@ -1341,10 +1346,12 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         resume_count--;
       }
       break;
-    case '.':
+    }
+    case '.': {
       node = pni_data_scan_next_any_type(data, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
+    }
     case 'C': {
       pn_data_t *dst = va_arg(ap, pn_data_t *);
       node = pni_data_scan_next_any_type(data, resume_count);
@@ -1355,13 +1362,14 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     }
-    case '?':
+    case '?': {
       if (!*fmt || *fmt == '?') {
         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
       }
       scanarg = va_arg(ap, bool *);
       // Skip the scanarg handling at the end
       continue;
+    }
     default:
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
