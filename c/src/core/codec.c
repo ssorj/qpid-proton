@@ -781,6 +781,7 @@ static int pni_data_put_null(pn_data_t *data);
 static int pni_data_put_bool(pn_data_t *data, bool b);
 static int pni_data_put_uint(pn_data_t *data, uint32_t ui);
 static int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
+static int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
 static int pni_data_put_variable(pn_data_t *data, pn_type_t type, pn_bytes_t bytes);
 static int pni_data_put_compound(pn_data_t *data, pn_type_t type);
 static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
@@ -857,7 +858,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       err = pn_data_put_long(data, va_arg(ap, int64_t));
       break;
     case 't':
-      err = pn_data_put_timestamp(data, va_arg(ap, pn_timestamp_t));
+      err = pni_data_put_timestamp(data, va_arg(ap, pn_timestamp_t));
       break;
     case 'f':
       err = pn_data_put_float(data, va_arg(ap, double));
@@ -1849,12 +1850,17 @@ int pn_data_put_long(pn_data_t *data, int64_t l)
   return 0;
 }
 
-int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
+static inline int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_timestamp(node, t);
   return 0;
+}
+
+int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
+{
+  return pni_data_put_timestamp(data, t);
 }
 
 int pn_data_put_float(pn_data_t *data, float f)
