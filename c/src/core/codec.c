@@ -1105,198 +1105,182 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next(data, PN_NULL, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'o':
-      {
-        bool *value = va_arg(ap, bool *);
-        node = pni_data_scan_next(data, PN_BOOL, resume_count);
-        if (node) {
-          *value = pni_node_get_bool(node);
-        } else {
-          *value = 0;
-        }
+    case 'o': {
+      bool *value = va_arg(ap, bool *);
+      node = pni_data_scan_next(data, PN_BOOL, resume_count);
+      if (node) {
+        *value = pni_node_get_bool(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'B':
-      {
-        uint8_t *value = va_arg(ap, uint8_t *);
-        node = pni_data_scan_next(data, PN_UBYTE, resume_count);
-        if (node) {
-          *value = pni_node_get_ubyte(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'B': {
+      uint8_t *value = va_arg(ap, uint8_t *);
+      node = pni_data_scan_next(data, PN_UBYTE, resume_count);
+      if (node) {
+        *value = pni_node_get_ubyte(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'b':
-      {
-        int8_t *value = va_arg(ap, int8_t *);
-        node = pni_data_scan_next(data, PN_BYTE, resume_count);
-        if (node) {
-          *value = pni_node_get_byte(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'b': {
+      int8_t *value = va_arg(ap, int8_t *);
+      node = pni_data_scan_next(data, PN_BYTE, resume_count);
+      if (node) {
+        *value = pni_node_get_byte(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'H':
-      {
-        uint16_t *value = va_arg(ap, uint16_t *);
-        node = pni_data_scan_next(data, PN_USHORT, resume_count);
-        if (node) {
-          *value = pni_node_get_ushort(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'H': {
+      uint16_t *value = va_arg(ap, uint16_t *);
+      node = pni_data_scan_next(data, PN_USHORT, resume_count);
+      if (node) {
+        *value = pni_node_get_ushort(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'h':
-      {
-        int16_t *value = va_arg(ap, int16_t *);
-        node = pni_data_scan_next(data, PN_SHORT, resume_count);
-        if (node) {
-          *value = pni_node_get_short(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'h': {
+      int16_t *value = va_arg(ap, int16_t *);
+      node = pni_data_scan_next(data, PN_SHORT, resume_count);
+      if (node) {
+        *value = pni_node_get_short(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'I':
-      {
-        uint32_t *value = va_arg(ap, uint32_t *);
-        node = pni_data_scan_next(data, PN_UINT, resume_count);
-        if (node) {
-          *value = pni_node_get_uint(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'I': {
+      uint32_t *value = va_arg(ap, uint32_t *);
+      node = pni_data_scan_next(data, PN_UINT, resume_count);
+      if (node) {
+        *value = pni_node_get_uint(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'i':
-      {
-        int32_t *value = va_arg(ap, int32_t *);
-        node = pni_data_scan_next(data, PN_INT, resume_count);
-        if (node) {
-          *value = pni_node_get_int(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'i': {
+      int32_t *value = va_arg(ap, int32_t *);
+      node = pni_data_scan_next(data, PN_INT, resume_count);
+      if (node) {
+        *value = pni_node_get_int(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'c':
-      {
-        pn_char_t *value = va_arg(ap, pn_char_t *);
-        node = pni_data_scan_next(data, PN_CHAR, resume_count);
-        if (node) {
-          *value = pni_node_get_char(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'c': {
+      pn_char_t *value = va_arg(ap, pn_char_t *);
+      node = pni_data_scan_next(data, PN_CHAR, resume_count);
+      if (node) {
+        *value = pni_node_get_char(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'L':
-      {
-        uint64_t *value = va_arg(ap, uint64_t *);
-        node = pni_data_scan_next(data, PN_ULONG, resume_count);
-        if (node) {
-          *value = pni_node_get_ulong(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'L': {
+      uint64_t *value = va_arg(ap, uint64_t *);
+      node = pni_data_scan_next(data, PN_ULONG, resume_count);
+      if (node) {
+        *value = pni_node_get_ulong(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'l':
-      {
-        int64_t *value = va_arg(ap, int64_t *);
-        node = pni_data_scan_next(data, PN_LONG, resume_count);
-        if (node) {
-          *value = pni_node_get_long(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'l': {
+      int64_t *value = va_arg(ap, int64_t *);
+      node = pni_data_scan_next(data, PN_LONG, resume_count);
+      if (node) {
+        *value = pni_node_get_long(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 't':
-      {
-        pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-        node = pni_data_scan_next(data, PN_TIMESTAMP, resume_count);
-        if (node) {
-          *value = pni_node_get_timestamp(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 't': {
+      pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
+      node = pni_data_scan_next(data, PN_TIMESTAMP, resume_count);
+      if (node) {
+        *value = pni_node_get_timestamp(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'f':
-      {
-        float *value = va_arg(ap, float *);
-        node = pni_data_scan_next(data, PN_FLOAT, resume_count);
-        if (node) {
-          *value = pni_node_get_float(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'f': {
+      float *value = va_arg(ap, float *);
+      node = pni_data_scan_next(data, PN_FLOAT, resume_count);
+      if (node) {
+        *value = pni_node_get_float(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'd':
-      {
-        double *value = va_arg(ap, double *);
-        node = pni_data_scan_next(data, PN_DOUBLE, resume_count);
-        if (node) {
-          *value = pni_node_get_double(node);
-        } else {
-          *value = 0;
-        }
+    }
+    case 'd': {
+      double *value = va_arg(ap, double *);
+      node = pni_data_scan_next(data, PN_DOUBLE, resume_count);
+      if (node) {
+        *value = pni_node_get_double(node);
+      } else {
+        *value = 0;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'z':
-      {
-        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_BINARY, resume_count);
-        if (node) {
-          *value = pni_node_get_bytes(node);
-        } else {
-          *value = pn_bytes_null;
-        }
+    }
+    case 'z': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      node = pni_data_scan_next(data, PN_BINARY, resume_count);
+      if (node) {
+        *value = pni_node_get_bytes(node);
+      } else {
+        *value = pn_bytes_null;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'S':
-      {
-        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_STRING, resume_count);
-        if (node) {
-          *value = pni_node_get_bytes(node);
-        } else {
-          *value = pn_bytes_null;
-        }
+    }
+    case 'S': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      node = pni_data_scan_next(data, PN_STRING, resume_count);
+      if (node) {
+        *value = pni_node_get_bytes(node);
+      } else {
+        *value = pn_bytes_null;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 's':
-      {
-        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_SYMBOL, resume_count);
-        if (node) {
-          *value = pni_node_get_bytes(node);
-        } else {
-          *value = pn_bytes_null;
-        }
+    }
+    case 's': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      node = pni_data_scan_next(data, PN_SYMBOL, resume_count);
+      if (node) {
+        *value = pni_node_get_bytes(node);
+      } else {
+        *value = pn_bytes_null;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
+    }
     case 'D':
       node = pni_data_scan_next(data, PN_DESCRIBED, resume_count);
       if (node) {
@@ -1355,7 +1339,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '}':
       level--;
       if (!data->parent) {
-        return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
+        return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
       }
       if (!resume_count) {
         pni_data_exit(data);
@@ -1367,17 +1351,16 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next_any_type(data, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
-    case 'C':
-      {
-        pn_data_t *dst = va_arg(ap, pn_data_t *);
-        node = pni_data_scan_next_any_type(data, resume_count);
-        if (node && node->atom.type != PN_NULL) {
-          int err = pni_data_append_nodes(dst, data, node, 1);
-          if (err) return err;
-        }
+    case 'C': {
+      pn_data_t *dst = va_arg(ap, pn_data_t *);
+      node = pni_data_scan_next_any_type(data, resume_count);
+      if (node && node->atom.type != PN_NULL) {
+        int err = pni_data_append_nodes(dst, data, node, 1);
+        if (err) return err;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
+    }
     case '?':
       if (!*fmt || *fmt == '?') {
         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
