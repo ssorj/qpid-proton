@@ -1104,7 +1104,6 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     switch (code) {
     case 'n':
       node = pni_data_scan_next(data, PN_NULL, suspend);
-      scanned = node;
       if (resume_count && level == count_level) resume_count--;
       break;
     case 'o':
@@ -1113,10 +1112,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_BOOL, suspend);
         if (node) {
           *value = pni_node_get_bool(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1127,10 +1124,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_UBYTE, suspend);
         if (node) {
           *value = pni_node_get_ubyte(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1141,10 +1136,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_BYTE, suspend);
         if (node) {
           *value = pni_node_get_byte(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1155,10 +1148,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_USHORT, suspend);
         if (node) {
           *value = pni_node_get_ushort(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1169,10 +1160,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_SHORT, suspend);
         if (node) {
           *value = pni_node_get_short(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1183,10 +1172,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_UINT, suspend);
         if (node) {
           *value = pni_node_get_uint(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1197,10 +1184,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_INT, suspend);
         if (node) {
           *value = pni_node_get_int(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1211,10 +1196,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_CHAR, suspend);
         if (node) {
           *value = pni_node_get_char(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1225,10 +1208,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_ULONG, suspend);
         if (node) {
           *value = pni_node_get_ulong(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1239,10 +1220,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_LONG, suspend);
         if (node) {
           *value = pni_node_get_long(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1253,10 +1232,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_TIMESTAMP, suspend);
         if (node) {
           *value = pni_node_get_timestamp(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1267,10 +1244,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_FLOAT, suspend);
         if (node) {
           *value = pni_node_get_float(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1281,10 +1256,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_DOUBLE, suspend);
         if (node) {
           *value = pni_node_get_double(node);
-          scanned = true;
         } else {
           *value = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1295,11 +1268,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_BINARY, suspend);
         if (node) {
           *bytes = pni_node_get_bytes(node);
-          scanned = true;
         } else {
+          // XXX
           bytes->start = 0;
           bytes->size = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1310,11 +1282,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_STRING, suspend);
         if (node) {
           *bytes = pni_node_get_bytes(node);
-          scanned = true;
         } else {
+          // XXX
           bytes->start = 0;
           bytes->size = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1325,11 +1296,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_scan_next(data, PN_SYMBOL, suspend);
         if (node) {
           *bytes = pni_node_get_bytes(node);
-          scanned = true;
         } else {
+          // XXX
           bytes->start = 0;
           bytes->size = 0;
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1338,13 +1308,11 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next(data, PN_DESCRIBED, suspend);
       if (node) {
         pni_data_enter(data);
-        scanned = true;
       } else {
         if (!suspend) {
           resume_count = 3;
           count_level = level;
         }
-        scanned = false;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
@@ -1352,32 +1320,28 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next(data, PN_ARRAY, suspend);
       if (node) {
         pni_data_enter(data);
-        scanned = true;
         at = true;
       } else {
         if (!suspend) {
           resume_count = 3;
           count_level = level;
         }
-        scanned = false;
       }
       if (resume_count && level == count_level) resume_count--;
       break;
     case '[':
       if (at) {
-        scanned = true;
+        scanned = true; // XXX
         at = false;
       } else {
         node = pni_data_scan_next(data, PN_LIST, suspend);
         if (node) {
           pni_data_enter(data);
-          scanned = true;
         } else {
           if (!suspend) {
             resume_count = 1;
             count_level = level;
           }
-          scanned = false;
         }
       }
       level++;
@@ -1386,13 +1350,11 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next(data, PN_MAP, suspend);
       if (node) {
         pni_data_enter(data);
-        scanned = true;
       } else {
         if (resume_count) {
           resume_count = 1;
           count_level = level;
         }
-        scanned = false;
       }
       level++;
       break;
@@ -1410,29 +1372,23 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case '.':
       node = pni_data_scan_next_any_type(data, suspend);
-      scanned = node;
       if (resume_count && level == count_level) resume_count--;
       break;
     case '?':
       if (!*fmt || *fmt == '?')
         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
       scanarg = va_arg(ap, bool *);
-      break;
+      // Skip the scanarg handling at the end
+      continue;
     case 'C':
       {
         pn_data_t *dst = va_arg(ap, pn_data_t *);
         if (!suspend) {
-          size_t old = pn_data_size(dst);
-          pni_node_t *node = pni_data_next(data);
+          node = pni_data_next(data);
           if (node && node->atom.type != PN_NULL) {
             int err = pni_data_append_nodes(dst, data, node, 1);
             if (err) return err;
-            scanned = pn_data_size(dst) > old;
-          } else {
-            scanned = false;
           }
-        } else {
-          scanned = false;
         }
       }
       if (resume_count && level == count_level) resume_count--;
@@ -1441,8 +1397,8 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
 
-    if (scanarg && code != '?') {
-      *scanarg = scanned;
+    if (scanarg) {
+      *scanarg = node != NULL || scanned;
       scanarg = NULL;
     }
   }
