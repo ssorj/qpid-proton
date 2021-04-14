@@ -1039,9 +1039,9 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, bool suspend)
+static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resume_count)
 {
-  if (suspend) return NULL;
+  if (resume_count > 0) return NULL;
 
   pni_node_t *node = pni_data_next(data);
 
@@ -1052,16 +1052,16 @@ static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, bool susp
 
     if (parent->atom.type == PN_DESCRIBED) {
       pni_data_exit(data);
-      return pni_data_scan_next_any_type(data, suspend);
+      return pni_data_scan_next_any_type(data, resume_count);
     }
   }
 
   return NULL;
 }
 
-static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, bool suspend)
+static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, int resume_count)
 {
-  if (suspend) return NULL;
+  if (resume_count > 0) return NULL;
 
   pni_node_t *node = pni_data_next(data);
 
@@ -1074,7 +1074,7 @@ static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, bo
 
     if (parent->atom.type == PN_DESCRIBED) {
       pni_data_exit(data);
-      return pni_data_scan_next(data, type, suspend);
+      return pni_data_scan_next(data, type, resume_count);
     }
   }
 
@@ -1094,22 +1094,21 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   int resume_count = 0;
 
   while (*fmt) {
+    assert(resume_count >= 0);
+
     char code = *(fmt++);
-
     pni_node_t *node = NULL;
-
     bool scanned = false;
-    bool suspend = resume_count > 0;
 
     switch (code) {
     case 'n':
-      node = pni_data_scan_next(data, PN_NULL, suspend);
+      node = pni_data_scan_next(data, PN_NULL, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
     case 'o':
       {
         bool *value = va_arg(ap, bool *);
-        node = pni_data_scan_next(data, PN_BOOL, suspend);
+        node = pni_data_scan_next(data, PN_BOOL, resume_count);
         if (node) {
           *value = pni_node_get_bool(node);
         } else {
@@ -1121,7 +1120,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'B':
       {
         uint8_t *value = va_arg(ap, uint8_t *);
-        node = pni_data_scan_next(data, PN_UBYTE, suspend);
+        node = pni_data_scan_next(data, PN_UBYTE, resume_count);
         if (node) {
           *value = pni_node_get_ubyte(node);
         } else {
@@ -1133,7 +1132,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'b':
       {
         int8_t *value = va_arg(ap, int8_t *);
-        node = pni_data_scan_next(data, PN_BYTE, suspend);
+        node = pni_data_scan_next(data, PN_BYTE, resume_count);
         if (node) {
           *value = pni_node_get_byte(node);
         } else {
@@ -1145,7 +1144,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'H':
       {
         uint16_t *value = va_arg(ap, uint16_t *);
-        node = pni_data_scan_next(data, PN_USHORT, suspend);
+        node = pni_data_scan_next(data, PN_USHORT, resume_count);
         if (node) {
           *value = pni_node_get_ushort(node);
         } else {
@@ -1157,7 +1156,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'h':
       {
         int16_t *value = va_arg(ap, int16_t *);
-        node = pni_data_scan_next(data, PN_SHORT, suspend);
+        node = pni_data_scan_next(data, PN_SHORT, resume_count);
         if (node) {
           *value = pni_node_get_short(node);
         } else {
@@ -1169,7 +1168,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'I':
       {
         uint32_t *value = va_arg(ap, uint32_t *);
-        node = pni_data_scan_next(data, PN_UINT, suspend);
+        node = pni_data_scan_next(data, PN_UINT, resume_count);
         if (node) {
           *value = pni_node_get_uint(node);
         } else {
@@ -1181,7 +1180,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'i':
       {
         int32_t *value = va_arg(ap, int32_t *);
-        node = pni_data_scan_next(data, PN_INT, suspend);
+        node = pni_data_scan_next(data, PN_INT, resume_count);
         if (node) {
           *value = pni_node_get_int(node);
         } else {
@@ -1193,7 +1192,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'c':
       {
         pn_char_t *value = va_arg(ap, pn_char_t *);
-        node = pni_data_scan_next(data, PN_CHAR, suspend);
+        node = pni_data_scan_next(data, PN_CHAR, resume_count);
         if (node) {
           *value = pni_node_get_char(node);
         } else {
@@ -1205,7 +1204,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'L':
       {
         uint64_t *value = va_arg(ap, uint64_t *);
-        node = pni_data_scan_next(data, PN_ULONG, suspend);
+        node = pni_data_scan_next(data, PN_ULONG, resume_count);
         if (node) {
           *value = pni_node_get_ulong(node);
         } else {
@@ -1217,7 +1216,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'l':
       {
         int64_t *value = va_arg(ap, int64_t *);
-        node = pni_data_scan_next(data, PN_LONG, suspend);
+        node = pni_data_scan_next(data, PN_LONG, resume_count);
         if (node) {
           *value = pni_node_get_long(node);
         } else {
@@ -1229,7 +1228,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 't':
       {
         pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-        node = pni_data_scan_next(data, PN_TIMESTAMP, suspend);
+        node = pni_data_scan_next(data, PN_TIMESTAMP, resume_count);
         if (node) {
           *value = pni_node_get_timestamp(node);
         } else {
@@ -1241,7 +1240,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'f':
       {
         float *value = va_arg(ap, float *);
-        node = pni_data_scan_next(data, PN_FLOAT, suspend);
+        node = pni_data_scan_next(data, PN_FLOAT, resume_count);
         if (node) {
           *value = pni_node_get_float(node);
         } else {
@@ -1253,7 +1252,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case 'd':
       {
         double *value = va_arg(ap, double *);
-        node = pni_data_scan_next(data, PN_DOUBLE, suspend);
+        node = pni_data_scan_next(data, PN_DOUBLE, resume_count);
         if (node) {
           *value = pni_node_get_double(node);
         } else {
@@ -1264,52 +1263,46 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'z':
       {
-        pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_BINARY, suspend);
+        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+        node = pni_data_scan_next(data, PN_BINARY, resume_count);
         if (node) {
-          *bytes = pni_node_get_bytes(node);
+          *value = pni_node_get_bytes(node);
         } else {
-          // XXX
-          bytes->start = 0;
-          bytes->size = 0;
+          *value = pn_bytes_null;
         }
       }
       if (resume_count && level == count_level) resume_count--;
       break;
     case 'S':
       {
-        pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_STRING, suspend);
+        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+        node = pni_data_scan_next(data, PN_STRING, resume_count);
         if (node) {
-          *bytes = pni_node_get_bytes(node);
+          *value = pni_node_get_bytes(node);
         } else {
-          // XXX
-          bytes->start = 0;
-          bytes->size = 0;
+          *value = pn_bytes_null;
         }
       }
       if (resume_count && level == count_level) resume_count--;
       break;
     case 's':
       {
-        pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
-        node = pni_data_scan_next(data, PN_SYMBOL, suspend);
+        pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+        node = pni_data_scan_next(data, PN_SYMBOL, resume_count);
         if (node) {
-          *bytes = pni_node_get_bytes(node);
+          *value = pni_node_get_bytes(node);
         } else {
-          // XXX
-          bytes->start = 0;
-          bytes->size = 0;
+          *value = pn_bytes_null;
         }
       }
       if (resume_count && level == count_level) resume_count--;
       break;
     case 'D':
-      node = pni_data_scan_next(data, PN_DESCRIBED, suspend);
+      node = pni_data_scan_next(data, PN_DESCRIBED, resume_count);
       if (node) {
         pni_data_enter(data);
       } else {
-        if (!suspend) {
+        if (!resume_count) {
           resume_count = 3;
           count_level = level;
         }
@@ -1317,12 +1310,12 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     case '@':
-      node = pni_data_scan_next(data, PN_ARRAY, suspend);
+      node = pni_data_scan_next(data, PN_ARRAY, resume_count);
       if (node) {
         pni_data_enter(data);
         at = true;
       } else {
-        if (!suspend) {
+        if (!resume_count) {
           resume_count = 3;
           count_level = level;
         }
@@ -1331,14 +1324,14 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case '[':
       if (at) {
-        scanned = true; // XXX
+        scanned = true;
         at = false;
       } else {
-        node = pni_data_scan_next(data, PN_LIST, suspend);
+        node = pni_data_scan_next(data, PN_LIST, resume_count);
         if (node) {
           pni_data_enter(data);
         } else {
-          if (!suspend) {
+          if (!resume_count) {
             resume_count = 1;
             count_level = level;
           }
@@ -1347,7 +1340,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       level++;
       break;
     case '{':
-      node = pni_data_scan_next(data, PN_MAP, suspend);
+      node = pni_data_scan_next(data, PN_MAP, resume_count);
       if (node) {
         pni_data_enter(data);
       } else {
@@ -1361,38 +1354,37 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case ']':
     case '}':
       level--;
-//       if (!data->parent) {
-//         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
-//       }
-//       pni_data_exit(data);
-//       break;
-      if (!suspend && !pn_data_exit(data))
+      if (!data->parent) {
         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
-      if (resume_count && level == count_level) resume_count--;
+      }
+      if (!resume_count) {
+        pni_data_exit(data);
+      } else if (level == count_level) {
+        resume_count--;
+      }
       break;
     case '.':
-      node = pni_data_scan_next_any_type(data, suspend);
+      node = pni_data_scan_next_any_type(data, resume_count);
       if (resume_count && level == count_level) resume_count--;
       break;
-    case '?':
-      if (!*fmt || *fmt == '?')
-        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
-      scanarg = va_arg(ap, bool *);
-      // Skip the scanarg handling at the end
-      continue;
     case 'C':
       {
         pn_data_t *dst = va_arg(ap, pn_data_t *);
-        if (!suspend) {
-          node = pni_data_next(data);
-          if (node && node->atom.type != PN_NULL) {
-            int err = pni_data_append_nodes(dst, data, node, 1);
-            if (err) return err;
-          }
+        node = pni_data_scan_next_any_type(data, resume_count);
+        if (node && node->atom.type != PN_NULL) {
+          int err = pni_data_append_nodes(dst, data, node, 1);
+          if (err) return err;
         }
       }
       if (resume_count && level == count_level) resume_count--;
       break;
+    case '?':
+      if (!*fmt || *fmt == '?') {
+        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
+      }
+      scanarg = va_arg(ap, bool *);
+      // Skip the scanarg handling at the end
+      continue;
     default:
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
@@ -1405,302 +1397,6 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
   return 0;
 }
-
-// int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
-// {
-//   //printf("FMT: %s\n", fmt);
-
-//   pn_data_rewind(data);
-
-//   bool *scan_arg = NULL;
-//   bool at = false;
-
-//   int level = 0;
-//   int count_level = -1;
-//   int resume_count = 0;
-
-//   while (*fmt) {
-//     char code = *(fmt++);
-//     pni_node_t *node = NULL;
-
-//     switch (code) {
-//     case 'n':
-//       if (resume_count) break;
-//       node = pni_data_scan_next(data, PN_NULL);
-//       if (resume_count && level == count_level) resume_count--;
-//       break;
-//     case 'o': {
-//       bool *value = va_arg(ap, bool *);
-//       node = pni_data_scan_next(data, PN_BOOL);
-//       if (node && !resume_count) {
-//         *value = pni_node_get_bool(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'B': {
-//       uint8_t *value = va_arg(ap, uint8_t *);
-//       node = pni_data_scan_next(data, PN_UBYTE);
-//       if (node) {
-//         *value = pni_node_get_ubyte(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'b': {
-//       int8_t *value = va_arg(ap, int8_t *);
-//       node = pni_data_scan_next(data, PN_BYTE);
-//       if (node) {
-//         *value = pni_node_get_byte(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'H': {
-//       uint16_t *value = va_arg(ap, uint16_t *);
-//       node = pni_data_scan_next(data, PN_USHORT);
-//       if (node) {
-//         *value = pni_node_get_ushort(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'h': {
-//       int16_t *value = va_arg(ap, int16_t *);
-//       node = pni_data_scan_next(data, PN_SHORT);
-//       if (node) {
-//         *value = pni_node_get_short(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'I': {
-//       uint32_t *value = va_arg(ap, uint32_t *);
-//       node = pni_data_scan_next(data, PN_UINT);
-//       if (node) {
-//         *value = pni_node_get_uint(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'i': {
-//       int32_t *value = va_arg(ap, int32_t *);
-//       node = pni_data_scan_next(data, PN_INT);
-//       if (node) {
-//         *value = pni_node_get_int(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'c': {
-//       pn_char_t *value = va_arg(ap, pn_char_t *);
-//       node = pni_data_scan_next(data, PN_CHAR);
-//       if (node) {
-//         *value = pni_node_get_char(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'L': {
-//       uint64_t *value = va_arg(ap, uint64_t *);
-//       node = pni_data_scan_next(data, PN_ULONG);
-//       if (node) {
-//         *value = pni_node_get_ulong(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'l': {
-//       int64_t *value = va_arg(ap, int64_t *);
-//       node = pni_data_scan_next(data, PN_LONG);
-//       if (node) {
-//         *value = pni_node_get_long(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 't': {
-//       pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-//       node = pni_data_scan_next(data, PN_TIMESTAMP);
-//       if (node) {
-//         *value = pni_node_get_timestamp(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'f': {
-//       float *value = va_arg(ap, float *);
-//       node = pni_data_scan_next(data, PN_FLOAT);
-//       if (node) {
-//         *value = pni_node_get_float(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'd': {
-//       double *value = va_arg(ap, double *);
-//       node = pni_data_scan_next(data, PN_DOUBLE);
-//       if (node) {
-//         *value = pni_node_get_double(node);
-//       } else {
-//         *value = 0;
-//       }
-//       break;
-//     }
-//     case 'z': {
-//       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-//       node = pni_data_scan_next(data, PN_BINARY);
-//       if (node) {
-//         *value = pni_node_get_bytes(node);
-//       } else {
-//         *value = pn_bytes_null;
-//       }
-//       break;
-//     }
-//     case 'S': {
-//       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-//       node = pni_data_scan_next(data, PN_STRING);
-//       if (node) {
-//         *value = pni_node_get_bytes(node);
-//       } else {
-//         *value = pn_bytes_null;
-//       }
-//       break;
-//     }
-//     case 's': {
-//       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-//       node = pni_data_scan_next(data, PN_SYMBOL);
-//       if (node) {
-//         *value = pni_node_get_bytes(node);
-//       } else {
-//         *value = pn_bytes_null;
-//       }
-//       break;
-//     }
-//     case 'D':
-//       node = pni_data_next(data);
-
-//       if (node) {
-//         printf("D: %s\n", pn_type_name(node->atom.type));
-//       }
-
-//       if (node && node->atom.type == PN_DESCRIBED) {
-//         ;
-//       } else {
-//         node = NULL;
-//       }
-
-//       //node = pni_data_scan_next(data, PN_DESCRIBED);
-//       if (node) {
-//         printf("ENTERING DESCRIBED: %c\n", *fmt);
-//         pni_data_enter(data);
-//       }
-//       break;
-//     case '@':
-//       node = pni_data_scan_next(data, PN_ARRAY);
-//       if (node) {
-//         pni_data_enter(data);
-//         at = true;
-//       }
-//       break;
-//     case '[':
-//       if (at) {
-//         at = false;
-//       } else {
-//         node = pni_data_scan_next(data, PN_LIST);
-//         if (node) {
-//           pni_data_enter(data);
-//         }
-//       }
-//       break;
-//     case '{':
-//       node = pni_data_scan_next(data, PN_MAP);
-//       if (node) {
-//         pni_data_enter(data);
-//       }
-//       break;
-//     case ']':
-//     case '}': {
-//       if (!data->parent) {
-//         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
-//       }
-//       pni_data_exit(data);
-//       break;
-//     }
-//     case '.': {
-//       node = pni_data_next(data);
-//       break;
-//     }
-//     case 'C': {
-//       pn_data_t *dst = va_arg(ap, pn_data_t *);
-//       node = pni_data_next(data);
-//       if (node && node->atom.type != PN_NULL) {
-//         printf("appending\n");
-//         int err = pni_data_append_nodes(dst, data, node, 1);
-//         if (err) return err;
-//       } else {
-//         printf("not appending\n");
-//         node = NULL;
-//       }
-//       break;
-//     case '?':
-//       if (!*fmt || *fmt == '?') {
-//         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
-//       }
-//       scan_arg = va_arg(ap, bool *);
-//       continue;
-//     }
-//     default:
-//       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
-//     }
-
-//     if (scan_arg) {
-//       *scan_arg = node != NULL;
-//       scan_arg = NULL;
-//     }
-
-//     if (code == 'C') {
-//       printf("dc=%d dp=%d n=%p\n", data->current, data->parent, (void*) node);
-//       if (node) {
-//         printf("nt=%s np=%d nn=%d\n", pn_type_name(node->atom.type), node->parent, node->next);
-//       }
-//       if (data->current) {
-//         printf("cn=%d\n", pni_data_node(data, data->current)->next);
-//       }
-//       if (data->parent) {
-//         printf("pt=%s\n", pn_type_name(pni_data_node(data, data->parent)->atom.type));
-//       }
-//     }
-
-//     // This performs a data exit at the end of a described type
-//     if (data->current) {
-//       pni_node_t *current = pni_data_node(data, data->current);
-
-//       if (!current->next) {
-//         pni_node_t *parent = pni_data_node(data, data->parent);
-
-//         if (parent->atom.type == PN_DESCRIBED) {
-//           printf("EXITING DESCRIBED: %c\n", code);
-//           pni_data_exit(data);
-//         }
-//       }
-//     }
-//   }
-
-//   return 0;
-// }
 
 int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
