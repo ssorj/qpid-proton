@@ -607,8 +607,8 @@ static inline int pni_encoder_encode_type(pni_encoder_t *encoder, const uint8_t 
   return 0;
 }
 
-static inline int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node,
-                                           const uint8_t code)
+static int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node,
+                                    const uint8_t code)
 {
   switch (code & 0xF0) {
   case 0x00: return pni_encoder_encode_described(encoder, data, node);
@@ -629,7 +629,7 @@ static inline int pni_encoder_encode_value(pni_encoder_t *encoder, pn_data_t *da
   }
 }
 
-static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
+static inline int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node)
 {
   int err = 0;
 

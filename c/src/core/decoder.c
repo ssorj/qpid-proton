@@ -495,7 +495,7 @@ static inline int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t *code)
   return 0;
 }
 
-static inline int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
+static int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *data, const uint8_t code)
 {
   pni_node_t *node = pni_data_add_node(data);
 
@@ -526,7 +526,7 @@ static inline int pni_decoder_decode_value(pni_decoder_t *decoder, pn_data_t *da
   }
 }
 
-static int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data)
+static inline int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data)
 {
   int err;
   uint8_t code;
