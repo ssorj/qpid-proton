@@ -1309,11 +1309,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       node = pni_data_scan_next(data, PN_MAP, suspend_count);
       if (node) {
         pni_data_enter(data);
-      } else {
-        if (suspend_count) {
-          suspend_count = 1;
-          suspend_level = level;
-        }
+      } else if (!suspend_count) {
+        suspend_count = 1;
+        suspend_level = level;
       }
       level++;
       suspend_decrement = false;
