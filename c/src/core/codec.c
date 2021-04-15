@@ -1084,6 +1084,7 @@ static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resum
 
 static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit);
 
+__attribute__((hot))
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   pn_data_rewind(data);
