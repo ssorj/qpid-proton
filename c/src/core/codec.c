@@ -1601,7 +1601,7 @@ void pn_data_dump(pn_data_t *data)
   pn_free(str);
 }
 
-PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
+PNI_HOT PNI_INLINE pni_node_t *pni_data_add_node(pn_data_t *data)
 {
   if (data->capacity <= data->size) {
     int err = pni_data_grow(data);
