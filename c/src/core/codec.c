@@ -661,7 +661,7 @@ PNI_INLINE void pn_data_clear(pn_data_t *data)
   if (data) pni_data_clear(data);
 }
 
-static int pni_data_grow(pn_data_t *data)
+PNI_COLD static int pni_data_grow(pn_data_t *data)
 {
   size_t capacity = data->capacity ? data->capacity : 2;
 
@@ -1042,7 +1042,7 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
 
 static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, int resume_count)
 {
-  if (resume_count > 0) return NULL;
+  if (resume_count) return NULL;
 
   pni_node_t *node = pni_data_next(data);
 
@@ -1064,7 +1064,7 @@ static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, in
 
 static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resume_count)
 {
-  if (resume_count > 0) return NULL;
+  if (resume_count) return NULL;
 
   pni_node_t *node = pni_data_next(data);
 
@@ -1084,8 +1084,7 @@ static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int resum
 
 static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit);
 
-__attribute__((hot))
-int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   pn_data_rewind(data);
 

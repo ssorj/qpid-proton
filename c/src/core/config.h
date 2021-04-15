@@ -28,9 +28,13 @@
 #if defined(__GNUC__)
 #  define PNI_INLINE inline
 #  define PNI_FORCE_INLINE __attribute__((always_inline))
+#  define PNI_HOT __attribute__((hot))
+#  define PNI_COLD __attribute__((cold))
 #else
 #  define PNI_INLINE
 #  define PNI_FORCE_INLINE
+#  define PNI_HOT
+#  define PNI_COLD
 #endif
 
 #endif /*  _PROTON_SRC_CONFIG_H */
