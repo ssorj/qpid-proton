@@ -101,14 +101,9 @@ static inline uint8_t pni_decoder_readf8(pni_decoder_t *decoder)
 
 static inline uint16_t pni_decoder_readf16(pni_decoder_t *decoder)
 {
-  // uint16_t a = (uint8_t) decoder->position[0];
-  // uint16_t b = (uint8_t) decoder->position[1];
+  assert(pni_decoder_remaining(decoder) >= 2);
 
-  // decoder->position += 2;
-
-  // return a << 8 | b;
-
-  uint16_t result = __builtin_bswap16(*(uint16_t*) decoder->position);
+  uint16_t result = pni_read16(decoder->position);
 
   decoder->position += 2;
 
@@ -117,16 +112,9 @@ static inline uint16_t pni_decoder_readf16(pni_decoder_t *decoder)
 
 static inline uint32_t pni_decoder_readf32(pni_decoder_t *decoder)
 {
-  // uint32_t a = (uint8_t) decoder->position[0];
-  // uint32_t b = (uint8_t) decoder->position[1];
-  // uint32_t c = (uint8_t) decoder->position[2];
-  // uint32_t d = (uint8_t) decoder->position[3];
+  assert(pni_decoder_remaining(decoder) >= 4);
 
-  // decoder->position += 4;
-
-  // return a << 24 | b << 16 | c <<  8 | d;
-
-  uint32_t result = __builtin_bswap32(*(uint32_t*) decoder->position);
+  uint32_t result = pni_read32(decoder->position);
 
   decoder->position += 4;
 
@@ -135,20 +123,9 @@ static inline uint32_t pni_decoder_readf32(pni_decoder_t *decoder)
 
 static inline uint64_t pni_decoder_readf64(pni_decoder_t *decoder)
 {
-  // uint64_t a = (uint8_t) decoder->position[0];
-  // uint64_t b = (uint8_t) decoder->position[1];
-  // uint64_t c = (uint8_t) decoder->position[2];
-  // uint64_t d = (uint8_t) decoder->position[3];
-  // uint64_t e = (uint8_t) decoder->position[4];
-  // uint64_t f = (uint8_t) decoder->position[5];
-  // uint64_t g = (uint8_t) decoder->position[6];
-  // uint64_t h = (uint8_t) decoder->position[7];
+  assert(pni_decoder_remaining(decoder) >= 8);
 
-  // decoder->position += 8;
-
-  // return a << 56 | b << 48 | c << 40 | d << 32 | e << 24 | f << 16 | g <<  8 | h;
-
-  uint64_t result = __builtin_bswap64(*(uint64_t*) decoder->position);
+  uint64_t result = pni_read64(decoder->position);
 
   decoder->position += 8;
 
