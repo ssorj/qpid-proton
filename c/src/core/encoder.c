@@ -477,7 +477,7 @@ static int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_data_t *da
   int err = 0;
   pni_node_t *child;
 
-  const uint8_t array_code = pni_encoder_type2code(encoder, node->type, &err);
+  const uint8_t array_code = pni_encoder_type2code(encoder, node->array_type, &err);
   if (err) return err;
 
   if (array_code == PNE_DESCRIPTOR) {
@@ -487,7 +487,7 @@ static int pni_encoder_encode_array_values(pni_encoder_t *encoder, pn_data_t *da
   data->parent = data->current;
   data->current = node->down;
 
-  if (node->described) {
+  if (node->array_described) {
     child = pni_data_node(data, data->current);
 
     err = pni_encoder_encode_type(encoder, PNE_DESCRIPTOR);
@@ -534,7 +534,7 @@ static int pni_encoder_encode_array32(pni_encoder_t *encoder, pn_data_t *data, p
 
   size_t count;
 
-  if (node->described) {
+  if (node->array_described) {
     count = node->children - 1;
   } else {
     count = node->children;
@@ -584,7 +584,7 @@ static int pni_encoder_encode_array8(pni_encoder_t *encoder, pn_data_t *data, pn
 
   size_t count;
 
-  if (node->described) {
+  if (node->array_described) {
     count = node->children - 1;
   } else {
     count = node->children;

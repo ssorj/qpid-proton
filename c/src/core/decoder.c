@@ -420,7 +420,7 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
   if (err) return err;
 
   if (array_code == PNE_DESCRIPTOR) {
-    node->described = true;
+    node->array_described = true;
 
     err = pni_decoder_decode_descriptor(decoder, data);
     if (err) return err;
@@ -429,7 +429,7 @@ static int pni_decoder_decode_array_values(pni_decoder_t *decoder, pn_data_t *da
     if (err) return err;
   }
 
-  node->type = pni_decoder_code2type(decoder, array_code, &err);
+  node->array_type = pni_decoder_code2type(decoder, array_code, &err);
   if (err) return err;
 
   for (size_t i = 0; i < count; i++) {

@@ -485,7 +485,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_string_addf(str, "@");
   case PN_ARRAY:
     // XXX: need to fix for described arrays
-    return pn_string_addf(str, "@%s[", pn_type_name(node->type));
+    return pn_string_addf(str, "@%s[", pn_type_name(node->array_type));
   case PN_LIST:
     return pn_string_addf(str, "[");
   case PN_MAP:
@@ -915,7 +915,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       {
         pni_node_t *parent = pni_data_node(data, data->parent);
         if (parent->atom.type == PN_ARRAY) {
-          parent->type = (pn_type_t) va_arg(ap, int);
+          parent->array_type = (pn_type_t) va_arg(ap, int);
         } else {
           return pn_error_format(pni_data_error(data), PN_ERR, "naked type");
         }
@@ -1015,7 +1015,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
         pni_node_t *current = pni_data_node(data, data->current);
-        current->described = true;
+        current->array_described = true;
         pni_data_exit(data);
       } else if (parent->atom.type == PN_NULL && parent->children == 1) {
         pni_data_exit(data);
@@ -1706,8 +1706,8 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_type(node, PN_ARRAY);
-  node->described = described;
-  node->type = type;
+  node->array_described = described;
+  node->array_type = type;
   return 0;
 }
 
@@ -1952,7 +1952,7 @@ size_t pn_data_get_array(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
-    if (node->described) {
+    if (node->array_described) {
       return node->children - 1;
     } else {
       return node->children;
@@ -1966,7 +1966,7 @@ bool pn_data_is_array_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
-    return node->described;
+    return node->array_described;
   } else {
     return false;
   }
@@ -1976,7 +1976,7 @@ pn_type_t pn_data_get_array_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->atom.type == PN_ARRAY) {
-    return node->type;
+    return node->array_type;
   } else {
     return PN_INVALID;
   }
@@ -2223,8 +2223,8 @@ static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
   if (dst == NULL) return PN_OUT_OF_MEMORY;
 
   dst->atom = src->atom;
-  dst->described = src->described;
-  dst->type = src->type;
+  dst->array_described = src->array_described;
+  dst->array_type = src->array_type;
 
   if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
     err = pni_data_intern_node(data, dst);

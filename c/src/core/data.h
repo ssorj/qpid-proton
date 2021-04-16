@@ -40,14 +40,13 @@ typedef struct {
   size_t data_offset;
   size_t data_size;
   pn_atom_t atom;
-  pn_type_t type;
+  pn_type_t array_type;
   pni_nid_t next;
   pni_nid_t prev;
   pni_nid_t down;
   pni_nid_t parent;
   pni_nid_t children;
-  // for arrays
-  bool described;
+  bool array_described;
   bool data;
 } pni_node_t;
 
