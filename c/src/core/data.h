@@ -91,11 +91,6 @@ void pni_node_set_ulong(pni_node_t *node, uint64_t value);
 void pni_node_set_ushort(pni_node_t *node, uint16_t value);
 void pni_node_set_uuid(pni_node_t *node, pn_uuid_t value);
 
-int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      void *ctx);
-
 static inline pni_node_t *pni_data_node(pn_data_t *data, pni_nid_t node_id)
 {
   assert(data);

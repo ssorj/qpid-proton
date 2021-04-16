@@ -514,18 +514,6 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
   return NULL;
 }
 
-static pni_node_t *pni_data_next_nonnull(pn_data_t *data, pni_node_t *node)
-{
-  while (node) {
-    node = pn_data_node(data, node->next);
-    if (node && node->atom.type != PN_NULL) {
-      return node;
-    }
-  }
-
-  return NULL;
-}
-
 PNI_INLINE void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
@@ -542,6 +530,58 @@ PNI_INLINE void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
+}
+
+int pni_data_traverse(pn_data_t *data,
+                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      void *ctx)
+{
+  pni_node_t *node = data->size ? pn_data_node(data, 1) : NULL;
+
+  while (node) {
+    pni_node_t *parent = pn_data_node(data, node->parent);
+    int err = enter(ctx, data, node);
+    if (err) return err;
+
+    size_t next = 0;
+    if (node->down) {
+      next = node->down;
+    } else if (node->next) {
+      err = exit(ctx, data, node);
+      if (err) return err;
+      next = node->next;
+    } else {
+      err = exit(ctx, data, node);
+      if (err) return err;
+      while (parent) {
+        err = exit(ctx, data, parent);
+        if (err) return err;
+        if (parent->next) {
+          next = parent->next;
+          break;
+        } else {
+          parent = pn_data_node(data, parent->parent);
+        }
+      }
+    }
+
+    node = pn_data_node(data, next);
+  }
+
+  return 0;
+}
+
+static pni_node_t *pni_data_next_nonnull(pn_data_t *data, pni_node_t *node)
+{
+  while (node) {
+    node = pn_data_node(data, node->next);
+    if (node && node->atom.type != PN_NULL) {
+      return node;
+    }
+  }
+
+  return NULL;
 }
 
 int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
@@ -1466,46 +1506,6 @@ bool pn_data_prev(pn_data_t *data)
   }
 }
 
-int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      void *ctx)
-{
-  pni_node_t *node = data->size ? pn_data_node(data, 1) : NULL;
-
-  while (node) {
-    pni_node_t *parent = pn_data_node(data, node->parent);
-    int err = enter(ctx, data, node);
-    if (err) return err;
-
-    size_t next = 0;
-    if (node->down) {
-      next = node->down;
-    } else if (node->next) {
-      err = exit(ctx, data, node);
-      if (err) return err;
-      next = node->next;
-    } else {
-      err = exit(ctx, data, node);
-      if (err) return err;
-      while (parent) {
-        err = exit(ctx, data, parent);
-        if (err) return err;
-        if (parent->next) {
-          next = parent->next;
-          break;
-        } else {
-          parent = pn_data_node(data, parent->parent);
-        }
-      }
-    }
-
-    node = pn_data_node(data, next);
-  }
-
-  return 0;
-}
-
 PNI_INLINE pn_type_t pn_data_type(pn_data_t *data)
 {
   if (data->current) {
@@ -1921,7 +1921,7 @@ int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom = atom;
-  if (node->atom.type == PN_BINARY || node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL) {
+  if (node->atom.type == PN_STRING || node->atom.type == PN_SYMBOL || node->atom.type == PN_BINARY) {
     return pni_data_intern_node(data, node);
   } else {
     return 0;
@@ -2194,9 +2194,9 @@ pn_bytes_t pn_data_get_symbol(pn_data_t *data)
 pn_bytes_t pn_data_get_bytes(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
-  if (node && (node->atom.type == PN_BINARY ||
-               node->atom.type == PN_STRING ||
-               node->atom.type == PN_SYMBOL)) {
+  if (node && (node->atom.type == PN_STRING ||
+               node->atom.type == PN_SYMBOL ||
+               node->atom.type == PN_BINARY)) {
     return node->atom.u.as_bytes;
   } else {
     pn_bytes_t t = {0};

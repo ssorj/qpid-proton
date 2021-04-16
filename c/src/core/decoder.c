@@ -294,10 +294,10 @@ static inline int pni_decoder_decode_variable_value(pni_decoder_t *decoder, pn_d
 
   if ((code & 0x0F) == 1) {
     type = PN_STRING;
-  } else if ((code & 0x0F) == 0) {
-    type = PN_BINARY;
   } else if ((code & 0x0F) == 3) {
     type = PN_SYMBOL;
+  } else if ((code & 0x0F) == 0) {
+    type = PN_BINARY;
   } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
