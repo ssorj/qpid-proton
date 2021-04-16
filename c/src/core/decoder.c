@@ -363,7 +363,8 @@ static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_
   return 0;
 }
 
-static inline int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node, const uint8_t code)
+static inline int pni_decoder_decode_compound8(pni_decoder_t *decoder, pn_data_t *data, pni_node_t *node,
+                                               const uint8_t code)
 {
   size_t remaining = pni_decoder_remaining(decoder);
 
