@@ -1470,26 +1470,21 @@ bool pn_data_restore(pn_data_t *data, pn_handle_t point)
   }
 }
 
-static inline pni_nid_t pni_data_next_id(pn_data_t *data)
-{
-  if (data->current) {
-    return data->nodes[data->current - 1].next;
-  } else if (data->parent) {
-    return data->nodes[data->parent - 1].down;
-  } else if (data->size) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 PNI_INLINE pni_node_t *pni_data_next(pn_data_t *data)
 {
-  pni_nid_t next_id = pni_data_next_id(data);
+  pni_nid_t next = 0;
 
-  if (next_id) {
-    data->current = next_id;
-    return &data->nodes[next_id - 1];
+  if (data->current) {
+    next = data->nodes[data->current - 1].next;
+  } else if (data->parent) {
+    next = data->nodes[data->parent - 1].down;
+  } else if (data->size) {
+    next = 1;
+  }
+
+  if (next) {
+    data->current = next;
+    return &data->nodes[next - 1];
   }
 
   return NULL;
@@ -1497,13 +1492,7 @@ PNI_INLINE pni_node_t *pni_data_next(pn_data_t *data)
 
 PNI_INLINE bool pn_data_next(pn_data_t *data)
 {
-  pni_nid_t next_id = pni_data_next_id(data);
-
-  if (next_id) {
-    data->current = next_id;
-  }
-
-  return next_id;
+  return pni_data_next(data) != NULL;
 }
 
 bool pn_data_prev(pn_data_t *data)
