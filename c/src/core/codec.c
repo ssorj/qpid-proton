@@ -1080,55 +1080,16 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static inline pni_node_t *pni_data_scan_next(pn_data_t *data, pn_type_t type, int suspend_count)
-{
-  if (suspend_count) return NULL;
-
-  pni_node_t *node = pni_data_next(data);
-
-  if (node) {
-    if (node->atom.type == type) {
-      return node;
-    }
-  } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-
-    if (parent->atom.type == PN_DESCRIBED) {
-      pni_data_exit(data);
-      return pni_data_scan_next(data, type, suspend_count);
-    }
-  }
-
-  return NULL;
-}
-
-static inline pni_node_t *pni_data_scan_next_any_type(pn_data_t *data, int suspend_count)
-{
-  if (suspend_count) return NULL;
-
-  pni_node_t *node = pni_data_next(data);
-
-  if (node) {
-    return node;
-  } else if (data->parent) {
-    pni_node_t *parent = pni_data_node(data, data->parent);
-
-    if (parent->atom.type == PN_DESCRIBED) {
-      pni_data_exit(data);
-      return pni_data_scan_next_any_type(data, suspend_count);
-    }
-  }
-
-  return NULL;
-}
-
 static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *node, int limit);
 
 PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
+  // pn_data_dump(data);
+  // printf("XXX scan string: %s\n", fmt);
+
   pn_data_rewind(data);
 
-  bool *scanarg = NULL;
+  bool *scan_arg = NULL;
   bool at = false;
   int level = 0;
   int suspend_level = -1;
@@ -1142,16 +1103,45 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     bool scanned = false;
     bool suspend_decrement = true;
 
+    // printf("XXX scan code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
+
+    if (code == '?') {
+      if (!*fmt || *fmt == '?') {
+        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
+      }
+      scan_arg = va_arg(ap, bool *);
+      // Skip the suspend and scan_arg handling at the end
+      continue;
+    } else if (code == '[' && at) {
+      at = false;
+      goto end;
+    }
+
+    if (!suspend_count) {
+      node = pni_data_next(data);
+
+      //printf("YYY next=%p data->current=%d data->parent=%d\n", (void *) next, data->current, data->parent);
+
+      if (!node && data->parent) {
+        pni_node_t *parent = pni_data_node(data, data->parent);
+
+        if (parent->atom.type == PN_DESCRIBED) {
+          pni_data_exit(data);
+          node = pni_data_next(data);
+        }
+      }
+    }
+
     switch (code) {
     case 'n': {
-      node = pni_data_scan_next(data, PN_NULL, suspend_count);
+      scanned = node && node->atom.type == PN_NULL;
       break;
     }
     case 'o': {
       bool *value = va_arg(ap, bool *);
-      node = pni_data_scan_next(data, PN_BOOL, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_BOOL) {
         *value = pni_node_get_bool(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1159,9 +1149,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'B': {
       uint8_t *value = va_arg(ap, uint8_t *);
-      node = pni_data_scan_next(data, PN_UBYTE, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_UBYTE) {
         *value = pni_node_get_ubyte(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1169,9 +1159,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'b': {
       int8_t *value = va_arg(ap, int8_t *);
-      node = pni_data_scan_next(data, PN_BYTE, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_BYTE) {
         *value = pni_node_get_byte(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1179,9 +1169,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'H': {
       uint16_t *value = va_arg(ap, uint16_t *);
-      node = pni_data_scan_next(data, PN_USHORT, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_USHORT) {
         *value = pni_node_get_ushort(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1189,9 +1179,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'h': {
       int16_t *value = va_arg(ap, int16_t *);
-      node = pni_data_scan_next(data, PN_SHORT, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_SHORT) {
         *value = pni_node_get_short(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1199,9 +1189,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'I': {
       uint32_t *value = va_arg(ap, uint32_t *);
-      node = pni_data_scan_next(data, PN_UINT, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_UINT) {
         *value = pni_node_get_uint(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1209,9 +1199,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'i': {
       int32_t *value = va_arg(ap, int32_t *);
-      node = pni_data_scan_next(data, PN_INT, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_INT) {
         *value = pni_node_get_int(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1219,9 +1209,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'c': {
       pn_char_t *value = va_arg(ap, pn_char_t *);
-      node = pni_data_scan_next(data, PN_CHAR, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_CHAR) {
         *value = pni_node_get_char(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1229,9 +1219,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'L': {
       uint64_t *value = va_arg(ap, uint64_t *);
-      node = pni_data_scan_next(data, PN_ULONG, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_ULONG) {
         *value = pni_node_get_ulong(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1239,9 +1229,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'l': {
       int64_t *value = va_arg(ap, int64_t *);
-      node = pni_data_scan_next(data, PN_LONG, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_LONG) {
         *value = pni_node_get_long(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1249,9 +1239,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 't': {
       pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-      node = pni_data_scan_next(data, PN_TIMESTAMP, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_TIMESTAMP) {
         *value = pni_node_get_timestamp(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1259,9 +1249,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'f': {
       float *value = va_arg(ap, float *);
-      node = pni_data_scan_next(data, PN_FLOAT, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_FLOAT) {
         *value = pni_node_get_float(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1269,9 +1259,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'd': {
       double *value = va_arg(ap, double *);
-      node = pni_data_scan_next(data, PN_DOUBLE, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_DOUBLE) {
         *value = pni_node_get_double(node);
+        scanned = true;
       } else {
         *value = 0;
       }
@@ -1279,19 +1269,20 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'z': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      node = pni_data_scan_next(data, PN_BINARY, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_BINARY) {
         *value = pni_node_get_bytes(node);
+        scanned = true;
       } else {
         *value = pn_bytes_null;
+        scanned = true;
       }
       break;
     }
     case 'S': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      node = pni_data_scan_next(data, PN_STRING, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_STRING) {
         *value = pni_node_get_bytes(node);
+        scanned = true;
       } else {
         *value = pn_bytes_null;
       }
@@ -1299,18 +1290,18 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 's': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      node = pni_data_scan_next(data, PN_SYMBOL, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_SYMBOL) {
         *value = pni_node_get_bytes(node);
+        scanned = true;
       } else {
         *value = pn_bytes_null;
       }
       break;
     }
     case 'D': {
-      node = pni_data_scan_next(data, PN_DESCRIBED, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_DESCRIBED) {
         pni_data_enter(data);
+        scanned = true;
       } else if (!suspend_count) {
         suspend_count = 3;
         suspend_level = level;
@@ -1318,10 +1309,10 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '@': {
-      node = pni_data_scan_next(data, PN_ARRAY, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_ARRAY) {
         pni_data_enter(data);
         at = true;
+        scanned = true;
       } else if (!suspend_count) {
         suspend_count = 3;
         suspend_level = level;
@@ -1329,26 +1320,21 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '[': {
-      if (at) {
+      if (node && node->atom.type == PN_LIST) {
+        pni_data_enter(data);
         scanned = true;
-        at = false;
-      } else {
-        node = pni_data_scan_next(data, PN_LIST, suspend_count);
-        if (node) {
-          pni_data_enter(data);
-        } else if (!suspend_count) {
-          suspend_count = 1;
-          suspend_level = level;
-        }
+      } else if (!suspend_count) {
+        suspend_count = 1;
+        suspend_level = level;
       }
       level++;
       suspend_decrement = false;
       break;
     }
     case '{': {
-      node = pni_data_scan_next(data, PN_MAP, suspend_count);
-      if (node) {
+      if (node && node->atom.type == PN_MAP) {
         pni_data_enter(data);
+        scanned = true;
       } else if (!suspend_count) {
         suspend_count = 1;
         suspend_level = level;
@@ -1369,37 +1355,31 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '.': {
-      node = pni_data_scan_next_any_type(data, suspend_count);
+      scanned = true;
       break;
     }
     case 'C': {
       pn_data_t *dst = va_arg(ap, pn_data_t *);
-      node = pni_data_scan_next_any_type(data, suspend_count);
       if (node && node->atom.type != PN_NULL) {
         int err = pni_data_append_nodes(dst, data, node, 1);
         if (err) return err;
+        scanned = true;
       }
       break;
-    }
-    case '?': {
-      if (!*fmt || *fmt == '?') {
-        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
-      }
-      scanarg = va_arg(ap, bool *);
-      // Skip the suspend and scanarg handling at the end
-      continue;
     }
     default:
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
 
+  end:
+
     if (suspend_decrement && suspend_count && level == suspend_level) {
       suspend_count--;
     }
 
-    if (scanarg) {
-      *scanarg = node != NULL || scanned;
-      scanarg = NULL;
+    if (scan_arg) {
+      *scan_arg = scanned;
+      scan_arg = NULL;
     }
   }
 
