@@ -2211,8 +2211,7 @@ pn_decimal128_t pn_data_get_decimal128(pn_data_t *data)
   if (node && node->atom.type == PN_DECIMAL128) {
     return pni_node_get_decimal128(node);
   } else {
-    pn_decimal128_t t = {{0}};
-    return t;
+    return (pn_decimal128_t) {{0}};
   }
 }
 
@@ -2222,8 +2221,7 @@ pn_uuid_t pn_data_get_uuid(pn_data_t *data)
   if (node && node->atom.type == PN_UUID) {
     return pni_node_get_uuid(node);
   } else {
-    pn_uuid_t t = {{0}};
-    return t;
+    return (pn_uuid_t) {{0}};
   }
 }
 
@@ -2260,8 +2258,7 @@ pn_bytes_t pn_data_get_bytes(pn_data_t *data)
                node->atom.type == PN_BINARY)) {
     return node->atom.u.as_bytes;
   } else {
-    pn_bytes_t t = {0};
-    return t;
+    return pn_bytes_null;
   }
 }
 
