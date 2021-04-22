@@ -872,7 +872,9 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     // printf("XXX fill code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
 
     if (code == '?') {
-      // XXX Check for more ?s and end of string
+      if (!*fmt || *fmt == '?') {
+        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
+      }
 
       if (!va_arg(ap, int)) {
         err = pni_data_put_null(data);
@@ -920,7 +922,8 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'i': {
-      uint32_t value = va_arg(ap, uint32_t); // uint32_t? XXX
+      // uint32_t value = va_arg(ap, uint32_t); // uint32_t? XXX
+      int32_t value = va_arg(ap, int32_t);
       if (!skip) err = pn_data_put_int(data, value);
       break;
     }
@@ -940,7 +943,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'f': {
-      double value = va_arg(ap, double); // double? XXX
+      double value = va_arg(ap, double);
       if (!skip) err = pn_data_put_float(data, value);
       break;
     }
@@ -958,7 +961,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       char *start = va_arg(ap, char *);
 
       if (!start) {
-        // XXX error
+        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "null pointer for code Z");
       }
 
       if (!skip) err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
@@ -1015,14 +1018,13 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'D': {
       err = pni_data_put_described(data);
-      if (err) return err;
       pni_data_enter(data);
       break;
     }
     case 'T': {
       // Set type of open array
 
-      // XXX scan ahead instead
+      // XXX scan ahead after @ instead
 
       pni_node_t *parent = pni_data_node(data, data->parent);
 
@@ -1055,7 +1057,6 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 
       if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pni_data_put_compound(data, PN_LIST);
-        if (err) return err;
         pni_data_enter(data);
       }
 
@@ -1065,8 +1066,6 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       // Begin map
 
       err = pni_data_put_compound(data, PN_MAP);
-      if (err) return err;
-
       pni_data_enter(data);
 
       break;
@@ -1140,13 +1139,13 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
         pni_node_t *current = pni_data_node(data, data->current);
         current->array_described = true;
+
         pni_data_exit(data);
       } else if (parent->atom.type == PN_NULL) {
+        parent->down = 0;
+        parent->children = 0;
+
         pni_data_exit(data);
-        // XXX use parent
-        pni_node_t *current = pni_data_node(data, data->current);
-        current->down = 0;
-        current->children = 0;
       } else {
         break;
       }
