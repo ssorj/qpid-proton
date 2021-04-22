@@ -888,7 +888,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 
     switch (code) {
     case 'n': {
-      err = pn_data_put_null(data);
+      err = pni_data_put_null(data);
       break;
     }
     case 'o': {
@@ -1073,7 +1073,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case '}':
     case ']': {
       if (!data->parent) {
-        return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
+        return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
       }
 
       pni_data_exit(data);
@@ -1137,9 +1137,6 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       pni_node_t *parent = pni_data_node(data, data->parent);
 
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
-        pni_node_t *current = pni_data_node(data, data->current);
-        current->array_described = true;
-
         pni_data_exit(data);
       } else if (parent->atom.type == PN_NULL) {
         parent->down = 0;
@@ -1187,7 +1184,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     bool scanned = false;
     bool suspend_decrement = true;
 
-    // printf("XXX scan code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
+    // printf("scan code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
 
     if (code == '?') {
       if (!*fmt || *fmt == '?') {
@@ -1203,8 +1200,6 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
     if (!suspend_count) {
       node = pni_data_next(data);
-
-      //printf("YYY next=%p data->current=%d data->parent=%d\n", (void *) next, data->current, data->parent);
 
       if (!node && data->parent) {
         pni_node_t *parent = pni_data_node(data, data->parent);
