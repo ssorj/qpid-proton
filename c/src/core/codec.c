@@ -1201,12 +1201,14 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     if (!suspend_count) {
       node = pni_data_next(data);
 
-      if (!node && data->parent) {
+      while (!node && data->parent) {
         pni_node_t *parent = pni_data_node(data, data->parent);
 
         if (parent->atom.type == PN_DESCRIBED) {
           pni_data_exit(data);
           node = pni_data_next(data);
+        } else {
+          break;
         }
       }
     }
