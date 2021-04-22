@@ -860,190 +860,274 @@ static int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
  */
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
+  // printf("XXX fill string: %s\n", fmt);
+
   int err = 0;
   const char *begin = fmt;
+
   while (*fmt) {
     char code = *(fmt++);
-    if (!code) return 0;
+    bool skip = false;
+
+    // printf("XXX fill code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
+
+    if (code == '?') {
+      // XXX Check for more ?s and end of string
+
+      if (!va_arg(ap, int)) {
+        err = pni_data_put_null(data);
+        if (err) return err;
+        pni_data_enter(data);
+        skip = true;
+      }
+
+      code = *(fmt++);
+    }
 
     switch (code) {
-    case 'n':
+    case 'n': {
       err = pn_data_put_null(data);
       break;
-    case 'o':
-      err = pni_data_put_bool(data, va_arg(ap, int));
+    }
+    case 'o': {
+      int value = va_arg(ap, int);
+      if (!skip) err = pni_data_put_bool(data, value);
       break;
-    case 'B':
-      err = pn_data_put_ubyte(data, va_arg(ap, unsigned int));
+    }
+    case 'B': {
+      unsigned int value = va_arg(ap, unsigned int);
+      if (!skip) err = pn_data_put_ubyte(data, value);
       break;
-    case 'b':
-      err = pn_data_put_byte(data, va_arg(ap, int));
+    }
+    case 'b': {
+      int value = va_arg(ap, int);
+      if (!skip) err = pn_data_put_byte(data, value);
       break;
-    case 'H':
-      err = pn_data_put_ushort(data, va_arg(ap, unsigned int));
+    }
+    case 'H': {
+      unsigned int value = va_arg(ap, unsigned int);
+      if (!skip) err = pn_data_put_ushort(data, value);
       break;
-    case 'h':
-      err = pn_data_put_short(data, va_arg(ap, int));
+    }
+    case 'h': {
+      int value = va_arg(ap, int);
+      if (!skip) err = pn_data_put_short(data, value);
       break;
-    case 'I':
-      err = pni_data_put_uint(data, va_arg(ap, uint32_t));
+    }
+    case 'I': {
+      uint32_t value = va_arg(ap, uint32_t);
+      if (!skip) err = pni_data_put_uint(data, value);
       break;
-    case 'i':
-      err = pn_data_put_int(data, va_arg(ap, uint32_t));
+    }
+    case 'i': {
+      uint32_t value = va_arg(ap, uint32_t); // uint32_t? XXX
+      if (!skip) err = pn_data_put_int(data, value);
       break;
-    case 'L':
-      err = pni_data_put_ulong(data, va_arg(ap, uint64_t));
+    }
+    case 'L': {
+      uint64_t value = va_arg(ap, uint64_t);
+      if (!skip) err = pni_data_put_ulong(data, value);
       break;
-    case 'l':
-      err = pn_data_put_long(data, va_arg(ap, int64_t));
+    }
+    case 'l': {
+      int64_t value = va_arg(ap, int64_t);
+      if (!skip) err = pn_data_put_long(data, value);
       break;
-    case 't':
-      err = pni_data_put_timestamp(data, va_arg(ap, pn_timestamp_t));
+    }
+    case 't': {
+      pn_timestamp_t value = va_arg(ap, pn_timestamp_t);
+      if (!skip) err = pni_data_put_timestamp(data, value);
       break;
-    case 'f':
-      err = pn_data_put_float(data, va_arg(ap, double));
+    }
+    case 'f': {
+      double value = va_arg(ap, double); // double? XXX
+      if (!skip) err = pn_data_put_float(data, value);
       break;
-    case 'd':
-      err = pn_data_put_double(data, va_arg(ap, double));
+    }
+    case 'd': {
+      double value = va_arg(ap, double);
+      if (!skip) err = pn_data_put_double(data, value);
       break;
-    case 'Z':                   /* encode binary, must not be NULL */
-      {
-	// For maximum portability, caller must pass these as two separate args, not a single struct
-        size_t size = va_arg(ap, size_t);
-        char *start = va_arg(ap, char *);
-        err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
+    }
+    case 'Z': {
+      // Encode binary. The pointer must not be NULL.
+
+      // For maximum portability, caller must pass these as two
+      // separate args, not a single struct
+      size_t size = va_arg(ap, size_t);
+      char *start = va_arg(ap, char *);
+
+      if (!start) {
+        // XXX error
       }
+
+      if (!skip) err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
+
       break;
-    case 'z':                   /* encode binary or null if pointer is NULL */
-      {
-	// For maximum portability, caller must pass these as two separate args, not a single struct
-        size_t size = va_arg(ap, size_t);
-        char *start = va_arg(ap, char *);
+    }
+    case 'z': {
+      // Encode binary or null if pointer is NULL
+
+      // For maximum portability, caller must pass these as two
+      // separate args, not a single struct
+      size_t size = va_arg(ap, size_t);
+      char *start = va_arg(ap, char *);
+
+      if (!skip) {
         if (start) {
           err = pni_data_put_variable(data, PN_BINARY, pn_bytes(size, start));
         } else {
           err = pni_data_put_null(data);
         }
       }
+
       break;
-    case 'S':                   /* encode string or null if NULL */
-      {
-        char *start = va_arg(ap, char *);
+    }
+    case 'S': {
+      // Encode string or null if NULL
+
+      char *start = va_arg(ap, char *);
+
+      if (!skip) {
         if (start) {
           err = pni_data_put_variable(data, PN_STRING, pn_bytes(strlen(start), start));
         } else {
           err = pni_data_put_null(data);
         }
       }
+
       break;
-    case 's':                   /* encode symbol or null if NULL */
-      {
-        char *start = va_arg(ap, char *);
+    }
+    case 's': {
+      // Encode symbol or null if NULL
+
+      char *start = va_arg(ap, char *);
+
+      if (!skip) {
         if (start) {
           err = pni_data_put_variable(data, PN_SYMBOL, pn_bytes(strlen(start), start));
         } else {
           err = pni_data_put_null(data);
         }
       }
+
       break;
-    case 'D':
-      /* The next 2 args are the descriptor, value for a described value. */
+    }
+    case 'D': {
       err = pni_data_put_described(data);
+      if (err) return err;
       pni_data_enter(data);
       break;
-    case 'T':                   /* Set type of open array */
-      {
-        pni_node_t *parent = pni_data_node(data, data->parent);
-        if (parent->atom.type == PN_ARRAY) {
-          parent->array_type = (pn_type_t) va_arg(ap, int);
-        } else {
-          return pn_error_format(pni_data_error(data), PN_ERR, "naked type");
-        }
+    }
+    case 'T': {
+      // Set type of open array
+
+      // XXX scan ahead instead
+
+      pni_node_t *parent = pni_data_node(data, data->parent);
+
+      if (parent->atom.type == PN_ARRAY) {
+        parent->array_type = (pn_type_t) va_arg(ap, int);
+      } else {
+        return pn_error_format(pni_data_error(data), PN_ERR, "naked type");
       }
+
       break;
-    case '@':                   /* begin array */
-      {
-        bool described;
-        if (*(fmt + 1) == 'D') {
-          fmt++;
-          described = true;
-        } else {
-          described = false;
-        }
-        err = pn_data_put_array(data, described, (pn_type_t) 0);
-        pni_data_enter(data);
+    }
+    case '@': {
+      // Begin array
+
+      bool described;
+      if (*(fmt + 1) == 'D') { // XXX Never used or tested
+        fmt++;
+        described = true;
+      } else {
+        described = false;
       }
+
+      err = pn_data_put_array(data, described, (pn_type_t) 0);
+      pni_data_enter(data);
+
       break;
-    case '[':                   /* begin list */
+    }
+    case '[': {
+      // Begin list
+
       if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pni_data_put_compound(data, PN_LIST);
         if (err) return err;
         pni_data_enter(data);
       }
+
       break;
-    case '{':                   /* begin map */
+    }
+    case '{': {
+      // Begin map
+
       err = pni_data_put_compound(data, PN_MAP);
       if (err) return err;
+
       pni_data_enter(data);
+
       break;
+    }
     case '}':
-    case ']':
-      if (!pn_data_exit(data))
+    case ']': {
+      if (!data->parent) {
         return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
-      break;
-    case '?':
-      if (!va_arg(ap, int)) {
-        err = pni_data_put_null(data);
-        if (err) return err;
-        pni_data_enter(data);
       }
-      break;
-    case '*':
-      {
-        int count = va_arg(ap, int);
-        void *ptr = va_arg(ap, void *);
 
-        char c = *(fmt++);
+      pni_data_exit(data);
 
-        switch (c)
-        {
-        case 's':
-          {
-            char **sptr = (char **) ptr;
-            for (int i = 0; i < count; i++)
-            {
-              char *sym = *(sptr++);
-              err = pn_data_fill(data, "s", sym);
-              if (err) return err;
-            }
-          }
-          break;
-        default:
-          PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized * code: 0x%.2X '%c'", code, code);
-          return PN_ARG_ERR;
-        }
-      }
       break;
-    case 'C':                   /* Append an existing pn_data_t *  */
-      {
-        pn_data_t *src = va_arg(ap, pn_data_t *);
-        if (src && pni_data_size(src) > 0) {
-          err = pni_data_appendn(data, src, 1);
-          if (err) return err;
-        } else {
-          err = pni_data_put_null(data);
+    }
+    case '*': {
+      int count = va_arg(ap, int);
+      void *ptr = va_arg(ap, void *);
+
+      char c = *(fmt++);
+
+      switch (c) {
+      case 's': {
+        char **sptr = (char **) ptr;
+        for (int i = 0; i < count; i++) {
+          char *sym = *(sptr++);
+          err = pn_data_fill(data, "s", sym);
           if (err) return err;
         }
-      }
-      break;
-     case 'M':
-      {
-        pn_data_t *src = va_arg(ap, pn_data_t *);
-        err = (src && pni_data_size(src) > 0) ?
-          pni_normalize_multiple(data, src) : pn_data_put_null(data);
         break;
       }
-     default:
+      default:
+        PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized * code: 0x%.2X '%c'", code, code);
+        return PN_ARG_ERR;
+      }
+      break;
+    }
+    case 'C': {
+      // Append an existing pn_data_t *
+
+      pn_data_t *src = va_arg(ap, pn_data_t *);
+
+      if (src && pni_data_size(src) > 0) {
+        err = pni_data_appendn(data, src, 1);
+      } else {
+        err = pni_data_put_null(data);
+      }
+
+      break;
+    }
+    case 'M': {
+      pn_data_t *src = va_arg(ap, pn_data_t *);
+
+      if (src && pni_data_size(src) > 0) {
+        err = pni_normalize_multiple(data, src);
+      } else {
+        err = pn_data_put_null(data);
+      }
+
+      break;
+    }
+    default:
       PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized fill code: 0x%.2X '%c'", code, code);
       return PN_ARG_ERR;
     }
@@ -1057,8 +1141,9 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_node_t *current = pni_data_node(data, data->current);
         current->array_described = true;
         pni_data_exit(data);
-      } else if (parent->atom.type == PN_NULL && parent->children == 1) {
+      } else if (parent->atom.type == PN_NULL) {
         pni_data_exit(data);
+        // XXX use parent
         pni_node_t *current = pni_data_node(data, data->current);
         current->down = 0;
         current->children = 0;
