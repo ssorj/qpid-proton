@@ -24,7 +24,7 @@
 
 #include "framing.h"
 
-#include "config.h"
+#include "codec.h"
 
 ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max)
 {

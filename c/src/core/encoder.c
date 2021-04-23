@@ -19,17 +19,18 @@
  *
  */
 
+#include <assert.h>
+#include <proton/codec.h>
 #include <proton/error.h>
 #include <proton/object.h>
-#include <proton/codec.h>
-
-#include "data.h"
-#include "encodings.h"
-#include "encoder.h"
-
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "encoder.h"
+
+#include "codec.h"
+#include "data.h"
+#include "encodings.h"
 
 static int pni_encoder_encode_node(pni_encoder_t *encoder, pn_data_t *data, pni_node_t *node);
 static int pni_encoder_encode_type(pni_encoder_t *encoder, uint8_t code);

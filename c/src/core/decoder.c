@@ -22,12 +22,13 @@
 #include <proton/error.h>
 #include <proton/object.h>
 #include <proton/codec.h>
+#include <string.h>
 
-#include "data.h"
-#include "encodings.h"
 #include "decoder.h"
 
-#include <string.h>
+#include "codec.h"
+#include "data.h"
+#include "encodings.h"
 
 static int pni_decoder_decode_node(pni_decoder_t *decoder, pn_data_t *data);
 static int pni_decoder_decode_type(pni_decoder_t *decoder, uint8_t* code);
