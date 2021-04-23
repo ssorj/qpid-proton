@@ -2357,9 +2357,12 @@ static inline int pni_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
     return 0;
   }
 
-  pni_node_t *node = pni_data_node(src, next);
+  if (next) {
+    pni_node_t *node = pni_data_node(src, next);
+    return pni_data_append_nodes(data, src, node, limit);
+  }
 
-  return pni_data_append_nodes(data, src, node, limit);
+  return 0;
 }
 
 PNI_INLINE int pn_data_copy(pn_data_t *data, pn_data_t *src)
