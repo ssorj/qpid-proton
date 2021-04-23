@@ -72,7 +72,6 @@ else()
   set (C_EXTENDED_GNU -std=gnu99)
   set (C_STANDARD_Clang -std=c99)
   set (C_EXTENDED_Clang -std=gnu99)
-  set (C_STANDARD_MSVC "/std:c11")
 endif()
 
 set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
