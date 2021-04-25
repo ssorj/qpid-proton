@@ -1165,9 +1165,6 @@ static int pni_data_append_nodes(pn_data_t *data, pn_data_t *src, pni_node_t *no
 
 PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
-  // pn_data_dump(data);
-  // printf("XXX scan string: %s\n", fmt);
-
   pn_data_rewind(data);
 
   bool *scan_arg = NULL;
@@ -1184,13 +1181,12 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     bool scanned = false;
     bool suspend_decrement = true;
 
-    // printf("scan code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
-
     if (code == '?') {
-      if (!*fmt || *fmt == '?') {
-        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
-      }
+      assert(*fmt);
+      assert(*fmt != '?');
+
       scan_arg = va_arg(ap, bool *);
+
       // Skip the suspend and scan_arg handling at the end
       continue;
     } else if (code == '[' && at) {
@@ -1454,7 +1450,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
   end:
 
-    if (suspend_decrement && suspend_count && level == suspend_level) {
+    if (suspend_count && level == suspend_level && suspend_decrement) {
       suspend_count--;
     }
 
