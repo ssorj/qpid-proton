@@ -1181,19 +1181,6 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     bool scanned = false;
     bool suspend_decrement = true;
 
-    if (code == '?') {
-      assert(*fmt);
-      assert(*fmt != '?');
-
-      scan_arg = va_arg(ap, bool *);
-
-      // Skip the suspend and scan_arg handling at the end
-      continue;
-    } else if (code == '[' && at) {
-      at = false;
-      goto end;
-    }
-
     if (!suspend_count) {
       node = pni_data_next(data);
 
@@ -1397,6 +1384,13 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '[': {
+      if (at) {
+        at = false;
+        // Step back one node
+        if (node) data->current = node->prev;
+        break;
+      }
+
       if (node && node->atom.type == PN_LIST) {
         pni_data_enter(data);
         scanned = true;
@@ -1404,6 +1398,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         suspend_count = 1;
         suspend_level = level;
       }
+
       level++;
       suspend_decrement = false;
       break;
@@ -1444,11 +1439,21 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     }
+    case '?': {
+      assert(*fmt);
+      assert(*fmt != '?');
+
+      scan_arg = va_arg(ap, bool *);
+
+      // Step back one node
+      if (node) data->current = node->prev;
+
+      // Skip the suspend and scan_arg handling at the end
+      continue;
+    }
     default:
       return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
-
-  end:
 
     if (suspend_count && level == suspend_level && suspend_decrement) {
       suspend_count--;
