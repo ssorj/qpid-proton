@@ -1386,9 +1386,10 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '[': {
       if (at) {
         at = false;
-        // Step back one node
+        // Step back one node and skip the suspend and scan_arg handling
+        // at the end
         if (node) data->current = node->prev;
-        break;
+        continue;
       }
 
       if (node && node->atom.type == PN_LIST) {
@@ -1445,10 +1446,9 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
       scan_arg = va_arg(ap, bool *);
 
-      // Step back one node
+      // Step back one node and skip the suspend and scan_arg handling
+      // at the end
       if (node) data->current = node->prev;
-
-      // Skip the suspend and scan_arg handling at the end
       continue;
     }
     default:
