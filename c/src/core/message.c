@@ -21,6 +21,7 @@
 
 #include "platform/platform_fmt.h"
 
+#include "data.h"
 #include "max_align.h"
 #include "message-internal.h"
 #include "protocol.h"
@@ -658,15 +659,10 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
                                pn_error_text(pn_data_error(msg->data)));
     size -= used;
     bytes += used;
-    bool scanned;
-    uint64_t desc;
-    int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
+    uint64_t desc = 0;
+    int err = pni_data_scan(msg->data, "<L", &desc);
     if (err) return pn_error_format(msg->error, err, "data error: %s",
                                     pn_error_text(pn_data_error(msg->data)));
-    if (!scanned) {
-      desc = 0;
-    }
-
     pn_data_rewind(msg->data);
     pn_data_next(msg->data);
     pn_data_enter(msg->data);
@@ -674,26 +670,31 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
     switch (desc) {
     case HEADER: {
-      bool priority_q;
-      uint8_t priority;
-      err = pn_data_scan(msg->data, "D.[o?BIoI]",
+      err = pni_data_scan(msg->data, "<.[oBIoI]>",
                          &msg->durable,
-                         &priority_q, &priority,
+                         &msg->priority,
                          &msg->ttl,
                          &msg->first_acquirer,
                          &msg->delivery_count);
       if (err) return pn_error_format(msg->error, err, "data error: %s",
                                       pn_error_text(pn_data_error(msg->data)));
-      msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
       break;
     }
     case PROPERTIES:
       {
-        pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
-          group_id, reply_to_group_id;
+        pn_bytes_t
+          user_id = pn_bytes_null,
+          address = pn_bytes_null,
+          subject = pn_bytes_null,
+          reply_to = pn_bytes_null,
+          ctype = pn_bytes_null,
+          cencoding = pn_bytes_null,
+          group_id = pn_bytes_null,
+          reply_to_group_id = pn_bytes_null;
+
         pn_data_clear(msg->id);
         pn_data_clear(msg->correlation_id);
-        err = pn_data_scan(msg->data, "D.[CzSSSCssttSIS]", msg->id,
+        err = pni_data_scan(msg->data, "<.[CzSSSCssttSIS]>", msg->id,
                            &user_id, &address, &subject, &reply_to,
                            msg->correlation_id, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,

@@ -69,6 +69,7 @@ void pni_data_rewind(pn_data_t *data);
 
 pni_node_t *pni_data_add_node(pn_data_t *data);
 int pni_data_intern_node(pn_data_t *data, pni_node_t *node);
+int pni_data_scan(pn_data_t *data, const char *fmt, ...);
 
 void pni_node_set_type(pni_node_t *node, pn_type_t type);
 void pni_node_set_bytes(pni_node_t *node, pn_type_t type, pn_bytes_t bytes);

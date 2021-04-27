@@ -1338,7 +1338,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         scanned = true;
       } else {
         *value = pn_bytes_null;
-        scanned = true;
+        scanned = true; // XXX Check this - seems wrong
       }
       break;
     }
@@ -1473,6 +1473,240 @@ int pn_data_scan(pn_data_t *data, const char *fmt, ...)
   va_list ap;
   va_start(ap, fmt);
   int err = pn_data_vscan(data, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
+// It doesn't zero the args
+// It doesn't do arrays ('@[') (I could add these)
+// '<' and '>' instead of D with a synthetic close
+// It is stricter about type mismatches (returns an error, not an empty value)
+PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+{
+  bool *scan_arg = NULL;
+  int level = 0;
+  int suspend = false;
+  int suspend_level = -1;
+
+  pn_data_rewind(data);
+
+  while (*fmt) {
+    char code = *(fmt++);
+    pni_node_t *node = NULL;
+
+    if (code == '?') {
+      assert(*fmt);
+      assert(*fmt != '?');
+
+      scan_arg = va_arg(ap, bool *);
+
+      continue;
+    }
+
+    if (!suspend) {
+      node = pni_data_next(data);
+
+      if (!node) {
+        // There is no more data.  Stop scanning.
+        break;
+      }
+
+      if (node->atom.type == PN_NULL) {
+        // The node is present but null.  Unset the node var.
+        node = NULL;
+      } else if (scan_arg) {
+        // The node is present and not null
+        *scan_arg = true;
+        scan_arg = NULL;
+      }
+    }
+
+    switch (code) {
+    case '.': {
+      break;
+    }
+    case 'o': {
+      bool *value = va_arg(ap, bool *);
+      if (node) {
+        if (node->atom.type != PN_BOOL) return PN_ARG_ERR;
+        *value = pni_node_get_bool(node);
+      }
+      break;
+    }
+    case 'B': {
+      uint8_t *value = va_arg(ap, uint8_t *);
+      if (node) {
+        if (node->atom.type != PN_UBYTE) return PN_ARG_ERR;
+        *value = pni_node_get_ubyte(node);
+      }
+      break;
+    }
+    case 'b': {
+      int8_t *value = va_arg(ap, int8_t *);
+      if (node) {
+        if (node->atom.type != PN_BYTE) return PN_ARG_ERR;
+        *value = pni_node_get_byte(node);
+      }
+      break;
+    }
+    case 'H': {
+      uint16_t *value = va_arg(ap, uint16_t *);
+      if (node) {
+        if (node->atom.type != PN_USHORT) return PN_ARG_ERR;
+        *value = pni_node_get_ushort(node);
+      }
+      break;
+    }
+    case 'h': {
+      int16_t *value = va_arg(ap, int16_t *);
+      if (node) {
+        if (node->atom.type != PN_SHORT) return PN_ARG_ERR;
+        *value = pni_node_get_short(node);
+      }
+      break;
+    }
+    case 'I': {
+      uint32_t *value = va_arg(ap, uint32_t *);
+      if (node) {
+        if (node->atom.type != PN_UINT) return PN_ARG_ERR;
+        *value = pni_node_get_uint(node);
+      }
+      break;
+    }
+    case 'i': {
+      int32_t *value = va_arg(ap, int32_t *);
+      if (node) {
+        if (node->atom.type != PN_INT) return PN_ARG_ERR;
+        *value = pni_node_get_int(node);
+      }
+      break;
+    }
+    case 'c': {
+      pn_char_t *value = va_arg(ap, pn_char_t *);
+      if (node) {
+        if (node->atom.type != PN_CHAR) return PN_ARG_ERR;
+        *value = pni_node_get_char(node);
+      }
+      break;
+    }
+    case 'L': {
+      uint64_t *value = va_arg(ap, uint64_t *);
+      if (node) {
+        if (node->atom.type != PN_ULONG) return PN_ARG_ERR;
+        *value = pni_node_get_ulong(node);
+      }
+      break;
+    }
+    case 'l': {
+      int64_t *value = va_arg(ap, int64_t *);
+      if (node) {
+        if (node->atom.type != PN_LONG) return PN_ARG_ERR;
+        *value = pni_node_get_long(node);
+      }
+      break;
+    }
+    case 't': {
+      pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
+      if (node) {
+        if (node->atom.type != PN_TIMESTAMP) return PN_ARG_ERR;
+        *value = pni_node_get_timestamp(node);
+      }
+      break;
+    }
+    case 'f': {
+      float *value = va_arg(ap, float *);
+      if (node) {
+        if (node->atom.type != PN_FLOAT) return PN_ARG_ERR;
+        *value = pni_node_get_float(node);
+      }
+      break;
+    }
+    case 'd': {
+      double *value = va_arg(ap, double *);
+      if (node) {
+        if (node->atom.type != PN_DOUBLE) return PN_ARG_ERR;
+        *value = pni_node_get_double(node);
+      }
+      break;
+    }
+    case 'z': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      if (node) {
+        if (node->atom.type != PN_BINARY) return PN_ARG_ERR;
+        *value = pni_node_get_bytes(node);
+      }
+      break;
+    }
+    case 'S': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      if (node) {
+        if (node->atom.type != PN_STRING) return PN_ARG_ERR;
+        *value = pni_node_get_bytes(node);
+      }
+      break;
+    }
+    case 's': {
+      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
+      if (node) {
+        if (node->atom.type != PN_SYMBOL) return PN_ARG_ERR;
+        *value = pni_node_get_bytes(node);
+      }
+      break;
+    }
+    case 'C': {
+      pn_data_t *dst = va_arg(ap, pn_data_t *);
+      if (node && !suspend) {
+        int err = pni_data_append_nodes(dst, data, node, 1);
+        if (err) return err;
+      }
+      break;
+    }
+    case '<':
+    case '{':
+    case '[': {
+      if (!node) {
+        // A node representing a collection is null and has no
+        // children.  Don't try to process any child nodes.
+        suspend = true;
+        suspend_level = level;
+      }
+
+      level++;
+
+      if (!suspend) {
+        pni_data_enter(data);
+      }
+
+      break;
+    }
+    case '>':
+    case ']':
+    case '}': {
+      if (!data->parent) return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unbalanced exit");
+
+      level--;
+
+      if (!suspend) {
+        pni_data_exit(data);
+      } else if (level == suspend_level) {
+        suspend = false;
+      }
+
+      break;
+    }
+    default:
+      return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
+    }
+  }
+
+  return 0;
+}
+
+int pni_data_scan(pn_data_t *data, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int err = pni_data_vscan(data, fmt, ap);
   va_end(ap);
   return err;
 }
