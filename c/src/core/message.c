@@ -787,12 +787,12 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
   pn_data_clear(data);
-  int err = pn_data_fill(data, "DL[?o?B?I?o?I]", HEADER,
-                         msg->durable, msg->durable,
-                         msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
-                         (bool)msg->ttl, msg->ttl,
-                         msg->first_acquirer, msg->first_acquirer,
-                         (bool)msg->delivery_count, msg->delivery_count);
+  int err = pni_data_fill(data, "<L[?o?B?I?o?I]>", HEADER,
+                          msg->durable, msg->durable,
+                          msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
+                          (bool)msg->ttl, msg->ttl,
+                          msg->first_acquirer, msg->first_acquirer,
+                          (bool)msg->delivery_count, msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
@@ -821,25 +821,25 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pn_data_exit(data);
   }
 
-  err = pn_data_fill(data, "DL[CzSSSCss?t?tS?IS]", PROPERTIES,
-                     msg->id,
-                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
-                     pn_string_get(msg->address),
-                     pn_string_get(msg->subject),
-                     pn_string_get(msg->reply_to),
-                     msg->correlation_id,
-                     pn_string_get(msg->content_type),
-                     pn_string_get(msg->content_encoding),
-                     (bool)msg->expiry_time, msg->expiry_time,
-                     (bool)msg->creation_time, msg->creation_time,
-                     pn_string_get(msg->group_id),
-                     /*
-                      * As a heuristic, null out group_sequence if there is no group_id and
-                      * group_sequence is 0. In this case it is extremely unlikely we want
-                      * group semantics
-                      */
-                     (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
-                     pn_string_get(msg->reply_to_group_id));
+  err = pni_data_fill(data, "<L[CzSSSCss?t?tS?IS]>", PROPERTIES,
+                      msg->id,
+                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
+                      pn_string_get(msg->address),
+                      pn_string_get(msg->subject),
+                      pn_string_get(msg->reply_to),
+                      msg->correlation_id,
+                      pn_string_get(msg->content_type),
+                      pn_string_get(msg->content_encoding),
+                      (bool)msg->expiry_time, msg->expiry_time,
+                      (bool)msg->creation_time, msg->creation_time,
+                      pn_string_get(msg->group_id),
+                      /*
+                       * As a heuristic, null out group_sequence if there is no group_id and
+                       * group_sequence is 0. In this case it is extremely unlikely we want
+                       * group semantics
+                       */
+                      (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
+                      pn_string_get(msg->reply_to_group_id));
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));

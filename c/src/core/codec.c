@@ -987,7 +987,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'S': {
-      // Encode string or null if NULL
+      // Encode string or null if pointer is NULL
 
       char *start = va_arg(ap, char *);
 
@@ -1157,6 +1157,245 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   va_list ap;
   va_start(ap, fmt);
   int err = pn_data_vfill(data, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
+// No arrays
+int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+{
+  // fprintf(stderr, "XXX fill string: %s\n", fmt);
+
+  while (*fmt) {
+    char code = *(fmt++);
+    bool skip = false;
+
+    // fprintf(stderr, "XXX fill code: %c (current=%d, parent=%d)\n", code, data->current, data->parent);
+
+    if (code == '?') {
+      assert(*fmt);
+      assert(*fmt != '?');
+
+      if (!va_arg(ap, int)) { // XXX bool?
+        skip = true;
+      }
+
+      code = *(fmt++);
+    } else if (code == '>' || code == '}' || code == ']') {
+      if (!data->parent) {
+        return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
+      }
+
+      pni_data_exit(data);
+
+      continue;
+    } else if (code == 'C') {
+      // Append an existing pn_data_t *
+
+      pn_data_t *src = va_arg(ap, pn_data_t *);
+
+      if (src && pni_data_size(src) > 0) {
+        int err = pni_data_appendn(data, src, 1);
+        if (err) return err;
+      } else {
+        pni_data_put_null(data);
+      }
+
+      continue;
+    }
+
+    pni_node_t *node = pni_data_add_node(data);
+    if (!node) return PN_OUT_OF_MEMORY;
+
+    if (skip) {
+      pni_node_set_type(node, PN_NULL);
+      node = NULL;
+    }
+
+    switch (code) {
+    case 'n': {
+      if (node) pni_node_set_type(node, PN_NULL);
+      break;
+    }
+    case 'o': {
+      int value = va_arg(ap, int);
+      if (node) pni_node_set_bool(node, value);
+      break;
+    }
+    case 'B': {
+      unsigned int value = va_arg(ap, unsigned int);
+      if (node) pni_node_set_ubyte(node, value);
+      break;
+    }
+    case 'b': {
+      int value = va_arg(ap, int);
+      if (node) pni_node_set_byte(node, value);
+      break;
+    }
+    case 'H': {
+      unsigned int value = va_arg(ap, unsigned int);
+      if (node) pni_node_set_ushort(node, value);
+      break;
+    }
+    case 'h': {
+      int value = va_arg(ap, int);
+      if (node) pni_node_set_short(node, value);
+      break;
+    }
+    case 'I': {
+      uint32_t value = va_arg(ap, uint32_t);
+      if (node) pni_node_set_uint(node, value);
+      break;
+    }
+    case 'i': {
+      int32_t value = va_arg(ap, int32_t);
+      if (node) pni_node_set_int(node, value);
+      break;
+    }
+    case 'L': {
+      uint64_t value = va_arg(ap, uint64_t);
+      if (node) pni_node_set_ulong(node, value);
+      break;
+    }
+    case 'l': {
+      int64_t value = va_arg(ap, int64_t);
+      if (node) pni_node_set_long(node, value);
+      break;
+    }
+    case 't': {
+      pn_timestamp_t value = va_arg(ap, pn_timestamp_t);
+      if (node) pni_node_set_timestamp(node, value);
+      break;
+    }
+    case 'f': {
+      double value = va_arg(ap, double);
+      if (node) pni_node_set_float(node, value);
+      break;
+    }
+    case 'd': {
+      double value = va_arg(ap, double);
+      if (node) pni_node_set_double(node, value);
+      break;
+    }
+    case 'z': {
+      // Encode binary or null if pointer is NULL
+
+      // For maximum portability, caller must pass these as two
+      // separate args, not a single struct
+      size_t size = va_arg(ap, size_t);
+      char *start = va_arg(ap, char *);
+
+      if (node) {
+        if (start) {
+          pni_node_set_bytes(node, PN_BINARY, pn_bytes(size, start));
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
+      }
+
+      break;
+    }
+    case 'S': {
+      // Encode string or null if pointer is NULL
+
+      char *start = va_arg(ap, char *);
+
+      if (node) {
+        if (start) {
+          pni_node_set_bytes(node, PN_STRING, pn_bytes(strlen(start), start));
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
+      }
+
+      break;
+    }
+    case 's': {
+      // Encode symbol or null if pointer is NULL
+
+      char *start = va_arg(ap, char *);
+
+      if (node) {
+        if (start) {
+          pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(start), start));
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
+      }
+
+      break;
+    }
+    case '<': {
+      if (node) {
+        pni_node_set_type(node, PN_DESCRIBED);
+        pni_data_enter(data);
+      } else {
+        char c;
+        int level = 0;
+
+        while ((c = *(fmt++))) {
+          if (c == '<') level++;
+          if (c == '>') {
+            if (level == 0) break;
+            else level--;
+          }
+        }
+      }
+
+      break;
+    }
+    case '[': {
+      if (node) {
+        pni_node_set_type(node, PN_LIST);
+        pni_data_enter(data);
+      } else {
+        char c;
+        int level = 0;
+
+        while ((c = *(fmt++))) {
+          if (c == '[') level++;
+          if (c == ']') {
+            if (level == 0) break;
+            else level--;
+          }
+        }
+      }
+
+      break;
+    }
+    case '{': {
+      if (node) {
+        pni_node_set_type(node, PN_MAP);
+        pni_data_enter(data);
+      } else {
+        char c;
+        int level = 0;
+
+        while ((c = *(fmt++))) {
+          if (c == '{') level++;
+          if (c == '}') {
+            if (level == 0) break;
+            else level--;
+          }
+        }
+      }
+
+      break;
+    }
+    default:
+      PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized fill code: 0x%.2X '%c'", code, code);
+      return PN_ARG_ERR;
+    }
+  }
+
+  return 0;
+}
+
+int pni_data_fill(pn_data_t *data, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int err = pni_data_vfill(data, fmt, ap);
   va_end(ap);
   return err;
 }
