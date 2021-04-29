@@ -1161,11 +1161,38 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
+static inline void pni_data_fill_scan_advance(const char **fmt, va_list ap, char open_code, char close_code)
+{
+  char code;
+  int level = 0;
+
+  while ((code = *((*fmt)++))) {
+    if (code == open_code) {
+      level++;
+    } else if (code == close_code) {
+      if (level == 0) break;
+      else level--;
+    } else {
+      switch (code) {
+      case '.':
+      case 'n':
+      case '<':
+      case '>':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
+        break;
+      default:
+        va_arg(ap, void *);
+      }
+    }
+  }
+}
+
 // No arrays
 int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
-  // fprintf(stderr, "FILL fmt=%s\n", fmt);
-
   while (*fmt) {
     char code = *(fmt++);
     bool skip = false;
@@ -1174,19 +1201,12 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       assert(*fmt);
       assert(*fmt != '?');
 
-      if (!va_arg(ap, int)) {
-        skip = true;
-      }
-
+      if (!va_arg(ap, int)) skip = true;
       code = *(fmt++);
     } else if (code == '>' || code == '}' || code == ']') {
-      if (!data->parent) {
-        return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
-      }
+      assert(data->parent);
 
       pni_data_exit(data);
-
-      // fprintf(stderr, "FILL code=%c current=%d parent=%d\n", code, data->current, data->parent);
       continue;
     } else if (code == 'C') {
       // Append an existing pn_data_t *
@@ -1200,24 +1220,16 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_data_put_null(data);
       }
 
-      // fprintf(stderr, "FILL code=%c current=%d parent=%d\n", code, data->current, data->parent);
       continue;
     }
-
-    // fprintf(stderr, "FILL code=%c current=%d parent=%d\n", code, data->current, data->parent);
 
     pni_node_t *node = pni_data_add_node(data);
     if (!node) return PN_OUT_OF_MEMORY;
 
     if (skip) {
       pni_node_set_type(node, PN_NULL);
-      // fprintf(stderr, "FILL node=%s current=%d\n", pn_type_name(node->atom.type), data->current);
       node = NULL;
     }
-
-    // if (node) {
-    //   fprintf(stderr, "FILL node=%s current=%d\n", pn_type_name(node->atom.type), data->current);
-    // }
 
     switch (code) {
     case 'n': {
@@ -1337,19 +1349,8 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_node_set_type(node, PN_DESCRIBED);
         pni_data_enter(data);
       } else {
-        char c;
-        int level = 0;
-
-        while ((c = *(fmt++))) {
-          if (c != '<' && c != '>') va_arg(ap, void *);
-          if (c == '<') level++;
-          if (c == '>') {
-            if (level == 0) break;
-            else level--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '<', '>');
       }
-
       break;
     }
     case '[': {
@@ -1357,18 +1358,8 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_node_set_type(node, PN_LIST);
         pni_data_enter(data);
       } else {
-        char c;
-        int level = 0;
-
-        while ((c = *(fmt++))) {
-          if (c == '[') level++;
-          if (c == ']') {
-            if (level == 0) break;
-            else level--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '[', ']');
       }
-
       break;
     }
     case '{': {
@@ -1376,18 +1367,8 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_node_set_type(node, PN_MAP);
         pni_data_enter(data);
       } else {
-        char c;
-        int level = 0;
-
-        while ((c = *(fmt++))) {
-          if (c == '{') level++;
-          if (c == '}') {
-            if (level == 0) break;
-            else level--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '{', '}');
       }
-
       break;
     }
     default:
@@ -1730,35 +1711,23 @@ int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 // It is stricter about type mismatches (returns an error, not an empty value)
 PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
-  // fprintf(stderr, "SCAN fmt=%s\n", fmt);
-
-  bool *scan_arg = NULL;
-
   pn_data_rewind(data);
-
-  // pn_data_dump(data);
-  // fflush(stdout);
 
   while (*fmt) {
     char code = *(fmt++);
+    bool *scan_arg = NULL;
     pni_node_t *node = NULL;
-
-    // fprintf(stderr, "SCAN code=%c current=%d parent=%d\n", code, data->current, data->parent);
 
     if (code == '?') {
       assert(*fmt);
       assert(*fmt != '?');
 
       scan_arg = va_arg(ap, bool *);
-
-      continue;
+      code = *(fmt++);
     } else if (code == '>' || code == '}' || code == ']') {
-      if (!data->parent) {
-        return pn_error_format(pni_data_error(data), PN_ERR, "unbalanced exit");
-      }
+      assert(data->parent);
 
       pni_data_exit(data);
-
       continue;
     }
 
@@ -1768,8 +1737,6 @@ PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       // There is no more data.  Stop scanning.
       break;
     }
-
-    // fprintf(stderr, "SCAN node=%s current=%d\n", pn_type_name(node->atom.type), data->current);
 
     if (node->atom.type == PN_NULL) {
       // The node is present but null.  Unset the node var.
@@ -1790,9 +1757,6 @@ PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         if (node->atom.type != PN_BOOL) return PN_ARG_ERR;
         *value = pni_node_get_bool(node);
       }
-
-      // fprintf(stderr, "XXX o=%d\n", *value);
-
       break;
     }
     case 'B': {
@@ -1928,20 +1892,7 @@ PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         if (node->atom.type != PN_DESCRIBED) return PN_ARG_ERR;
         pni_data_enter(data);
       } else {
-        char c;
-        int l = 0;
-
-        while ((c = *(fmt++))) {
-          if (c != '<' && c != '>') { // XXX Needs to filter out {}, [], and . as well
-            // XXX fprintf(stderr, "consume %c\n", c);
-            va_arg(ap, void *);
-          }
-          if (c == '<') l++;
-          if (c == '>') {
-            if (l == 0) break;
-            else l--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '<', '>');
       }
 
       break;
@@ -1951,16 +1902,7 @@ PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         if (node->atom.type != PN_MAP) return PN_ARG_ERR;
         pni_data_enter(data);
       } else {
-        char c;
-        int l = 0;
-
-        while ((c = *(fmt++))) {
-          if (c == '{') l++;
-          if (c == '}') {
-            if (l == 0) break;
-            else l--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '{', '}');
       }
 
       break;
@@ -1970,16 +1912,7 @@ PNI_HOT int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         if (node->atom.type != PN_LIST) return PN_ARG_ERR;
         pni_data_enter(data);
       } else {
-        char c;
-        int l = 0;
-
-        while ((c = *(fmt++))) {
-          if (c == '[') l++;
-          if (c == ']') {
-            if (l == 0) break;
-            else l--;
-          }
-        }
+        pni_data_fill_scan_advance(&fmt, ap, '[', ']');
       }
 
       break;
