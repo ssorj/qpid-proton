@@ -695,10 +695,10 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         pn_data_clear(msg->id);
         pn_data_clear(msg->correlation_id);
         err = pni_data_scan(msg->data, "<.[CzSSSCssttSIS]>", msg->id,
-                           &user_id, &address, &subject, &reply_to,
-                           msg->correlation_id, &ctype, &cencoding,
-                           &msg->expiry_time, &msg->creation_time, &group_id,
-                           &msg->group_sequence, &reply_to_group_id);
+                            &user_id, &address, &subject, &reply_to,
+                            msg->correlation_id, &ctype, &cencoding,
+                            &msg->expiry_time, &msg->creation_time, &group_id,
+                            &msg->group_sequence, &reply_to_group_id);
         if (err) return pn_error_format(msg->error, err, "data error: %s",
                                         pn_error_text(pn_data_error(msg->data)));
         err = pn_string_set_bytes(msg->user_id, user_id);
