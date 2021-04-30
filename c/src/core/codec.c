@@ -1190,6 +1190,8 @@ static inline void pni_data_fill_scan_advance(const char **fmt, va_list ap, char
   }
 }
 
+static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node, pn_data_t *src_data, pni_node_t *src_node, int limit);
+
 // No arrays
 int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
@@ -1207,19 +1209,6 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       assert(data->parent);
 
       pni_data_exit(data);
-      continue;
-    } else if (code == 'C') {
-      // Append an existing pn_data_t *
-
-      pn_data_t *src = va_arg(ap, pn_data_t *);
-
-      if (src && pni_data_size(src) > 0) {
-        int err = pni_data_appendn(data, src, 1);
-        if (err) return err;
-      } else {
-        pni_data_put_null(data);
-      }
-
       continue;
     }
 
@@ -1297,9 +1286,7 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'z': {
-      // Encode binary or null if pointer is NULL
-
-      // For maximum portability, caller must pass these as two
+      // For maximum portability, the caller must pass these as two
       // separate args, not a single struct
       size_t size = va_arg(ap, size_t);
       char *start = va_arg(ap, char *);
@@ -1315,8 +1302,6 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'S': {
-      // Encode string or null if pointer is NULL
-
       char *start = va_arg(ap, char *);
 
       if (node) {
@@ -1330,13 +1315,26 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 's': {
-      // Encode symbol or null if pointer is NULL
-
       char *start = va_arg(ap, char *);
 
       if (node) {
         if (start) {
           pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(start), start));
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
+      }
+
+      break;
+    }
+    case 'C': {
+      pn_data_t *src_data = va_arg(ap, pn_data_t *);
+
+      if (node) {
+        if (src_data && pni_data_size(src_data) > 0) {
+          pni_node_t *src_node = pni_data_node(src_data, 1);
+          int err = pni_data_copy_nodes(data, node, src_data, src_node, 1);
+          if (err) return err;
         } else {
           pni_node_set_type(node, PN_NULL);
         }
@@ -1372,8 +1370,7 @@ int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     default:
-      PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized fill code: 0x%.2X '%c'", code, code);
-      return PN_ARG_ERR;
+      return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized fill code: 0x%.2X '%c'", code, code);
     }
   }
 
@@ -2729,6 +2726,72 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
     pn_atom_t t = {PN_NULL, {0,}};
     return t;
   }
+}
+
+static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node, pn_data_t *src_data, pni_node_t *src_node, int limit)
+{
+  int level = 0;
+  int count = 0;
+  pni_nid_t next;
+
+  while (count != limit) {
+    assert(src_node);
+    assert(dst_node);
+
+    dst_node->atom = src_node->atom;
+    dst_node->array_described = src_node->array_described;
+    dst_node->array_type = src_node->array_type;
+
+    pn_type_t type = src_node->atom.type;
+
+    if (type == PN_STRING || type == PN_SYMBOL || type == PN_BINARY) {
+      int err = pni_data_intern_node(dst_data, dst_node);
+      if (err) return err;
+    }
+
+    if (src_node->down) {
+      pni_data_enter(dst_data);
+      level++;
+
+      next = src_node->down;
+    } else if (src_node->next) {
+      if (level == 0) count++;
+
+      next = src_node->next;
+    } else if (src_node->parent) {
+      src_node = pni_data_node(src_data, src_node->parent);
+
+      while (level > 0) {
+        pni_data_exit(dst_data);
+        level--;
+
+        if (src_node->next) {
+          if (level == 0) count++;
+          next = src_node->next;
+          goto outer;
+        }
+
+        if (src_node->parent) {
+          src_node = pni_data_node(src_data, src_node->parent);
+        }
+      }
+
+      break;
+    } else {
+      break;
+    }
+
+  outer:
+
+    assert(next);
+
+    src_node = pni_data_node(src_data, next);
+    dst_node = pni_data_add_node(dst_data);
+
+    if (!dst_node) return PN_OUT_OF_MEMORY;
+  }
+
+  return 0;
 }
 
 static inline int pni_data_copy_node(pn_data_t *data, pni_node_t *src) {
