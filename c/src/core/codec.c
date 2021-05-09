@@ -897,7 +897,7 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
   }
 }
 
-int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "FILL fmt=%s\n", fmt);
 
@@ -1206,7 +1206,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
    M: multiple value (pn_data_t*) - normalize and append multiple field value,
       see pni_normalize_multiple()
  */
-PNI_INLINE int pn_data_fill(pn_data_t *data, const char *fmt, ...)
+int pn_data_fill(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -1226,18 +1226,18 @@ static inline void pni_data_scan_skip_arg(va_list ap, char code)
   case ']':
   case '{':
   case '}': break;
-  case '?': *va_arg(ap, bool *) = false; break;
-  case 'o': *va_arg(ap, bool *) = false; break;
-  case 'B': *va_arg(ap, uint8_t *) = 0; break;
-  case 'b': *va_arg(ap, int8_t *) = 0; break;
-  case 'H': *va_arg(ap, uint16_t *) = 0; break;
-  case 'h': *va_arg(ap, int16_t *) = 0; break;
-  case 'I': *va_arg(ap, uint32_t *) = 0; break;
-  case 'i': *va_arg(ap, int32_t *) = 0; break;
-  case 'c': *va_arg(ap, pn_char_t *) = 0; break;
-  case 'L': *va_arg(ap, uint64_t *) = 0; break;
-  case 'l': *va_arg(ap, int64_t *) = 0; break;
-  case 't': *va_arg(ap, pn_timestamp_t *) = 0; break;
+  case '?':
+  case 'o':
+  case 'B':
+  case 'b': *va_arg(ap, uint8_t *) = 0; break;
+  case 'H':
+  case 'h': *va_arg(ap, uint16_t *) = 0; break;
+  case 'I':
+  case 'i':
+  case 'c': *va_arg(ap, uint32_t *) = 0; break;
+  case 'L':
+  case 'l':
+  case 't': *va_arg(ap, uint64_t *) = 0; break;
   case 'f': *va_arg(ap, float *) = 0; break;
   case 'd': *va_arg(ap, double *) = 0; break;
   case 'z':
@@ -1248,7 +1248,7 @@ static inline void pni_data_scan_skip_arg(va_list ap, char code)
   }
 }
 
-static inline void pni_data_scan_skip_compound(const char **fmt, va_list ap, char open_code, char close_code)
+static void pni_data_scan_skip_compound(const char **fmt, va_list ap, char open_code, char close_code)
 {
   char code;
   size_t level = 0;
@@ -1267,7 +1267,7 @@ static inline void pni_data_scan_skip_compound(const char **fmt, va_list ap, cha
   }
 }
 
-static inline void pni_data_scan_skip_described(const char **fmt, va_list ap)
+static void pni_data_scan_skip_described(const char **fmt, va_list ap)
 {
   char code;
   size_t count = 0;
@@ -1321,21 +1321,23 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
     node = pni_data_next_node(data);
 
-    // I protest
-    while (!node && data->parent) {
-      pni_node_t *parent = pni_data_node(data, data->parent);
-
-      if (parent->atom.type == PN_DESCRIBED) {
-        pni_data_exit(data);
-        node = pni_data_next_node(data);
-      } else {
-        break;
+    if (node) {
+      if (node->atom.type == PN_NULL) {
+        // The node is present but null.  Unset the node var.
+        node = NULL;
       }
-    }
+    } else {
+      // I protest
+      while (!node && data->parent) {
+        pni_node_t *parent = pni_data_node(data, data->parent);
 
-    if (node && node->atom.type == PN_NULL) {
-      // The node is present but null.  Unset the node var.
-      node = NULL;
+        if (parent->atom.type == PN_DESCRIBED) {
+          pni_data_exit(data);
+          node = pni_data_next_node(data);
+        } else {
+          break;
+        }
+      }
     }
 
     if (scan_arg) {
@@ -1563,7 +1565,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   return 0;
 }
 
-PNI_INLINE int pn_data_scan(pn_data_t *data, const char *fmt, ...)
+int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
