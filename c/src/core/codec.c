@@ -1328,6 +1328,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
     } else {
       // I protest
+
       while (!node && data->parent) {
         pni_node_t *parent = pni_data_node(data, data->parent);
 
@@ -1337,6 +1338,11 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         } else {
           break;
         }
+      }
+
+      if (node && node->atom.type == PN_NULL) {
+        // The node is present but null.  Unset the node var.
+        node = NULL;
       }
     }
 
