@@ -840,14 +840,6 @@ static inline pni_node_t *pni_data_first_node(pn_data_t *data)
   return NULL;
 }
 
-static int pni_data_put_described(pn_data_t *data);
-static int pni_data_put_null(pn_data_t *data);
-static int pni_data_put_bool(pn_data_t *data, bool b);
-static int pni_data_put_uint(pn_data_t *data, uint32_t ui);
-static int pni_data_put_ulong(pn_data_t *data, uint64_t ul);
-static int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
-static int pni_data_put_variable(pn_data_t *data, pn_type_t type, pn_bytes_t bytes);
-static int pni_data_put_compound(pn_data_t *data, pn_type_t type);
 static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node, pn_data_t *src_data, pni_node_t *src_node, int limit);
 
 static inline void pni_data_fill_skip_arg(va_list ap, char code)
@@ -1876,7 +1868,7 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
   return 0;
 }
 
-static inline int pni_data_put_described(pn_data_t *data)
+int pn_data_put_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1884,12 +1876,7 @@ static inline int pni_data_put_described(pn_data_t *data)
   return 0;
 }
 
-int pn_data_put_described(pn_data_t *data)
-{
-  return pni_data_put_described(data);
-}
-
-static inline int pni_data_put_null(pn_data_t *data)
+int pn_data_put_null(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
@@ -1897,22 +1884,12 @@ static inline int pni_data_put_null(pn_data_t *data)
   return 0;
 }
 
-int pn_data_put_null(pn_data_t *data)
-{
-  return pni_data_put_null(data);
-}
-
-static inline int pni_data_put_bool(pn_data_t *data, bool b)
+int pn_data_put_bool(pn_data_t *data, bool b)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_bool(node, b);
   return 0;
-}
-
-int pn_data_put_bool(pn_data_t *data, bool b)
-{
-  return pni_data_put_bool(data, b);
 }
 
 int pn_data_put_ubyte(pn_data_t *data, uint8_t ub)
@@ -1947,17 +1924,12 @@ int pn_data_put_short(pn_data_t *data, int16_t s)
   return 0;
 }
 
-static inline int pni_data_put_uint(pn_data_t *data, uint32_t ui)
+int pn_data_put_uint(pn_data_t *data, uint32_t ui)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_uint(node, ui);
   return 0;
-}
-
-int pn_data_put_uint(pn_data_t *data, uint32_t ui)
-{
-  return pni_data_put_uint(data, ui);
 }
 
 int pn_data_put_int(pn_data_t *data, int32_t i)
@@ -1976,17 +1948,12 @@ int pn_data_put_char(pn_data_t *data, pn_char_t c)
   return 0;
 }
 
-static inline int pni_data_put_ulong(pn_data_t *data, uint64_t ul)
+int pn_data_put_ulong(pn_data_t *data, uint64_t ul)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_ulong(node, ul);
   return 0;
-}
-
-int pn_data_put_ulong(pn_data_t *data, uint64_t ul)
-{
-  return pni_data_put_ulong(data, ul);
 }
 
 int pn_data_put_long(pn_data_t *data, int64_t l)
@@ -1997,17 +1964,12 @@ int pn_data_put_long(pn_data_t *data, int64_t l)
   return 0;
 }
 
-static inline int pni_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
+int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
 {
   pni_node_t *node = pni_data_add_node(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_node_set_timestamp(node, t);
   return 0;
-}
-
-int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
-{
-  return pni_data_put_timestamp(data, t);
 }
 
 int pn_data_put_float(pn_data_t *data, float f)
