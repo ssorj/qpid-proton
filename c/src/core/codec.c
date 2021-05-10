@@ -820,10 +820,7 @@ static inline pni_node_t *pni_data_first_node(pn_data_t *data)
 {
   pni_nid_t next;
 
-  if (data->size == 1) {
-    // A common case
-    next = 1;
-  } else if (data->base_current) {
+  if (data->base_current) {
     next = data->nodes[data->base_current - 1].next;
   } else if (data->base_parent) {
     next = data->nodes[data->base_parent - 1].down;
@@ -916,8 +913,22 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     } else if (code == ']' || code == '}') {
       assert(data->parent);
 
-      // fprintf(stderr, "FILL   exiting %c\n", code);
       pni_data_exit(data);
+      goto end;
+    } else if (code == 'M') {
+      int err;
+      pn_data_t *src = va_arg(ap, pn_data_t *);
+
+      if (src && pni_data_size(src) > 0) {
+        err = pni_normalize_multiple(data, src);
+      } else {
+        err = pn_data_put_null(data);
+      }
+
+      if (err) {
+        return err;
+      }
+
       goto end;
     } else if (code == '*') {
       int count = va_arg(ap, int);
@@ -937,21 +948,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       default:
         return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized fill code: 0x%.2X '%c'", code, code);
-      }
-
-      goto end;
-    } else if (code == 'M') {
-      int err;
-      pn_data_t *src = va_arg(ap, pn_data_t *);
-
-      if (src && pni_data_size(src) > 0) {
-        err = pni_normalize_multiple(data, src);
-      } else {
-        err = pn_data_put_null(data);
-      }
-
-      if (err) {
-        return err;
       }
 
       goto end;
@@ -1321,33 +1317,19 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 
     node = pni_data_next_node(data);
 
-    if (node) {
-      if (node->atom.type == PN_NULL) {
-        // The node is present but null.  Unset the node var.
-        node = NULL;
-      }
-    } else {
-      // I protest
+    while (!node && data->parent) {
+      pni_node_t *parent = pni_data_node(data, data->parent);
 
-      while (!node && data->parent) {
-        pni_node_t *parent = pni_data_node(data, data->parent);
-
-        if (parent->atom.type == PN_DESCRIBED) {
-          pni_data_exit(data);
-          node = pni_data_next_node(data);
-        } else {
-          break;
-        }
-      }
-
-      if (node && node->atom.type == PN_NULL) {
-        // The node is present but null.  Unset the node var.
-        node = NULL;
+      if (parent->atom.type == PN_DESCRIBED) {
+        pni_data_exit(data);
+        node = pni_data_next_node(data);
+      } else {
+        break;
       }
     }
 
     if (scan_arg) {
-      *scan_arg = node != NULL;
+      *scan_arg = node && node->atom.type != PN_NULL;
     }
 
     switch (code) {
@@ -1357,8 +1339,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'o': {
       bool *value = va_arg(ap, bool *);
-      if (node) {
-        if (node->atom.type != PN_BOOL) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_BOOL) {
         *value = pni_node_get_bool(node);
       } else {
         *value = 0;
@@ -1367,8 +1348,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'B': {
       uint8_t *value = va_arg(ap, uint8_t *);
-      if (node) {
-        if (node->atom.type != PN_UBYTE) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_UBYTE) {
         *value = pni_node_get_ubyte(node);
       } else {
         *value = 0;
@@ -1377,8 +1357,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'b': {
       int8_t *value = va_arg(ap, int8_t *);
-      if (node) {
-        if (node->atom.type != PN_BYTE) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_BYTE) {
         *value = pni_node_get_byte(node);
       } else {
         *value = 0;
@@ -1387,8 +1366,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'H': {
       uint16_t *value = va_arg(ap, uint16_t *);
-      if (node) {
-        if (node->atom.type != PN_USHORT) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_USHORT) {
         *value = pni_node_get_ushort(node);
       } else {
         *value = 0;
@@ -1397,8 +1375,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'h': {
       int16_t *value = va_arg(ap, int16_t *);
-      if (node) {
-        if (node->atom.type != PN_SHORT) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_SHORT) {
         *value = pni_node_get_short(node);
       } else {
         *value = 0;
@@ -1407,8 +1384,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'I': {
       uint32_t *value = va_arg(ap, uint32_t *);
-      if (node) {
-        if (node->atom.type != PN_UINT) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_UINT) {
         *value = pni_node_get_uint(node);
       } else {
         *value = 0;
@@ -1417,8 +1393,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'i': {
       int32_t *value = va_arg(ap, int32_t *);
-      if (node) {
-        if (node->atom.type != PN_INT) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_INT) {
         *value = pni_node_get_int(node);
       } else {
         *value = 0;
@@ -1427,8 +1402,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'c': {
       pn_char_t *value = va_arg(ap, pn_char_t *);
-      if (node) {
-        if (node->atom.type != PN_CHAR) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_CHAR) {
         *value = pni_node_get_char(node);
       } else {
         *value = 0;
@@ -1437,8 +1411,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'L': {
       uint64_t *value = va_arg(ap, uint64_t *);
-      if (node) {
-        if (node->atom.type != PN_ULONG) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_ULONG) {
         *value = pni_node_get_ulong(node);
       } else {
         *value = 0;
@@ -1447,8 +1420,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'l': {
       int64_t *value = va_arg(ap, int64_t *);
-      if (node) {
-        if (node->atom.type != PN_LONG) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_LONG) {
         *value = pni_node_get_long(node);
       } else {
         *value = 0;
@@ -1457,8 +1429,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 't': {
       pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-      if (node) {
-        if (node->atom.type != PN_TIMESTAMP) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_TIMESTAMP) {
         *value = pni_node_get_timestamp(node);
       } else {
         *value = 0;
@@ -1467,8 +1438,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'f': {
       float *value = va_arg(ap, float *);
-      if (node) {
-        if (node->atom.type != PN_FLOAT) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_FLOAT) {
         *value = pni_node_get_float(node);
       } else {
         *value = 0;
@@ -1477,8 +1447,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'd': {
       double *value = va_arg(ap, double *);
-      if (node) {
-        if (node->atom.type != PN_DOUBLE) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_DOUBLE) {
         *value = pni_node_get_double(node);
       } else {
         *value = 0;
@@ -1487,8 +1456,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'z': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node) {
-        if (node->atom.type != PN_BINARY) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_BINARY) {
         *value = pni_node_get_bytes(node);
       } else {
         *value = pn_bytes_null;
@@ -1497,8 +1465,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'S': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node) {
-        if (node->atom.type != PN_STRING) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_STRING) {
         *value = pni_node_get_bytes(node);
       } else {
         *value = pn_bytes_null;
@@ -1507,8 +1474,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 's': {
       pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node) {
-        if (node->atom.type != PN_SYMBOL) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_SYMBOL) {
         *value = pni_node_get_bytes(node);
       } else {
         *value = pn_bytes_null;
@@ -1517,7 +1483,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'C': {
       pn_data_t *dst_data = va_arg(ap, pn_data_t *);
-      if (node) {
+      if (node && node->atom.type != PN_NULL) {
         pni_node_t *dst_node = pni_data_add_node(dst_data);
         if (!dst_node) return PN_OUT_OF_MEMORY;
         int err = pni_data_copy_nodes(dst_data, dst_node, data, node, 1);
@@ -1526,8 +1492,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case 'D': {
-      if (node) {
-        if (node->atom.type != PN_DESCRIBED) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_DESCRIBED) {
         pni_data_enter(data);
       } else {
         pni_data_scan_skip_described(&fmt, ap);
@@ -1537,8 +1502,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '@': {
       assert(*fmt == '[');
       fmt++;
-      if (node) {
-        if (node->atom.type != PN_ARRAY) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_ARRAY) {
         pni_data_enter(data);
       } else {
         pni_data_scan_skip_compound(&fmt, ap, '[', ']');
@@ -1546,8 +1510,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '[': {
-      if (node) {
-        if (node->atom.type != PN_LIST) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_LIST) {
         pni_data_enter(data);
       } else {
         pni_data_scan_skip_compound(&fmt, ap, '[', ']');
@@ -1555,8 +1518,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '{': {
-      if (node) {
-        if (node->atom.type != PN_MAP) return PN_ARG_ERR;
+      if (node && node->atom.type == PN_MAP) {
         pni_data_enter(data);
       } else {
         pni_data_scan_skip_compound(&fmt, ap, '{', '}');
