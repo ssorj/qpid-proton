@@ -842,16 +842,27 @@ static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node, pn_dat
 static inline void pni_data_fill_skip_arg(va_list ap, char code)
 {
   switch (code) {
-  case '.':
-  case 'n':
-  case 'D':
-  case '@':
-  case '[':
-  case ']':
-  case '{':
-  case '}': break;
-  default:
-    va_arg(ap, void *);
+  case '?':
+  case 'o':
+  case 'B':
+  case 'b':
+  case 'H':
+  case 'h':
+  case 'I':
+  case 'i':
+  case 'c':
+  case 'L':
+  case 'l':
+  case 't':
+  case 'f':
+  case 'd':
+  case 'Z':
+  case 'z':
+  case 'S':
+  case 's':
+  case 'C':
+  case 'M':
+  case '*': va_arg(ap, void *);
   }
 }
 
@@ -882,19 +893,22 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
   while ((code = **fmt) && count++ < 2) {
     (*fmt)++;
 
-    if (code == '[') {
-      pni_data_fill_skip_compound(fmt, ap, '[', ']');
-    } else if (code == '{') {
-      pni_data_fill_skip_compound(fmt, ap, '{', '}');
-    } else if (code == 'D') {
-      pni_data_fill_skip_described(fmt, ap);
-    } else {
-      pni_data_fill_skip_arg(ap, code);
+    switch (code) {
+    case '@':
+      assert(**fmt == 'T');
+      (*fmt)++;
+      assert(**fmt == '[');
+      (*fmt)++;
+      // Falls through
+    case '[': pni_data_fill_skip_compound(fmt, ap, '[', ']'); break;
+    case '{': pni_data_fill_skip_compound(fmt, ap, '{', '}'); break;
+    case 'D': pni_data_fill_skip_described(fmt, ap); break;
+    default: pni_data_fill_skip_arg(ap, code);
     }
   }
 }
 
-PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+PNI_INLINE PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "FILL fmt=%s\n", fmt);
 
@@ -909,6 +923,7 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       assert(*fmt != '?');
 
       if (!va_arg(ap, int)) skip = true;
+
       code = *(fmt++);
     } else if (code == ']' || code == '}') {
       assert(data->parent);
@@ -947,7 +962,7 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         break;
       }
       default:
-        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized fill code: 0x%.2X '%c'", code, code);
+        assert(false && "unrecognized fill code");
       }
 
       goto end;
@@ -1032,7 +1047,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       // separate args, not a single struct
       size_t size = va_arg(ap, size_t);
       char *start = va_arg(ap, char *);
-
       if (node) {
         if (start) {
           pni_node_set_bytes(node, PN_BINARY, pn_bytes(size, start));
@@ -1040,12 +1054,10 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           pni_node_set_type(node, PN_NULL);
         }
       }
-
       break;
     }
     case 'S': {
       char *start = va_arg(ap, char *);
-
       if (node) {
         if (start) {
           pni_node_set_bytes(node, PN_STRING, pn_bytes(strlen(start), start));
@@ -1053,12 +1065,10 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           pni_node_set_type(node, PN_NULL);
         }
       }
-
       break;
     }
     case 's': {
       char *start = va_arg(ap, char *);
-
       if (node) {
         if (start) {
           pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(start), start));
@@ -1066,13 +1076,11 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           pni_node_set_type(node, PN_NULL);
         }
       }
-
       break;
     }
     case 'D': {
       if (node) {
         pni_node_set_type(node, PN_DESCRIBED);
-        // fprintf(stderr, "FILL   entering D\n");
         pni_data_enter(data);
       } else {
         pni_data_fill_skip_described(&fmt, ap);
@@ -1080,36 +1088,15 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     }
     case '@': {
+      assert(*fmt == 'T');
+      fmt++;
+      assert(*fmt == '[');
+      fmt++;
       if (node) {
         pni_node_set_type(node, PN_ARRAY);
-        // fprintf(stderr, "FILL   entering @\n");
+        node->array_type = (pn_type_t) va_arg(ap, int);
         pni_data_enter(data);
-
-        if (*fmt == 'T') {
-          fmt++;
-          node->array_type = (pn_type_t) va_arg(ap, int);
-        } else {
-          return PN_ARG_ERR; // XXX
-        }
-
-        if (*fmt == '[') {
-          fmt++;
-        } else {
-          return PN_ARG_ERR;
-        }
       } else {
-        if (*fmt == 'T') {
-          fmt++;
-        } else {
-          return PN_ARG_ERR;
-        }
-
-        if (*fmt == '[') {
-          fmt++;
-        } else {
-          return PN_ARG_ERR;
-        }
-
         pni_data_fill_skip_compound(&fmt, ap, '[', ']');
       }
       break;
@@ -1117,7 +1104,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case '[': {
       if (node) {
         pni_node_set_type(node, PN_LIST);
-        // fprintf(stderr, "FILL   entering [\n");
         pni_data_enter(data);
       } else {
         pni_data_fill_skip_compound(&fmt, ap, '[', ']');
@@ -1127,7 +1113,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case '{': {
       if (node) {
         pni_node_set_type(node, PN_MAP);
-        // fprintf(stderr, "FILL   entering {\n");
         pni_data_enter(data);
       } else {
         pni_data_fill_skip_compound(&fmt, ap, '{', '}');
@@ -1136,7 +1121,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     }
     case 'C': {
       pn_data_t *src_data = va_arg(ap, pn_data_t *);
-
       if (node) {
         if (src_data && pni_data_size(src_data) > 0) {
           pni_node_t *src_node = pni_data_first_node(src_data);
@@ -1146,11 +1130,10 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           pni_node_set_type(node, PN_NULL);
         }
       }
-
       break;
     }
     default:
-      return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized fill code: 0x%.2X '%c'", code, code);
+      assert(false && "unrecognized fill code");
     }
 
   end:
@@ -1159,7 +1142,6 @@ PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       pni_node_t *parent = pni_data_node(data, data->parent);
 
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
-        // fprintf(stderr, "FILL   exiting D\n");
         pni_data_exit(data);
       } else {
         break;
@@ -1211,17 +1193,9 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static inline int pni_data_scan_skip_arg(pn_data_t *data, va_list ap, char code)
+static inline void pni_data_scan_skip_arg(va_list ap, char code)
 {
   switch (code) {
-  case '.':
-  case 'n':
-  case 'D':
-  case '@':
-  case '[':
-  case ']':
-  case '{':
-  case '}': break;
   case '?':
   case 'o':
   case 'B':
@@ -1240,14 +1214,10 @@ static inline int pni_data_scan_skip_arg(pn_data_t *data, va_list ap, char code)
   case 'S':
   case 's': *va_arg(ap, pn_bytes_t *) = pn_bytes_null; break;
   case 'C': va_arg(ap, pn_data_t *); break;
-  default:
-    return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
   }
-
-  return 0;
 }
 
-static int pni_data_scan_skip_compound(pn_data_t *data, const char **fmt, va_list ap, char open_code, char close_code)
+static void pni_data_scan_skip_compound(const char **fmt, va_list ap, char open_code, char close_code)
 {
   char code;
   size_t level = 0;
@@ -1261,17 +1231,13 @@ static int pni_data_scan_skip_compound(pn_data_t *data, const char **fmt, va_lis
       if (level == 0) break;
       else level--;
     } else {
-      int err = pni_data_scan_skip_arg(data, ap, code);
-      if (err) return err;
+      pni_data_scan_skip_arg(ap, code);
     }
   }
-
-  return 0;
 }
 
-static int pni_data_scan_skip_described(pn_data_t *data, const char **fmt, va_list ap)
+static void pni_data_scan_skip_described(const char **fmt, va_list ap)
 {
-  int err;
   char code;
   size_t count = 0;
 
@@ -1284,23 +1250,20 @@ static int pni_data_scan_skip_described(pn_data_t *data, const char **fmt, va_li
       (*fmt)++;
     }
 
-    if (code == '[') {
-      err = pni_data_scan_skip_compound(data, fmt, ap, '[', ']');
-    } else if (code == '{') {
-      err = pni_data_scan_skip_compound(data, fmt, ap, '{', '}');
-    } else if (code == 'D') {
-      err = pni_data_scan_skip_described(data, fmt, ap);
-    } else {
-      err = pni_data_scan_skip_arg(data, ap, code);
+    switch (code) {
+    case '@':
+      assert(**fmt == '[');
+      (*fmt)++;
+      // Falls through
+    case '[': pni_data_scan_skip_compound(fmt, ap, '[', ']'); break;
+    case '{': pni_data_scan_skip_compound(fmt, ap, '{', '}'); break;
+    case 'D': pni_data_scan_skip_described(fmt, ap); break;
+    default: pni_data_scan_skip_arg(ap, code);
     }
-
-    if (err) return err;
   }
-
-  return 0;
 }
 
-PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+PNI_INLINE PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "SCAN fmt=%s\n", fmt);
 
@@ -1318,6 +1281,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       assert(*fmt != '?');
 
       presence_arg = va_arg(ap, bool *);
+
       code = *(fmt++);
     } else if (code == ']' || code == '}') {
       assert(data->parent);
@@ -1506,8 +1470,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (node && node->atom.type == PN_DESCRIBED) {
         pni_data_enter(data);
       } else {
-        int err = pni_data_scan_skip_described(data, &fmt, ap);
-        if (err) return err;
+        pni_data_scan_skip_described(&fmt, ap);
       }
       break;
     }
@@ -1517,8 +1480,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (node && node->atom.type == PN_ARRAY) {
         pni_data_enter(data);
       } else {
-        int err = pni_data_scan_skip_compound(data, &fmt, ap, '[', ']');
-        if (err) return err;
+        pni_data_scan_skip_compound(&fmt, ap, '[', ']');
       }
       break;
     }
@@ -1526,8 +1488,7 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (node && node->atom.type == PN_LIST) {
         pni_data_enter(data);
       } else {
-        int err = pni_data_scan_skip_compound(data, &fmt, ap, '[', ']');
-        if (err) return err;
+        pni_data_scan_skip_compound(&fmt, ap, '[', ']');
       }
       break;
     }
@@ -1535,13 +1496,12 @@ PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (node && node->atom.type == PN_MAP) {
         pni_data_enter(data);
       } else {
-        int err = pni_data_scan_skip_compound(data, &fmt, ap, '{', '}');
-        if (err) return err;
+        pni_data_scan_skip_compound(&fmt, ap, '{', '}');
       }
       break;
     }
     default:
-      return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
+      assert(false && "unrecognized scan code");
     }
   }
 
