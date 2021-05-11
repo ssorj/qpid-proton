@@ -908,7 +908,7 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
   }
 }
 
-PNI_INLINE PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+static inline int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "FILL fmt=%s\n", fmt);
 
@@ -1152,6 +1152,11 @@ PNI_INLINE PNI_HOT int pn_data_vfill(pn_data_t *data, const char *fmt, va_list a
   return 0;
 }
 
+int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+{
+  return pni_data_vfill(data, fmt, ap);
+}
+
 /* Format codes:
    code: AMQP-type (arguments)
    n: null ()
@@ -1188,7 +1193,7 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  int err = pn_data_vfill(data, fmt, ap);
+  int err = pni_data_vfill(data, fmt, ap);
   va_end(ap);
   return err;
 }
@@ -1263,7 +1268,7 @@ static void pni_data_scan_skip_described(const char **fmt, va_list ap)
   }
 }
 
-PNI_INLINE PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+static inline int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "SCAN fmt=%s\n", fmt);
 
@@ -1508,11 +1513,16 @@ PNI_INLINE PNI_HOT int pn_data_vscan(pn_data_t *data, const char *fmt, va_list a
   return 0;
 }
 
+int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+{
+  return pni_data_vscan(data, fmt, ap);
+}
+
 int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  int err = pn_data_vscan(data, fmt, ap);
+  int err = pni_data_vscan(data, fmt, ap);
   va_end(ap);
   return err;
 }
