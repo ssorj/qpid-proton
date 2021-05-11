@@ -908,7 +908,7 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
   }
 }
 
-static inline int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
+static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "FILL fmt=%s\n", fmt);
 
@@ -1268,7 +1268,7 @@ static void pni_data_scan_skip_described(const char **fmt, va_list ap)
   }
 }
 
-static inline int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
+static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   // fprintf(stderr, "SCAN fmt=%s\n", fmt);
 
@@ -1306,6 +1306,13 @@ static inline int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       } else {
         break;
       }
+    }
+
+    if (!node) {
+      // XXX Comment
+      do pni_data_scan_skip_arg(ap, code);
+      while ((code = *(fmt++)));
+      break;
     }
 
     if (presence_arg) {
