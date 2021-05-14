@@ -1291,9 +1291,10 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       *presence_arg = false;
 
       code = *(fmt++);
-    } else if (code == ']' || code == '}') {
-      assert(data->parent);
+    }
 
+    if (code == ']' || code == '}') {
+      assert(data->parent);
       pni_data_exit(data);
       continue;
     }
@@ -1301,23 +1302,23 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     node = pni_data_next_node(data);
 
     if (!node) {
-      while (!node && data->parent) {
-        pni_node_t *parent = pni_data_node(data, data->parent);
-
-        if (parent->atom.type == PN_DESCRIBED) {
-          pni_data_exit(data);
-          node = pni_data_next_node(data);
-        } else {
-          break;
-        }
-      }
-
       if (data->current == data->size) {
         // There is no more data to process.  Zero the remaining args
         // and leave.
+
         do pni_data_scan_skip_arg(ap, code);
         while ((code = *(fmt++)));
+
         break;
+      }
+
+      while (!node && data->parent) {
+        pni_node_t *parent = pni_data_node(data, data->parent);
+
+        if (parent->atom.type != PN_DESCRIBED) break;
+
+        pni_data_exit(data);
+        node = pni_data_next_node(data);
       }
     }
 
