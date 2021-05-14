@@ -925,12 +925,16 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       if (!va_arg(ap, int)) skip = true;
 
       code = *(fmt++);
-    } else if (code == ']' || code == '}') {
+    }
+
+    if (code == ']' || code == '}') {
       assert(data->parent);
 
       pni_data_exit(data);
       goto end;
-    } else if (code == 'M') {
+    }
+
+    if (code == 'M') {
       int err;
       pn_data_t *src = va_arg(ap, pn_data_t *);
 
@@ -942,27 +946,6 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 
       if (err) {
         return err;
-      }
-
-      goto end;
-    } else if (code == '*') {
-      int count = va_arg(ap, int);
-      void *ptr = va_arg(ap, void *);
-
-      char c = *(fmt++);
-
-      switch (c) {
-      case 's': {
-        char **sptr = (char **) ptr;
-        for (int i = 0; i < count; i++) {
-          char *sym = *(sptr++);
-          int err = pn_data_fill(data, "s", sym);
-          if (err) return err;
-        }
-        break;
-      }
-      default:
-        assert(false && "unrecognized fill code");
       }
 
       goto end;
@@ -1131,6 +1114,25 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
+    }
+    case '*': {
+      int count = va_arg(ap, int);
+      void *ptr = va_arg(ap, void *);
+
+      assert(*fmt == 's' && "unrecognized fill code");
+      fmt++;
+
+      char **sptr = (char **) ptr;
+
+      for (int i = 0; i < count; i++) {
+        char *sym = *(sptr++);
+
+        if (sym) pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(sym), sym));
+        else pni_node_set_type(node, PN_NULL);
+
+        node = pni_data_add_node(data);
+        if (!node) return PN_OUT_OF_MEMORY;
+      }
     }
     default:
       assert(false && "unrecognized fill code");
