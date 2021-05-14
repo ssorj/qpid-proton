@@ -1725,13 +1725,13 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 void pn_data_dump(pn_data_t *data)
 {
   pn_string_t *str = pn_string(0);
-  fprintf(stderr, "{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
+  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
     pn_string_setn(str, "", 0);
     pni_inspect_atom((pn_atom_t *) &node->atom, str);
-    fprintf(stderr, "Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI
+    printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI
            ", children=%" PN_ZI ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
            (size_t) node->next,
