@@ -322,7 +322,7 @@ static inline int pni_decoder_decode_compound_values(pni_decoder_t *decoder, pn_
 
   if ((code & 0x0F) == 0) {
     type = PN_LIST;
-  } else if ((0x0F & code) == 1) {
+  } else if ((code & 0x0F) == 1) {
     type = PN_MAP;
   } else {
     return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
