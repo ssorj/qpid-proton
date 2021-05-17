@@ -772,47 +772,63 @@ PNI_INLINE int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   return 0;
 }
 
-/*
-   Append src to data after normalizing for "multiple" field encoding.
+static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node,
+                               pn_data_t *src_data, pni_node_t *src_node,
+                               int limit);
 
-   AMQP composite field definitions can be declared "multiple", see:
-
-   - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#doc-idp115568
-   - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#section-composite-type-representation
-
-   Multiple fields allow redundant encoding of two cases:
-
-   1. empty: null or an empty array.
-   2. single-value: direct encoding of value, or array with one element
-
-   For encoding compactness and inter-operability, normalize multiple
-   field values to always use null for empty, and direct encoding for
-   single value.
-*/
-static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
+// Copy src_data to dst after normalizing for "multiple" field
+// encoding.
+//
+// AMQP composite field definitions can be declared "multiple".  See:
+//
+// - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#doc-idp115568
+// - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#section-composite-type-representation
+//
+// Multiple fields allow redundant encoding of two cases:
+//
+// 1. empty: null or an empty array
+// 2. single-value: direct encoding of value, or array with one element
+//
+// For encoding compactness and inter-operability, normalize multiple
+// field values to always use null for empty, and direct encoding for
+// single value.
+static int pni_data_normalize_multiple(pn_data_t *dst_data, pni_node_t *dst_node, pn_data_t *src_data)
+{
   int err = 0;
-  pn_handle_t point = pn_data_point(src);
-  pn_data_rewind(src);
-  pn_data_next(src);
-  if (pn_data_type(src) == PN_ARRAY) {
-    switch (pn_data_get_array(src)) {
-     case 0:                    /* Empty array => null */
-      err = pn_data_put_null(data);
-      break;
-     case 1:          /* Single-element array => encode the element */
-      pn_data_enter(src);
-      pn_data_narrow(src);
-      err = pn_data_appendn(data, src, 1);
-      pn_data_widen(src);
-      break;
-     default:              /* Multi-element array, encode unchanged */
-      err = pn_data_appendn(data, src, 1);
+  pn_handle_t point = pn_data_point(src_data);
+
+  pn_data_rewind(src_data);
+
+  pni_node_t *src_node = pni_data_next_node(src_data);
+
+  if (src_node->atom.type == PN_ARRAY) {
+    switch (pn_data_get_array(src_data)) {
+    case 0: {
+      // Empty array => null
+      pni_node_set_type(dst_node, PN_NULL);
       break;
     }
+    case 1: {
+      // Single-element array => encode the element
+
+      pni_data_enter(src_data);
+
+      src_node = pni_data_next_node(src_data);
+      err = pni_data_copy_nodes(dst_data, dst_node, src_data, src_node, 1);
+
+      break;
+    }
+    default:
+      // Multi-element array => encode unchanged
+      err = pni_data_copy_nodes(dst_data, dst_node, src_data, src_node, 1);
+    }
   } else {
-    err = pn_data_appendn(data, src, 1); /* Non-array, append the value */
+    // Non-array => append the value
+    err = pni_data_copy_nodes(dst_data, dst_node, src_data, src_node, 1);
   }
-  pn_data_restore(src, point);
+
+  pn_data_restore(src_data, point);
+
   return err;
 }
 
@@ -836,8 +852,6 @@ static inline pni_node_t *pni_data_first_node(pn_data_t *data)
 
   return NULL;
 }
-
-static int pni_data_copy_nodes(pn_data_t *dst_data, pni_node_t *dst_node, pn_data_t *src_data, pni_node_t *src_node, int limit);
 
 static inline void pni_data_fill_skip_arg(va_list ap, char code)
 {
@@ -931,23 +945,6 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       assert(data->parent);
 
       pni_data_exit(data);
-      goto end;
-    }
-
-    if (code == 'M') {
-      int err;
-      pn_data_t *src = va_arg(ap, pn_data_t *);
-
-      if (src && pni_data_size(src) > 0) {
-        err = pni_normalize_multiple(data, src);
-      } else {
-        err = pn_data_put_null(data);
-      }
-
-      if (err) {
-        return err;
-      }
-
       goto end;
     }
 
@@ -1115,6 +1112,20 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     }
+    case 'M': {
+      pn_data_t *src = va_arg(ap, pn_data_t *);
+
+      if (node) {
+        if (src && pni_data_size(src) > 0) {
+          int err = pni_data_normalize_multiple(data, node, src);
+          if (err) return err;
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
+      }
+
+      break;
+    }
     case '*': {
       int count = va_arg(ap, int);
       void *ptr = va_arg(ap, void *);
@@ -1133,6 +1144,8 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         node = pni_data_add_node(data);
         if (!node) return PN_OUT_OF_MEMORY;
       }
+
+      break;
     }
     default:
       assert(false && "unrecognized fill code");
