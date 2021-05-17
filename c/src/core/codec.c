@@ -870,13 +870,13 @@ static inline void pni_data_fill_skip_arg(va_list ap, char code)
   case 't':
   case 'f':
   case 'd':
-  case 'Z':
-  case 'z':
   case 'S':
   case 's':
   case 'C':
-  case 'M':
-  case '*': va_arg(ap, void *);
+  case 'M': va_arg(ap, void *); break;
+  case '*':
+  case 'Z':
+  case 'z': va_arg(ap, void *); va_arg(ap, void *); break;
   }
 }
 
@@ -899,6 +899,8 @@ static void pni_data_fill_skip_compound(const char **fmt, va_list ap, char open_
   }
 }
 
+static void pni_data_fill_skip(const char **fmt, va_list ap, char code);
+
 static void pni_data_fill_skip_described(const char **fmt, va_list ap)
 {
   char code;
@@ -906,19 +908,23 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
 
   while ((code = **fmt) && count++ < 2) {
     (*fmt)++;
+    pni_data_fill_skip(fmt, ap, code);
+  }
+}
 
-    switch (code) {
-    case '@':
-      assert(**fmt == 'T');
-      (*fmt)++;
-      assert(**fmt == '[');
-      (*fmt)++;
-      // Falls through
-    case '[': pni_data_fill_skip_compound(fmt, ap, '[', ']'); break;
-    case '{': pni_data_fill_skip_compound(fmt, ap, '{', '}'); break;
-    case 'D': pni_data_fill_skip_described(fmt, ap); break;
-    default: pni_data_fill_skip_arg(ap, code);
-    }
+static inline void pni_data_fill_skip(const char **fmt, va_list ap, char code)
+{
+  switch (code) {
+  case '@':
+    assert(**fmt == 'T');
+    (*fmt)++;
+    assert(**fmt == '[');
+    (*fmt)++;
+    // Falls through
+  case '[': pni_data_fill_skip_compound(fmt, ap, '[', ']'); break;
+  case '{': pni_data_fill_skip_compound(fmt, ap, '{', '}'); break;
+  case 'D': pni_data_fill_skip_described(fmt, ap); break;
+  default: pni_data_fill_skip_arg(ap, code);
   }
 }
 
@@ -952,119 +958,59 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     if (!node) return PN_OUT_OF_MEMORY;
 
     if (skip) {
+      pni_data_fill_skip(&fmt, ap, code);
       pni_node_set_type(node, PN_NULL);
-      node = NULL;
+      goto end;
     }
 
     switch (code) {
-    case 'n': {
-      if (node) pni_node_set_type(node, PN_NULL);
-      break;
-    }
-    case 'o': {
-      int value = va_arg(ap, int);
-      if (node) pni_node_set_bool(node, value);
-      break;
-    }
-    case 'B': {
-      unsigned int value = va_arg(ap, unsigned int);
-      if (node) pni_node_set_ubyte(node, value);
-      break;
-    }
-    case 'b': {
-      int value = va_arg(ap, int);
-      if (node) pni_node_set_byte(node, value);
-      break;
-    }
-    case 'H': {
-      unsigned int value = va_arg(ap, unsigned int);
-      if (node) pni_node_set_ushort(node, value);
-      break;
-    }
-    case 'h': {
-      int value = va_arg(ap, int);
-      if (node) pni_node_set_short(node, value);
-      break;
-    }
-    case 'I': {
-      uint32_t value = va_arg(ap, uint32_t);
-      if (node) pni_node_set_uint(node, value);
-      break;
-    }
-    case 'i': {
-      int32_t value = va_arg(ap, int32_t);
-      if (node) pni_node_set_int(node, value);
-      break;
-    }
-    case 'L': {
-      uint64_t value = va_arg(ap, uint64_t);
-      if (node) pni_node_set_ulong(node, value);
-      break;
-    }
-    case 'l': {
-      int64_t value = va_arg(ap, int64_t);
-      if (node) pni_node_set_long(node, value);
-      break;
-    }
-    case 't': {
-      pn_timestamp_t value = va_arg(ap, pn_timestamp_t);
-      if (node) pni_node_set_timestamp(node, value);
-      break;
-    }
-    case 'f': {
-      double value = va_arg(ap, double);
-      if (node) pni_node_set_float(node, value);
-      break;
-    }
-    case 'd': {
-      double value = va_arg(ap, double);
-      if (node) pni_node_set_double(node, value);
-      break;
-    }
-    case 'Z':    // XXX error check?
+    case 'n': pni_node_set_type(node, PN_NULL); break;
+    case 'o': pni_node_set_bool(node, va_arg(ap, int)); break;
+    case 'B': pni_node_set_ubyte(node, va_arg(ap, unsigned int)); break;
+    case 'b': pni_node_set_byte(node, va_arg(ap, int)); break;
+    case 'H': pni_node_set_ushort(node, va_arg(ap, unsigned int)); break;
+    case 'h': pni_node_set_short(node, va_arg(ap, int)); break;
+    case 'I': pni_node_set_uint(node, va_arg(ap, uint32_t)); break;
+    case 'i': pni_node_set_int(node, va_arg(ap, int32_t)); break;
+    case 'L': pni_node_set_ulong(node, va_arg(ap, uint64_t)); break;
+    case 'l': pni_node_set_long(node, va_arg(ap, int64_t)); break;
+    case 't': pni_node_set_timestamp(node, va_arg(ap, pn_timestamp_t)); break;
+    case 'f': pni_node_set_float(node, va_arg(ap, double)); break;
+    case 'd': pni_node_set_double(node, va_arg(ap, double)); break;
+    case 'Z': // XXX error check this case?
     case 'z': {
       // For maximum portability, the caller must pass these as two
       // separate args, not a single struct
       size_t size = va_arg(ap, size_t);
       char *start = va_arg(ap, char *);
-      if (node) {
-        if (start) {
-          pni_node_set_bytes(node, PN_BINARY, pn_bytes(size, start));
-        } else {
-          pni_node_set_type(node, PN_NULL);
-        }
+      if (start) {
+        pni_node_set_bytes(node, PN_BINARY, pn_bytes(size, start));
+      } else {
+        pni_node_set_type(node, PN_NULL);
       }
       break;
     }
     case 'S': {
       char *start = va_arg(ap, char *);
-      if (node) {
-        if (start) {
-          pni_node_set_bytes(node, PN_STRING, pn_bytes(strlen(start), start));
-        } else {
-          pni_node_set_type(node, PN_NULL);
-        }
+      if (start) {
+        pni_node_set_bytes(node, PN_STRING, pn_bytes(strlen(start), start));
+      } else {
+        pni_node_set_type(node, PN_NULL);
       }
       break;
     }
     case 's': {
       char *start = va_arg(ap, char *);
-      if (node) {
-        if (start) {
-          pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(start), start));
-        } else {
-          pni_node_set_type(node, PN_NULL);
-        }
+      if (start) {
+        pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(start), start));
+      } else {
+        pni_node_set_type(node, PN_NULL);
       }
       break;
     }
     case 'D': {
-      if (node) {
-        pni_node_set_type(node, PN_DESCRIBED);
-        pni_data_enter(data);
-      } else {
-        pni_data_fill_skip_described(&fmt, ap);
-      }
+      pni_node_set_type(node, PN_DESCRIBED);
+      pni_data_enter(data);
       break;
     }
     case '@': {
@@ -1072,58 +1018,42 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       fmt++;
       assert(*fmt == '[');
       fmt++;
-      if (node) {
-        pni_node_set_type(node, PN_ARRAY);
-        node->array_type = (pn_type_t) va_arg(ap, int);
-        pni_data_enter(data);
-      } else {
-        pni_data_fill_skip_compound(&fmt, ap, '[', ']');
-      }
+
+      pni_node_set_type(node, PN_ARRAY);
+      node->array_type = (pn_type_t) va_arg(ap, int);
+      pni_data_enter(data);
+
       break;
     }
     case '[': {
-      if (node) {
-        pni_node_set_type(node, PN_LIST);
-        pni_data_enter(data);
-      } else {
-        pni_data_fill_skip_compound(&fmt, ap, '[', ']');
-      }
+      pni_node_set_type(node, PN_LIST);
+      pni_data_enter(data);
       break;
     }
     case '{': {
-      if (node) {
-        pni_node_set_type(node, PN_MAP);
-        pni_data_enter(data);
-      } else {
-        pni_data_fill_skip_compound(&fmt, ap, '{', '}');
-      }
+      pni_node_set_type(node, PN_MAP);
+      pni_data_enter(data);
       break;
     }
     case 'C': {
       pn_data_t *src_data = va_arg(ap, pn_data_t *);
-      if (node) {
-        if (src_data && pni_data_size(src_data) > 0) {
-          pni_node_t *src_node = pni_data_first_node(src_data);
-          int err = pni_data_copy_nodes(data, node, src_data, src_node, 1);
-          if (err) return err;
-        } else {
-          pni_node_set_type(node, PN_NULL);
-        }
+      if (src_data && pni_data_size(src_data) > 0) {
+        pni_node_t *src_node = pni_data_first_node(src_data);
+        int err = pni_data_copy_nodes(data, node, src_data, src_node, 1);
+        if (err) return err;
+      } else {
+        pni_node_set_type(node, PN_NULL);
       }
       break;
     }
     case 'M': {
       pn_data_t *src = va_arg(ap, pn_data_t *);
-
-      if (node) {
-        if (src && pni_data_size(src) > 0) {
-          int err = pni_data_normalize_multiple(data, node, src);
-          if (err) return err;
-        } else {
-          pni_node_set_type(node, PN_NULL);
-        }
+      if (src && pni_data_size(src) > 0) {
+        int err = pni_data_normalize_multiple(data, node, src);
+        if (err) return err;
+      } else {
+        pni_node_set_type(node, PN_NULL);
       }
-
       break;
     }
     case '*': {
@@ -1138,8 +1068,11 @@ PNI_HOT static int pni_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       for (int i = 0; i < count; i++) {
         char *sym = *(sptr++);
 
-        if (sym) pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(sym), sym));
-        else pni_node_set_type(node, PN_NULL);
+        if (sym) {
+          pni_node_set_bytes(node, PN_SYMBOL, pn_bytes(strlen(sym), sym));
+        } else {
+          pni_node_set_type(node, PN_NULL);
+        }
 
         node = pni_data_add_node(data);
         if (!node) return PN_OUT_OF_MEMORY;
@@ -1256,6 +1189,8 @@ static void pni_data_scan_skip_compound(const char **fmt, va_list ap, char open_
   }
 }
 
+static void pni_data_scan_skip(const char **fmt, va_list ap, char code);
+
 static void pni_data_scan_skip_described(const char **fmt, va_list ap)
 {
   char code;
@@ -1270,16 +1205,21 @@ static void pni_data_scan_skip_described(const char **fmt, va_list ap)
       (*fmt)++;
     }
 
-    switch (code) {
-    case '@':
-      assert(**fmt == '[');
-      (*fmt)++;
-      // Falls through
-    case '[': pni_data_scan_skip_compound(fmt, ap, '[', ']'); break;
-    case '{': pni_data_scan_skip_compound(fmt, ap, '{', '}'); break;
-    case 'D': pni_data_scan_skip_described(fmt, ap); break;
-    default: pni_data_scan_skip_arg(ap, code);
-    }
+    pni_data_scan_skip(fmt, ap, code);
+  }
+}
+
+static inline void pni_data_scan_skip(const char **fmt, va_list ap, char code)
+{
+  switch (code) {
+  case '@':
+    assert(**fmt == '[');
+    (*fmt)++;
+    // Falls through
+  case '[': pni_data_scan_skip_compound(fmt, ap, '[', ']'); break;
+  case '{': pni_data_scan_skip_compound(fmt, ap, '{', '}'); break;
+  case 'D': pni_data_scan_skip_described(fmt, ap); break;
+  default: pni_data_scan_skip_arg(ap, code);
   }
 }
 
@@ -1303,13 +1243,12 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       assert(*fmt != '?');
 
       presence_arg = va_arg(ap, bool *);
-      *presence_arg = false;
-
       code = *(fmt++);
     }
 
     if (code == ']' || code == '}') {
       assert(data->parent);
+
       pni_data_exit(data);
       continue;
     }
@@ -1337,217 +1276,138 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
     }
 
+    if (!node || node->atom.type == PN_NULL) {
+      *presence_arg = false;
+      pni_data_scan_skip(&fmt, ap, code);
+      continue;
+    }
+
+    *presence_arg = true;
+
     switch (code) {
     case '.':
     case 'n': {
       break;
     }
     case 'o': {
-      bool *value = va_arg(ap, bool *);
-      if (node && node->atom.type == PN_BOOL) {
-        *value = pni_node_get_bool(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_BOOL) return PN_ARG_ERR;
+      *va_arg(ap, bool *) = pni_node_get_bool(node);
       break;
     }
     case 'B': {
-      uint8_t *value = va_arg(ap, uint8_t *);
-      if (node && node->atom.type == PN_UBYTE) {
-        *value = pni_node_get_ubyte(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_UBYTE) return PN_ARG_ERR;
+      *va_arg(ap, uint8_t *) = pni_node_get_ubyte(node);
       break;
     }
     case 'b': {
-      int8_t *value = va_arg(ap, int8_t *);
-      if (node && node->atom.type == PN_BYTE) {
-        *value = pni_node_get_byte(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_BYTE) return PN_ARG_ERR;
+      *va_arg(ap, int8_t *) = pni_node_get_byte(node);
       break;
     }
     case 'H': {
-      uint16_t *value = va_arg(ap, uint16_t *);
-      if (node && node->atom.type == PN_USHORT) {
-        *value = pni_node_get_ushort(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_USHORT) return PN_ARG_ERR;
+      *va_arg(ap, uint16_t *) = pni_node_get_ushort(node);
       break;
     }
     case 'h': {
-      int16_t *value = va_arg(ap, int16_t *);
-      if (node && node->atom.type == PN_SHORT) {
-        *value = pni_node_get_short(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_SHORT) return PN_ARG_ERR;
+      *va_arg(ap, int16_t *) = pni_node_get_short(node);
       break;
     }
     case 'I': {
-      uint32_t *value = va_arg(ap, uint32_t *);
-      if (node && node->atom.type == PN_UINT) {
-        *value = pni_node_get_uint(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_UINT) return PN_ARG_ERR;
+      *va_arg(ap, uint32_t *) = pni_node_get_uint(node);
       break;
     }
     case 'i': {
-      int32_t *value = va_arg(ap, int32_t *);
-      if (node && node->atom.type == PN_INT) {
-        *value = pni_node_get_int(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_INT) return PN_ARG_ERR;
+      *va_arg(ap, int32_t *) = pni_node_get_int(node);
       break;
     }
     case 'c': {
-      pn_char_t *value = va_arg(ap, pn_char_t *);
-      if (node && node->atom.type == PN_CHAR) {
-        *value = pni_node_get_char(node);
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_CHAR) return PN_ARG_ERR;
+      *va_arg(ap, pn_char_t *) = pni_node_get_char(node);
       break;
     }
     case 'L': {
-      uint64_t *value = va_arg(ap, uint64_t *);
-      if (node && node->atom.type == PN_ULONG) {
-        *value = pni_node_get_ulong(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_ULONG) return PN_ARG_ERR;
+      *va_arg(ap, uint64_t *) = pni_node_get_ulong(node);
       break;
     }
     case 'l': {
-      int64_t *value = va_arg(ap, int64_t *);
-      if (node && node->atom.type == PN_LONG) {
-        *value = pni_node_get_long(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_LONG) return PN_ARG_ERR;
+      *va_arg(ap, int64_t *) = pni_node_get_long(node);
       break;
     }
     case 't': {
-      pn_timestamp_t *value = va_arg(ap, pn_timestamp_t *);
-      if (node && node->atom.type == PN_TIMESTAMP) {
-        *value = pni_node_get_timestamp(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_TIMESTAMP) return PN_ARG_ERR;
+      *va_arg(ap, pn_timestamp_t *) = pni_node_get_timestamp(node);
       break;
     }
     case 'f': {
-      float *value = va_arg(ap, float *);
-      if (node && node->atom.type == PN_FLOAT) {
-        *value = pni_node_get_float(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_FLOAT) return PN_ARG_ERR;
+      *va_arg(ap, float *) = pni_node_get_float(node);
       break;
     }
     case 'd': {
-      double *value = va_arg(ap, double *);
-      if (node && node->atom.type == PN_DOUBLE) {
-        *value = pni_node_get_double(node);
-        *presence_arg = true;
-      } else {
-        *value = 0;
-      }
+      if (node->atom.type != PN_DOUBLE) return PN_ARG_ERR;
+      *va_arg(ap, double *) = pni_node_get_double(node);
       break;
     }
     case 'z': {
-      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node && node->atom.type == PN_BINARY) {
-        *value = pni_node_get_bytes(node);
-        *presence_arg = true;
-      } else {
-        *value = pn_bytes_null;
-      }
+      if (node->atom.type != PN_BINARY) return PN_ARG_ERR;
+      *va_arg(ap, pn_bytes_t *) = pni_node_get_bytes(node);
       break;
     }
     case 'S': {
-      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node && node->atom.type == PN_STRING) {
-        *value = pni_node_get_bytes(node);
-        *presence_arg = true;
-      } else {
-        *value = pn_bytes_null;
+      // This is to accommodate the way targets of type coordinator
+      // are handled in transport.c.
+      if (node->atom.type != PN_STRING) {
+        pni_data_scan_skip_arg(ap, code);
+        *presence_arg = false;
+        break;
       }
+      // if (node->atom.type != PN_STRING) return PN_ARG_ERR;
+      *va_arg(ap, pn_bytes_t *) = pni_node_get_bytes(node);
       break;
     }
     case 's': {
-      pn_bytes_t *value = va_arg(ap, pn_bytes_t *);
-      if (node && node->atom.type == PN_SYMBOL) {
-        *value = pni_node_get_bytes(node);
-        *presence_arg = true;
-      } else {
-        *value = pn_bytes_null;
-      }
+      if (node->atom.type != PN_SYMBOL) return PN_ARG_ERR;
+      *va_arg(ap, pn_bytes_t *) = pni_node_get_bytes(node);
       break;
     }
     case 'C': {
       pn_data_t *dst_data = va_arg(ap, pn_data_t *);
-      if (node && node->atom.type != PN_NULL) {
-        pni_node_t *dst_node = pni_data_add_node(dst_data);
-        if (!dst_node) return PN_OUT_OF_MEMORY;
-        int err = pni_data_copy_nodes(dst_data, dst_node, data, node, 1);
-        if (err) return err;
-        *presence_arg = true;
-      }
+      pni_node_t *dst_node = pni_data_add_node(dst_data);
+      if (!dst_node) return PN_OUT_OF_MEMORY;
+      int err = pni_data_copy_nodes(dst_data, dst_node, data, node, 1);
+      if (err) return err;
       break;
     }
     case 'D': {
-      if (node && node->atom.type == PN_DESCRIBED) {
-        pni_data_enter(data);
-        *presence_arg = true;
-      } else {
+      if (node->atom.type != PN_DESCRIBED) {
         pni_data_scan_skip_described(&fmt, ap);
+        *presence_arg = false;
+        break;
       }
+      pni_data_enter(data);
       break;
     }
     case '@': {
+      if (node->atom.type != PN_ARRAY) return PN_ARG_ERR;
       assert(*fmt == '[');
       fmt++;
-      if (node && node->atom.type == PN_ARRAY) {
-        pni_data_enter(data);
-        *presence_arg = true;
-      } else {
-        pni_data_scan_skip_compound(&fmt, ap, '[', ']');
-      }
+      pni_data_enter(data);
       break;
     }
     case '[': {
-      if (node && node->atom.type == PN_LIST) {
-        pni_data_enter(data);
-        *presence_arg = true;
-      } else {
-        pni_data_scan_skip_compound(&fmt, ap, '[', ']');
-      }
+      if (node->atom.type != PN_LIST) return PN_ARG_ERR;
+      pni_data_enter(data);
       break;
     }
     case '{': {
-      if (node && node->atom.type == PN_MAP) {
-        pni_data_enter(data);
-        *presence_arg = true;
-      } else {
-        pni_data_scan_skip_compound(&fmt, ap, '{', '}');
-      }
+      if (node->atom.type != PN_MAP) return PN_ARG_ERR;
+      pni_data_enter(data);
       break;
     }
     default:
