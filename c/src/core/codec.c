@@ -879,10 +879,16 @@ static void pni_data_fill_skip_described(const char **fmt, va_list ap)
   }
 }
 
-static void pni_data_fill_skip(const char **fmt, va_list ap, char code)
+static inline void pni_data_fill_skip_arg(va_list ap, char code)
 {
   switch (code) {
-  case 'n': break;
+  case 'n':
+  case 'D':
+  case '@':
+  case '[':
+  case '{':
+  case ']':
+  case '}': break;
   case '?':
   case '.':
   case 'o':
@@ -905,6 +911,14 @@ static void pni_data_fill_skip(const char **fmt, va_list ap, char code)
   case '*':
   case 'Z':
   case 'z': va_arg(ap, void *); va_arg(ap, void *); break;
+  default:
+    assert(false && "unrecognized fill code");
+  }
+}
+
+static void pni_data_fill_skip(const char **fmt, va_list ap, char code)
+{
+  switch (code) {
   case 'D': pni_data_fill_skip_described(fmt, ap); break;
   case '@':
     assert(**fmt == 'T');
@@ -915,7 +929,7 @@ static void pni_data_fill_skip(const char **fmt, va_list ap, char code)
   case '[': pni_data_fill_skip_compound(fmt, ap, ']'); break;
   case '{': pni_data_fill_skip_compound(fmt, ap, '}'); break;
   default:
-    assert(false && "unrecognized fill code");
+    pni_data_fill_skip_arg(ap, code);
   }
 }
 
@@ -1166,11 +1180,15 @@ static void pni_data_scan_skip_described(const char **fmt, va_list ap)
   }
 }
 
-static void pni_data_scan_skip(const char **fmt, va_list ap, char code)
+static inline void pni_data_scan_skip_arg(va_list ap, char code)
 {
   switch (code) {
   case '.':
   case 'n':
+  case 'D':
+  case '@':
+  case '[':
+  case '{':
   case ']':
   case '}': break;
   case '?':
@@ -1191,6 +1209,14 @@ static void pni_data_scan_skip(const char **fmt, va_list ap, char code)
   case 'S':
   case 's': *va_arg(ap, pn_bytes_t *) = pn_bytes_null; break;
   case 'C': va_arg(ap, pn_data_t *); break;
+  default:
+    assert(false && "unrecognized scan code");
+  }
+}
+
+static inline void pni_data_scan_skip(const char **fmt, va_list ap, char code)
+{
+  switch (code) {
   case 'D': pni_data_scan_skip_described(fmt, ap); break;
   case '@':
     assert(**fmt == '[');
@@ -1199,7 +1225,7 @@ static void pni_data_scan_skip(const char **fmt, va_list ap, char code)
   case '[': pni_data_scan_skip_compound(fmt, ap, ']'); break;
   case '{': pni_data_scan_skip_compound(fmt, ap, '}'); break;
   default:
-    assert(false && "unrecognized scan code");
+    pni_data_scan_skip_arg(ap, code);
   }
 }
 
@@ -1230,7 +1256,7 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         // There is no more data to process.  Zero the remaining args
         // and leave.
 
-        do pni_data_scan_skip(&fmt, ap, code);
+        do pni_data_scan_skip_arg(ap, code);
         while ((code = *(fmt++)));
 
         return 0;
