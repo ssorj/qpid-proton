@@ -1214,7 +1214,7 @@ static inline void pni_data_scan_skip_arg(va_list ap, char code)
   }
 }
 
-static inline void pni_data_scan_skip(const char **fmt, va_list ap, char code)
+static void pni_data_scan_skip(const char **fmt, va_list ap, char code)
 {
   switch (code) {
   case 'D': pni_data_scan_skip_described(fmt, ap); break;
@@ -1246,22 +1246,12 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       assert(data->parent);
 
       pni_data_exit(data);
-      continue;
+      goto end;
     }
 
     pni_node_t *node = pni_data_next_node(data);
 
     if (!node) {
-      if (data->current == data->size) {
-        // There is no more data to process.  Zero the remaining args
-        // and leave.
-
-        do pni_data_scan_skip_arg(ap, code);
-        while ((code = *(fmt++)));
-
-        return 0;
-      }
-
       while (!node && data->parent) {
         pni_node_t *parent = pni_data_node(data, data->parent);
 
@@ -1287,7 +1277,7 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     if (!node || node->atom.type == PN_NULL) {
       *presence_arg = false;
       pni_data_scan_skip(&fmt, ap, code);
-      continue;
+      goto end;
     }
 
     switch (code) {
@@ -1413,6 +1403,16 @@ PNI_HOT static int pni_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     }
     default:
       assert(false && "unrecognized scan code");
+    }
+
+  end:
+
+    if (data->current == data->size) {
+      // There is no more data to process.  Zero the remaining args
+      // and leave.
+
+      while ((code = *(fmt++))) pni_data_scan_skip_arg(ap, code);
+      break;
     }
   }
 
