@@ -320,7 +320,7 @@ TEST_CASE("engine_link_name_prefix)") {
 }
 
 
-TEST_CASE("link_properties") {
+TEST_CASE("link_properties)") {
   pn_connection_t *c1 = pn_connection();
   pn_transport_t *t1 = pn_transport();
   pn_transport_bind(t1, c1);

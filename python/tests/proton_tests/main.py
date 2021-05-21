@@ -65,7 +65,7 @@ parser.add_option("-i", "--ignore", action="append", default=[],
 parser.add_option("-I", "--ignore-file", metavar="IFILE", action="append",
                   default=[],
                   help="ignore tests matching patterns in IFILE")
-parser.add_option("-H", "--halt-on-error", action="store_true", default=True,
+parser.add_option("-H", "--halt-on-error", action="store_true", default=False,
                   dest="hoe", help="halt if an error is encountered")
 parser.add_option("-t", "--time", action="store_true", default=False,
                   help="report timing information on test run")
