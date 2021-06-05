@@ -119,6 +119,12 @@ static void check_data_fill(const char *fmt, ...) {
   check_encode_decode(src, dst);
 }
 
+TEST_CASE("data_error") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  CHECK(pn_data_errno(data) == 0);
+}
+
 // Make sure we can grow the capacity of a pn_data_t all the way to the max and
 // we stop there.
 TEST_CASE("data_grow") {
