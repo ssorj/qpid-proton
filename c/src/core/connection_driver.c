@@ -92,12 +92,12 @@ pn_rwbytes_t pn_connection_driver_sized_read_buffer(pn_connection_driver_t *d, s
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
-pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
+inline pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
   ssize_t cap = pn_transport_capacity(d->transport);
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
-void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
+inline void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
   if (n > 0) pn_transport_process(d->transport, n);
 }
 
@@ -111,13 +111,13 @@ void pn_connection_driver_read_close(pn_connection_driver_t *d) {
   }
 }
 
-pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
+inline pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
   ssize_t pending = pn_transport_pending(d->transport);
   return (pending > 0) ?
     pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
 }
 
-pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
+inline pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
   pn_transport_pop(d->transport, n);
   ssize_t pending = d->transport->output_pending;
   return (pending > 0) ?
@@ -143,7 +143,7 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
   return batch_next(d);
 }
 
-bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
+inline bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
   return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
 }
 
@@ -179,7 +179,7 @@ void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_l
   pni_logger_vlogf(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, fmt, ap);
 }
 
-pn_connection_driver_t** pn_connection_driver_ptr(pn_connection_t *c) { return &c->driver; }
+inline pn_connection_driver_t** pn_connection_driver_ptr(pn_connection_t *c) { return &c->driver; }
 
 /* Backwards ABI compatability hack - this has been removed because it can't be used sanely */
 PN_EXTERN pn_connection_driver_t *pn_event_batch_connection_driver(pn_event_batch_t *b) { return NULL; }

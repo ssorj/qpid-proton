@@ -33,7 +33,7 @@ struct pn_list_t {
   void **elements;
 };
 
-size_t pn_list_size(pn_list_t *list)
+inline size_t pn_list_size(pn_list_t *list)
 {
   assert(list);
   return list->size;
@@ -69,13 +69,15 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
 int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
-  pni_list_ensure(list, list->size + 1);
+  if (list->capacity <= list->size) {
+    pni_list_ensure(list, list->size + 1);
+  }
   list->elements[list->size++] = value;
   pn_class_incref(list->clazz, value);
   return 0;
 }
 
-void *pn_list_pop(pn_list_t *list)
+inline void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
   if (list->size) {
@@ -127,7 +129,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-void pn_list_clear(pn_list_t *list)
+inline void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);
@@ -176,7 +178,7 @@ typedef struct {
   size_t index;
 } pni_list_iter_t;
 
-static void *pni_list_next(void *ctx)
+static inline void *pni_list_next(void *ctx)
 {
   pni_list_iter_t *iter = (pni_list_iter_t *) ctx;
   if (iter->index < pn_list_size(iter->list)) {
@@ -267,4 +269,3 @@ pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity)
   list->size = 0;
   return list;
 }
-

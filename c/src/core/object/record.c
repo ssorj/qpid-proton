@@ -78,7 +78,7 @@ static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
   return NULL;
 }
 
-static pni_field_t *pni_record_create(pn_record_t *record) {
+static inline pni_field_t *pni_record_create(pn_record_t *record) {
   record->size++;
   if (record->size > record->capacity) {
     record->fields = (pni_field_t *) pni_mem_subreallocate(pn_class(record), record, record->fields, record->size * sizeof(pni_field_t));
@@ -106,7 +106,7 @@ void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz
   }
 }
 
-bool pn_record_has(pn_record_t *record, pn_handle_t key)
+inline bool pn_record_has(pn_record_t *record, pn_handle_t key)
 {
   assert(record);
   pni_field_t *field = pni_record_find(record, key);
@@ -117,7 +117,7 @@ bool pn_record_has(pn_record_t *record, pn_handle_t key)
   }
 }
 
-void *pn_record_get(pn_record_t *record, pn_handle_t key)
+inline void *pn_record_get(pn_record_t *record, pn_handle_t key)
 {
   assert(record);
   pni_field_t *field = pni_record_find(record, key);

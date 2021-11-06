@@ -116,7 +116,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
   return string;
 }
 
-const char *pn_string_get(pn_string_t *string)
+inline const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
   if (string->size == PNI_NULL_SIZE) {
@@ -126,7 +126,7 @@ const char *pn_string_get(pn_string_t *string)
   }
 }
 
-size_t pn_string_size(pn_string_t *string)
+inline size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
   if (string->size == PNI_NULL_SIZE) {
@@ -136,7 +136,7 @@ size_t pn_string_size(pn_string_t *string)
   }
 }
 
-int pn_string_set(pn_string_t *string, const char *bytes)
+inline int pn_string_set(pn_string_t *string, const char *bytes)
 {
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
@@ -177,7 +177,7 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
   return 0;
 }
 
-ssize_t pn_string_put(pn_string_t *string, char *dst)
+inline ssize_t pn_string_put(pn_string_t *string, char *dst)
 {
   assert(string);
   assert(dst);
@@ -189,7 +189,7 @@ ssize_t pn_string_put(pn_string_t *string, char *dst)
   return string->size;
 }
 
-void pn_string_clear(pn_string_t *string)
+inline void pn_string_clear(pn_string_t *string)
 {
   pn_string_set(string, NULL);
 }
@@ -243,13 +243,13 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
   }
 }
 
-char *pn_string_buffer(pn_string_t *string)
+inline char *pn_string_buffer(pn_string_t *string)
 {
   assert(string);
   return string->bytes;
 }
 
-size_t pn_string_capacity(pn_string_t *string)
+inline size_t pn_string_capacity(pn_string_t *string)
 {
   assert(string);
   return string->capacity - 1;
@@ -265,7 +265,7 @@ int pn_string_resize(pn_string_t *string, size_t size)
   return 0;
 }
 
-int pn_string_copy(pn_string_t *string, pn_string_t *src)
+inline int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));

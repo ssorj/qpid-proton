@@ -746,7 +746,7 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
   pn_modified(connection, &connection->endpoint, true);
 }
 
-void pn_clear_tpwork(pn_delivery_t *delivery)
+inline void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
@@ -773,7 +773,7 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+inline void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
@@ -904,19 +904,19 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
   }
 }
 
-static bool pni_connection_live(pn_connection_t *conn) {
+static inline bool pni_connection_live(pn_connection_t *conn) {
   return pn_refcount(conn) > 1;
 }
 
-static bool pni_session_live(pn_session_t *ssn) {
+static inline bool pni_session_live(pn_session_t *ssn) {
   return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
 }
 
-static bool pni_link_live(pn_link_t *link) {
+static inline bool pni_link_live(pn_link_t *link) {
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
 
-static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
+static inline bool pni_endpoint_live(pn_endpoint_t *endpoint) {
   switch (endpoint->type) {
   case CONNECTION:
     return pni_connection_live((pn_connection_t *)endpoint);
@@ -1102,7 +1102,7 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(0);
 }
 
-static void pn_link_incref(void *object)
+static inline void pn_link_incref(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
   if (!link->endpoint.referenced) {
@@ -1396,12 +1396,12 @@ const char *pn_link_name(pn_link_t *link)
   return pn_string_get(link->name);
 }
 
-bool pn_link_is_sender(pn_link_t *link)
+inline bool pn_link_is_sender(pn_link_t *link)
 {
   return link->endpoint.type == SENDER;
 }
 
-bool pn_link_is_receiver(pn_link_t *link)
+inline bool pn_link_is_receiver(pn_link_t *link)
 {
   return link->endpoint.type == RECEIVER;
 }
@@ -1419,7 +1419,7 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
-static void pn_delivery_incref(void *object)
+static inline void pn_delivery_incref(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   if (delivery->link && !delivery->referenced) {
@@ -1494,7 +1494,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   pn_condition_init(&ds->condition);
 }
 
-static void pn_disposition_clear(pn_disposition_t *ds)
+static inline void pn_disposition_clear(pn_disposition_t *ds)
 {
   ds->type = 0;
   ds->section_number = 0;
@@ -1749,7 +1749,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
   }
 }
 
-pn_delivery_t *pn_link_current(pn_link_t *link)
+inline pn_delivery_t *pn_link_current(pn_link_t *link)
 {
   if (!link) return NULL;
   return link->current;
@@ -1807,7 +1807,7 @@ bool pn_link_advance(pn_link_t *link)
   }
 }
 
-int pn_link_credit(pn_link_t *link)
+inline int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
 }
@@ -2009,7 +2009,7 @@ pn_data_t *pn_link_remote_properties(pn_link_t *link)
 }
 
 
-pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
+inline pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   assert(delivery);
   return delivery->link;

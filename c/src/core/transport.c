@@ -85,18 +85,18 @@ void pn_delivery_map_free(pn_delivery_map_t *db)
   pn_free(db->deliveries);
 }
 
-static inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
+inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
 {
   return i & 0x00000000FFFFFFFFUL;
 }
 
 
-static pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
+static inline pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
 {
   return (pn_delivery_t *) pn_hash_get(db->deliveries, pni_sequence_make_hash(id) );
 }
 
-static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *delivery, pn_sequence_t id)
+static inline void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *delivery, pn_sequence_t id)
 {
   ds->id = id;
   ds->sending = false;
@@ -104,7 +104,7 @@ static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *deliv
   ds->init = true;
 }
 
-static pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *delivery)
+static inline pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   pn_delivery_state_t *ds = &delivery->state;
   pn_delivery_state_init(ds, delivery, db->next++);
@@ -122,7 +122,7 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
   }
 }
 
-static void pni_delivery_map_clear(pn_delivery_map_t *dm)
+static inline void pni_delivery_map_clear(pn_delivery_map_t *dm)
 {
   pn_hash_t *hash = dm->deliveries;
   for (pn_handle_t entry = pn_hash_head(hash);
@@ -2933,7 +2933,7 @@ ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n) {
 }
 
 // input
-ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+inline ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -2946,7 +2946,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 }
 
 
-char *pn_transport_tail(pn_transport_t *transport)
+inline char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -2954,7 +2954,7 @@ char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+inline ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3003,13 +3003,13 @@ int pn_transport_close_tail(pn_transport_t *transport)
 }
 
 // output
-ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
+inline ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
   return transport_produce( transport );
 }
 
-const char *pn_transport_head(pn_transport_t *transport)
+inline const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3017,7 +3017,7 @@ const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+inline ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -3081,15 +3081,15 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   return true;
 }
 
-bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
+inline bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
 
-bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
+inline bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
 
-bool pn_transport_closed(pn_transport_t *transport) {
+inline bool pn_transport_closed(pn_transport_t *transport) {
   return transport->head_closed && transport->tail_closed;
 }
 
-pn_connection_t *pn_transport_connection(pn_transport_t *transport)
+inline pn_connection_t *pn_transport_connection(pn_transport_t *transport)
 {
   assert(transport);
   return transport->connection;

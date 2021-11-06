@@ -167,13 +167,14 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   return event;
 }
 
-pn_event_t *pn_collector_peek(pn_collector_t *collector)
+inline pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   return collector->head;
 }
 
 // Advance head pointer for pop or next, return the old head.
-static pn_event_t *pop_internal(pn_collector_t *collector) {
+
+static inline pn_event_t *pop_internal(pn_collector_t *collector) {
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
@@ -184,7 +185,7 @@ static pn_event_t *pop_internal(pn_collector_t *collector) {
   return event;
 }
 
-bool pn_collector_pop(pn_collector_t *collector) {
+inline bool pn_collector_pop(pn_collector_t *collector) {
   pn_event_t *event = pop_internal(collector);
   if (event) {
     pn_decref(event);
@@ -192,7 +193,7 @@ bool pn_collector_pop(pn_collector_t *collector) {
   return event;
 }
 
-pn_event_t *pn_collector_next(pn_collector_t *collector) {
+inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
     pn_decref(collector->prev);
   }
@@ -200,11 +201,11 @@ pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
-pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+inline pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
-bool pn_collector_more(pn_collector_t *collector)
+inline bool pn_collector_more(pn_collector_t *collector)
 {
   assert(collector);
   return collector->head && collector->head->next;
@@ -220,7 +221,7 @@ static void pn_event_initialize(pn_event_t *event)
   event->attachments = pn_record();
 }
 
-static void pn_event_finalize(pn_event_t *event) {
+static inline void pn_event_finalize(pn_event_t *event) {
   // decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);
@@ -275,24 +276,24 @@ pn_event_t *pn_event(void)
   return pn_event_new();
 }
 
-pn_event_type_t pn_event_type(pn_event_t *event)
+inline pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event ? event->type : PN_EVENT_NONE;
 }
 
-const pn_class_t *pn_event_class(pn_event_t *event)
+inline const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
   return event->clazz;
 }
 
-void *pn_event_context(pn_event_t *event)
+inline void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
 }
 
-pn_record_t *pn_event_attachments(pn_event_t *event)
+inline pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
   return event->attachments;
