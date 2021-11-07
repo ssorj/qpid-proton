@@ -21,6 +21,7 @@
 
 #include <proton/object.h>
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #include <stddef.h>
@@ -141,7 +142,7 @@ pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
   return map;
 }
 
-inline size_t pn_map_size(pn_map_t *map)
+PN_INLINE size_t pn_map_size(pn_map_t *map)
 {
   assert(map);
   return map->size;
@@ -250,7 +251,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
   }
 }
 
-inline int pn_map_put(pn_map_t *map, void *key, void *value)
+PN_INLINE int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
@@ -261,7 +262,7 @@ inline int pn_map_put(pn_map_t *map, void *key, void *value)
   return 0;
 }
 
-inline void *pn_map_get(pn_map_t *map, void *key)
+PN_INLINE void *pn_map_get(pn_map_t *map, void *key)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, false);
@@ -423,22 +424,22 @@ pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
   return hash;
 }
 
-inline size_t pn_hash_size(pn_hash_t *hash)
+PN_INLINE size_t pn_hash_size(pn_hash_t *hash)
 {
   return pn_map_size(&hash->map);
 }
 
-inline int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
+PN_INLINE int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value)
 {
   return pn_map_put(&hash->map, (void *) key, value);
 }
 
-inline void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
+PN_INLINE void *pn_hash_get(pn_hash_t *hash, uintptr_t key)
 {
   return pn_map_get(&hash->map, (void *) key);
 }
 
-inline void pn_hash_del(pn_hash_t *hash, uintptr_t key)
+PN_INLINE void pn_hash_del(pn_hash_t *hash, uintptr_t key)
 {
   pn_map_del(&hash->map, (void *) key);
 }

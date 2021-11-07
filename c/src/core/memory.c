@@ -19,6 +19,7 @@
  *
  */
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #ifdef PN_MEMDEBUG
@@ -267,12 +268,12 @@ void pni_fini_memory(void) {}
 
 void pni_mem_setup_logging(void) {}
 
-inline void *pni_mem_allocate(const pn_class_t *clazz, size_t size) { return malloc(size); }
-inline void *pni_mem_zallocate(const pn_class_t *clazz, size_t size) { return calloc(1, size); }
-inline void pni_mem_deallocate(const pn_class_t *clazz, void *object) { free(object); }
+PN_INLINE void *pni_mem_allocate(const pn_class_t *clazz, size_t size) { return malloc(size); }
+PN_INLINE void *pni_mem_zallocate(const pn_class_t *clazz, size_t size) { return calloc(1, size); }
+PN_INLINE void pni_mem_deallocate(const pn_class_t *clazz, void *object) { free(object); }
 
-inline void *pni_mem_suballocate(const pn_class_t *clazz, void *object, size_t size) { return malloc(size); }
-inline void *pni_mem_subreallocate(const pn_class_t *clazz, void *object, void *buffer, size_t size) { return realloc(buffer, size); }
-inline void pni_mem_subdeallocate(const pn_class_t *clazz, void *object, void *buffer) { free(buffer); }
+PN_INLINE void *pni_mem_suballocate(const pn_class_t *clazz, void *object, size_t size) { return malloc(size); }
+PN_INLINE void *pni_mem_subreallocate(const pn_class_t *clazz, void *object, void *buffer, size_t size) { return realloc(buffer, size); }
+PN_INLINE void pni_mem_subdeallocate(const pn_class_t *clazz, void *object, void *buffer) { free(buffer); }
 
 #endif

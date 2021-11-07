@@ -24,6 +24,7 @@
 
 #include "engine-internal.h"
 
+#include "config.h"
 #include "framing.h"
 #include "memory.h"
 #include "platform/platform.h"
@@ -746,7 +747,7 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
   pn_modified(connection, &connection->endpoint, true);
 }
 
-inline void pn_clear_tpwork(pn_delivery_t *delivery)
+PN_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
 {
   pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
@@ -773,7 +774,7 @@ void pn_dump(pn_connection_t *conn)
   printf("\n");
 }
 
-inline void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+PN_INLINE void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
@@ -1396,12 +1397,12 @@ const char *pn_link_name(pn_link_t *link)
   return pn_string_get(link->name);
 }
 
-inline bool pn_link_is_sender(pn_link_t *link)
+PN_INLINE bool pn_link_is_sender(pn_link_t *link)
 {
   return link->endpoint.type == SENDER;
 }
 
-inline bool pn_link_is_receiver(pn_link_t *link)
+PN_INLINE bool pn_link_is_receiver(pn_link_t *link)
 {
   return link->endpoint.type == RECEIVER;
 }
@@ -1749,7 +1750,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
   }
 }
 
-inline pn_delivery_t *pn_link_current(pn_link_t *link)
+PN_INLINE pn_delivery_t *pn_link_current(pn_link_t *link)
 {
   if (!link) return NULL;
   return link->current;
@@ -1807,7 +1808,7 @@ bool pn_link_advance(pn_link_t *link)
   }
 }
 
-inline int pn_link_credit(pn_link_t *link)
+PN_INLINE int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
 }
@@ -2009,7 +2010,7 @@ pn_data_t *pn_link_remote_properties(pn_link_t *link)
 }
 
 
-inline pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
+PN_INLINE pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   assert(delivery);
   return delivery->link;

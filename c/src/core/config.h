@@ -18,11 +18,17 @@
 *
 */
 
-#ifndef  _PROTON_SRC_CONFIG_H 
-#define  _PROTON_SRC_CONFIG_H 
+#ifndef  _PROTON_SRC_CONFIG_H
+#define  _PROTON_SRC_CONFIG_H
 
 #ifndef PN_TRANSPORT_INITIAL_FRAME_SIZE
 # define PN_TRANSPORT_INITIAL_FRAME_SIZE (512) /* bytes */
+#endif
+
+#if defined(__GNUC__)
+#  define PN_INLINE inline
+#else
+#  define PN_INLINE
 #endif
 
 #endif /*  _PROTON_SRC_CONFIG_H */

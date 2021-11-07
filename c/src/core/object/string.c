@@ -23,6 +23,7 @@
 #include <proton/error.h>
 #include <proton/object.h>
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #include <stdio.h>
@@ -116,7 +117,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
   return string;
 }
 
-inline const char *pn_string_get(pn_string_t *string)
+PN_INLINE const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
   if (string->size == PNI_NULL_SIZE) {
@@ -126,7 +127,7 @@ inline const char *pn_string_get(pn_string_t *string)
   }
 }
 
-inline size_t pn_string_size(pn_string_t *string)
+PN_INLINE size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
   if (string->size == PNI_NULL_SIZE) {
@@ -136,7 +137,7 @@ inline size_t pn_string_size(pn_string_t *string)
   }
 }
 
-inline int pn_string_set(pn_string_t *string, const char *bytes)
+PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
 {
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
@@ -177,7 +178,7 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
   return 0;
 }
 
-inline ssize_t pn_string_put(pn_string_t *string, char *dst)
+PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
 {
   assert(string);
   assert(dst);
@@ -189,7 +190,7 @@ inline ssize_t pn_string_put(pn_string_t *string, char *dst)
   return string->size;
 }
 
-inline void pn_string_clear(pn_string_t *string)
+PN_INLINE void pn_string_clear(pn_string_t *string)
 {
   pn_string_set(string, NULL);
 }
@@ -243,13 +244,13 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
   }
 }
 
-inline char *pn_string_buffer(pn_string_t *string)
+PN_INLINE char *pn_string_buffer(pn_string_t *string)
 {
   assert(string);
   return string->bytes;
 }
 
-inline size_t pn_string_capacity(pn_string_t *string)
+PN_INLINE size_t pn_string_capacity(pn_string_t *string)
 {
   assert(string);
   return string->capacity - 1;
@@ -265,7 +266,7 @@ int pn_string_resize(pn_string_t *string, size_t size)
   return 0;
 }
 
-inline int pn_string_copy(pn_string_t *string, pn_string_t *src)
+PN_INLINE int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));

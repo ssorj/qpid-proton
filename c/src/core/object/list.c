@@ -21,6 +21,7 @@
 
 #include <proton/object.h>
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #include <stddef.h>
@@ -33,7 +34,7 @@ struct pn_list_t {
   void **elements;
 };
 
-inline size_t pn_list_size(pn_list_t *list)
+PN_INLINE size_t pn_list_size(pn_list_t *list)
 {
   assert(list);
   return list->size;
@@ -77,7 +78,7 @@ int pn_list_add(pn_list_t *list, void *value)
   return 0;
 }
 
-inline void *pn_list_pop(pn_list_t *list)
+PN_INLINE void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
   if (list->size) {
@@ -129,7 +130,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-inline void pn_list_clear(pn_list_t *list)
+PN_INLINE void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);

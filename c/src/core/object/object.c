@@ -21,6 +21,7 @@
 
 #include <proton/object.h>
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #include <stdlib.h>
@@ -53,7 +54,7 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
-inline pn_cid_t pn_class_id(const pn_class_t *clazz)
+PN_INLINE pn_cid_t pn_class_id(const pn_class_t *clazz)
 {
   return clazz->cid;
 }
@@ -68,7 +69,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-inline void *pn_class_incref(const pn_class_t *clazz, void *object)
+PN_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
@@ -78,7 +79,7 @@ inline void *pn_class_incref(const pn_class_t *clazz, void *object)
   return object;
 }
 
-inline int pn_class_refcount(const pn_class_t *clazz, void *object)
+PN_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   clazz = clazz->reify(object);
@@ -131,13 +132,13 @@ void pn_class_free(const pn_class_t *clazz, void *object)
   }
 }
 
-inline const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
+PN_INLINE const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   return clazz->reify(object);
 }
 
-inline uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
+PN_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
 
@@ -199,7 +200,7 @@ typedef struct {
 #define pni_head(PTR) \
   (((pni_head_t *) (PTR)) - 1)
 
-inline void *pn_object_new(const pn_class_t *clazz, size_t size)
+PN_INLINE void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
   void *object = NULL;
   pni_head_t *head = (pni_head_t *) pni_mem_zallocate(clazz, sizeof(pni_head_t) + size);
@@ -211,7 +212,7 @@ inline void *pn_object_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-inline const pn_class_t *pn_object_reify(void *object)
+PN_INLINE const pn_class_t *pn_object_reify(void *object)
 {
   if (object) {
     return pni_head(object)->clazz;
@@ -220,68 +221,68 @@ inline const pn_class_t *pn_object_reify(void *object)
   }
 }
 
-inline void pn_object_incref(void *object)
+PN_INLINE void pn_object_incref(void *object)
 {
   if (object) {
     pni_head(object)->refcount++;
   }
 }
 
-inline int pn_object_refcount(void *object)
+PN_INLINE int pn_object_refcount(void *object)
 {
   assert(object);
   return pni_head(object)->refcount;
 }
 
-inline void pn_object_decref(void *object)
+PN_INLINE void pn_object_decref(void *object)
 {
   pni_head_t *head = pni_head(object);
   assert(head->refcount > 0);
   head->refcount--;
 }
 
-inline void pn_object_free(void *object)
+PN_INLINE void pn_object_free(void *object)
 {
   pni_head_t *head = pni_head(object);
   pni_mem_deallocate(head->clazz, head);
 }
 
-inline void *pn_incref(void *object)
+PN_INLINE void *pn_incref(void *object)
 {
   return pn_class_incref(PN_OBJECT, object);
 }
 
-inline int pn_decref(void *object)
+PN_INLINE int pn_decref(void *object)
 {
   return pn_class_decref(PN_OBJECT, object);
 }
 
-inline int pn_refcount(void *object)
+PN_INLINE int pn_refcount(void *object)
 {
   return pn_class_refcount(PN_OBJECT, object);
 }
 
-inline void pn_free(void *object)
+PN_INLINE void pn_free(void *object)
 {
   pn_class_free(PN_OBJECT, object);
 }
 
-inline const pn_class_t *pn_class(void *object)
+PN_INLINE const pn_class_t *pn_class(void *object)
 {
   return pn_class_reify(PN_OBJECT, object);
 }
 
-inline uintptr_t pn_hashcode(void *object)
+PN_INLINE uintptr_t pn_hashcode(void *object)
 {
   return pn_class_hashcode(PN_OBJECT, object);
 }
 
-inline intptr_t pn_compare(void *a, void *b)
+PN_INLINE intptr_t pn_compare(void *a, void *b)
 {
   return pn_class_compare(PN_OBJECT, a, b);
 }
 
-inline bool pn_equals(void *a, void *b)
+PN_INLINE bool pn_equals(void *a, void *b)
 {
   return !pn_compare(a, b);
 }

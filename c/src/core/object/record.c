@@ -21,6 +21,7 @@
 
 #include <proton/object.h>
 
+#include "core/config.h"
 #include "core/memory.h"
 
 #include <stddef.h>
@@ -106,7 +107,7 @@ void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz
   }
 }
 
-inline bool pn_record_has(pn_record_t *record, pn_handle_t key)
+PN_INLINE bool pn_record_has(pn_record_t *record, pn_handle_t key)
 {
   assert(record);
   pni_field_t *field = pni_record_find(record, key);
@@ -117,7 +118,7 @@ inline bool pn_record_has(pn_record_t *record, pn_handle_t key)
   }
 }
 
-inline void *pn_record_get(pn_record_t *record, pn_handle_t key)
+PN_INLINE void *pn_record_get(pn_record_t *record, pn_handle_t key)
 {
   assert(record);
   pni_field_t *field = pni_record_find(record, key);

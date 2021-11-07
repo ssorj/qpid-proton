@@ -24,6 +24,8 @@
 #include <proton/reactor.h>
 #include <assert.h>
 
+#include "core/config.h"
+
 struct pn_collector_t {
   pn_list_t *pool;
   pn_event_t *head;
@@ -167,7 +169,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   return event;
 }
 
-inline pn_event_t *pn_collector_peek(pn_collector_t *collector)
+PN_INLINE pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   return collector->head;
 }
@@ -185,7 +187,7 @@ static inline pn_event_t *pop_internal(pn_collector_t *collector) {
   return event;
 }
 
-inline bool pn_collector_pop(pn_collector_t *collector) {
+PN_INLINE bool pn_collector_pop(pn_collector_t *collector) {
   pn_event_t *event = pop_internal(collector);
   if (event) {
     pn_decref(event);
@@ -193,7 +195,7 @@ inline bool pn_collector_pop(pn_collector_t *collector) {
   return event;
 }
 
-inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
+PN_INLINE pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
     pn_decref(collector->prev);
   }
@@ -201,11 +203,11 @@ inline pn_event_t *pn_collector_next(pn_collector_t *collector) {
   return collector->prev;
 }
 
-inline pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+PN_INLINE pn_event_t *pn_collector_prev(pn_collector_t *collector) {
   return collector->prev;
 }
 
-inline bool pn_collector_more(pn_collector_t *collector)
+PN_INLINE bool pn_collector_more(pn_collector_t *collector)
 {
   assert(collector);
   return collector->head && collector->head->next;
@@ -276,24 +278,24 @@ pn_event_t *pn_event(void)
   return pn_event_new();
 }
 
-inline pn_event_type_t pn_event_type(pn_event_t *event)
+PN_INLINE pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event ? event->type : PN_EVENT_NONE;
 }
 
-inline const pn_class_t *pn_event_class(pn_event_t *event)
+PN_INLINE const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
   return event->clazz;
 }
 
-inline void *pn_event_context(pn_event_t *event)
+PN_INLINE void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
 }
 
-inline pn_record_t *pn_event_attachments(pn_event_t *event)
+PN_INLINE pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
   return event->attachments;
