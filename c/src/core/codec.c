@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <ctype.h>
+#include "config.h"
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
@@ -362,7 +363,7 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 #define pn_data_hashcode NULL
 #define pn_data_compare NULL
 
-static pn_error_t *pni_data_error(pn_data_t *data)
+static inline pn_error_t *pni_data_error(pn_data_t *data)
 {
   if (data->error == NULL) {
     data->error = pn_error();
@@ -386,7 +387,7 @@ pn_data_t *pn_data(size_t capacity)
   return data;
 }
 
-inline void pn_data_free(pn_data_t *data)
+PN_INLINE void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
 }
@@ -401,12 +402,12 @@ pn_error_t *pn_data_error(pn_data_t *data)
   return pni_data_error(data);
 }
 
-inline size_t pn_data_size(pn_data_t *data)
+PN_INLINE size_t pn_data_size(pn_data_t *data)
 {
   return data ? data->size : 0;
 }
 
-inline void pn_data_clear(pn_data_t *data)
+PN_INLINE void pn_data_clear(pn_data_t *data)
 {
   if (data) {
     data->size = 0;
@@ -1263,7 +1264,7 @@ static pni_node_t *pni_data_new(pn_data_t *data)
   return node;
 }
 
-inline void pn_data_rewind(pn_data_t *data)
+PN_INLINE void pn_data_rewind(pn_data_t *data)
 {
   data->parent = data->base_parent;
   data->current = data->base_current;
@@ -1274,13 +1275,13 @@ static inline pni_node_t *pni_data_current(pn_data_t *data)
   return pn_data_node(data, data->current);
 }
 
-inline void pn_data_narrow(pn_data_t *data)
+PN_INLINE void pn_data_narrow(pn_data_t *data)
 {
   data->base_parent = data->parent;
   data->base_current = data->current;
 }
 
-inline void pn_data_widen(pn_data_t *data)
+PN_INLINE void pn_data_widen(pn_data_t *data)
 {
   data->base_parent = 0;
   data->base_current = 0;
@@ -1327,7 +1328,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
   return NULL;
 }
 
-inline bool pn_data_next(pn_data_t *data)
+PN_INLINE bool pn_data_next(pn_data_t *data)
 {
   pni_node_t *current = pni_data_current(data);
   pni_node_t *parent = pn_data_node(data, data->parent);
@@ -1402,7 +1403,7 @@ int pni_data_traverse(pn_data_t *data,
   return 0;
 }
 
-inline pn_type_t pn_data_type(pn_data_t *data)
+PN_INLINE pn_type_t pn_data_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node) {
@@ -1432,7 +1433,7 @@ size_t pn_data_siblings(pn_data_t *data)
   }
 }
 
-inline bool pn_data_enter(pn_data_t *data)
+PN_INLINE bool pn_data_enter(pn_data_t *data)
 {
   if (data->current) {
     data->parent = data->current;
@@ -1443,7 +1444,7 @@ inline bool pn_data_enter(pn_data_t *data)
   }
 }
 
-inline bool pn_data_exit(pn_data_t *data)
+PN_INLINE bool pn_data_exit(pn_data_t *data)
 {
   if (data->parent) {
     pni_node_t *parent = pn_data_node(data, data->parent);
@@ -1562,7 +1563,7 @@ static pni_node_t *pni_data_add(pn_data_t *data)
   return node;
 }
 
-ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
+PN_INLINE ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
   pn_encoder_t encoder;
   pn_encoder_initialize(&encoder);
@@ -1571,7 +1572,7 @@ ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
   return r;
 }
 
-ssize_t pn_data_encoded_size(pn_data_t *data)
+PN_INLINE ssize_t pn_data_encoded_size(pn_data_t *data)
 {
   pn_encoder_t encoder;
   pn_encoder_initialize(&encoder);
@@ -1580,7 +1581,7 @@ ssize_t pn_data_encoded_size(pn_data_t *data)
   return r;
 }
 
-ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
+PN_INLINE ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   pn_decoder_t decoder;
   pn_decoder_initialize(&decoder);

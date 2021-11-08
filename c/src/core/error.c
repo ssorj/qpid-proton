@@ -22,6 +22,7 @@
 #include <proton/error.h>
 #include <proton/object.h>
 
+#include "config.h"
 #include "memory.h"
 #include "platform/platform.h"
 #include "util.h"
@@ -52,7 +53,7 @@ pn_error_t *pn_error()
   return error;
 }
 
-void pn_error_free(pn_error_t *error)
+PN_INLINE void pn_error_free(pn_error_t *error)
 {
   if (error) {
     pni_mem_subdeallocate(PN_CLASSCLASS(pn_error), error, error->text);
