@@ -397,7 +397,7 @@ int pn_data_errno(pn_data_t *data)
   return pn_error_code(pni_data_error(data));
 }
 
-pn_error_t *pn_data_error(pn_data_t *data)
+PN_INLINE pn_error_t *pn_data_error(pn_data_t *data)
 {
   return pni_data_error(data);
 }
@@ -1287,7 +1287,7 @@ PN_INLINE void pn_data_widen(pn_data_t *data)
   data->base_current = 0;
 }
 
-pn_handle_t pn_data_point(pn_data_t *data)
+PN_INLINE pn_handle_t pn_data_point(pn_data_t *data)
 {
   if (data->current) {
     return (pn_handle_t)(uintptr_t)data->current;

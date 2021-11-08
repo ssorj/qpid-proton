@@ -61,7 +61,7 @@ PN_INLINE void pn_error_free(pn_error_t *error)
   }
 }
 
-void pn_error_clear(pn_error_t *error)
+PN_INLINE void pn_error_clear(pn_error_t *error)
 {
   if (error) {
     error->code = 0;
