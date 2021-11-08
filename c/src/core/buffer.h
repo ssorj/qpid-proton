@@ -85,7 +85,7 @@ static inline pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 static inline pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf)
 {
   assert(buf);
-  return pn_rwbytes(buf->capacity - buf->size, buf->bytes);
+  return pn_rwbytes(pn_buffer_available(buf), buf->bytes);
 }
 
 static inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)

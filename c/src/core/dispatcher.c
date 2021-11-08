@@ -129,7 +129,5 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
 
 ssize_t pn_dispatcher_output(pn_transport_t *transport, char *bytes, size_t size)
 {
-    int n = pn_buffer_pop_left(transport->output_buffer, size, bytes);
-    // XXX: need to check for errors
-    return n;
+    return pn_buffer_pop_left(transport->output_buffer, size, bytes);
 }
