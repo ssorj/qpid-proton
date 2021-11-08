@@ -32,12 +32,11 @@
 #include <assert.h>
 #include <ctype.h>
 
-#define PNI_NULL_SIZE (-1)
-
 struct pn_string_t {
   char *bytes;
-  ssize_t size;       // PNI_NULL_SIZE (-1) means null
+  size_t size;
   size_t capacity;
+  bool is_null;
 };
 
 static void pn_string_finalize(void *object)
@@ -49,12 +48,12 @@ static void pn_string_finalize(void *object)
 static uintptr_t pn_string_hashcode(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return 0;
   }
 
   uintptr_t hashcode = 1;
-  for (ssize_t i = 0; i < string->size; i++) {
+  for (size_t i = 0; i < string->size; i++) {
     hashcode = hashcode * 31 + string->bytes[i];
   }
   return hashcode;
@@ -68,7 +67,7 @@ static intptr_t pn_string_compare(void *oa, void *ob)
     return b->size - a->size;
   }
 
-  if (a->size == PNI_NULL_SIZE) {
+  if (a->is_null) {
     return 0;
   } else {
     return memcmp(a->bytes, b->bytes, a->size);
@@ -78,14 +77,14 @@ static intptr_t pn_string_compare(void *oa, void *ob)
 static int pn_string_inspect(void *obj, pn_string_t *dst)
 {
   pn_string_t *str = (pn_string_t *) obj;
-  if (str->size == PNI_NULL_SIZE) {
+  if (str->is_null) {
     return pn_string_addf(dst, "null");
   }
 
   int err = pn_string_addf(dst, "\"");
   if (err) return err;
 
-  for (int i = 0; i < str->size; i++) {
+  for (size_t i = 0; i < str->size; i++) {
     uint8_t c = str->bytes[i];
     if (isprint(c)) {
       err = pn_string_addf(dst, "%c", c);
@@ -106,7 +105,6 @@ pn_string_t *pn_string(const char *bytes)
 
 #define pn_string_initialize NULL
 
-
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
   static const pn_class_t clazz = PN_CLASS(pn_string);
@@ -120,7 +118,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 PN_INLINE const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return NULL;
   } else {
     return string->bytes;
@@ -130,11 +128,7 @@ PN_INLINE const char *pn_string_get(pn_string_t *string)
 PN_INLINE size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
-  if (string->size == PNI_NULL_SIZE) {
-    return 0;
-  } else {
-    return string->size;
-  }
+  return string->size;
 }
 
 PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
@@ -162,28 +156,32 @@ int pn_string_grow(pn_string_t *string, size_t capacity)
   return 0;
 }
 
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
+PN_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
-  int err = pn_string_grow(string, n);
-  if (err) return err;
+  if (string->capacity < n * sizeof(char) + 1) {
+    int err = pn_string_grow(string, n);
+    if (err) return err;
+  }
 
   if (bytes) {
-    memcpy(string->bytes, bytes, n*sizeof(char));
+    memcpy(string->bytes, bytes, n * sizeof(char));
     string->bytes[n] = '\0';
     string->size = n;
+    string->is_null = false;
   } else {
-    string->size = PNI_NULL_SIZE;
+    string->size = 0;
+    string->is_null = true;
   }
 
   return 0;
 }
 
-PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
+ssize_t pn_string_put(pn_string_t *string, char *dst)
 {
   assert(string);
   assert(dst);
 
-  if (string->size != PNI_NULL_SIZE) {
+  if (!string->is_null) {
     memcpy(dst, string->bytes, string->size + 1);
   }
 
@@ -192,7 +190,8 @@ PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
 
 PN_INLINE void pn_string_clear(pn_string_t *string)
 {
-  pn_string_set(string, NULL);
+  string->size = 0;
+  string->is_null = true;
 }
 
 int pn_string_format(pn_string_t *string, const char *format, ...)
@@ -225,7 +224,7 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 {
   va_list copy;
 
-  if (string->size == PNI_NULL_SIZE) {
+  if (string->is_null) {
     return PN_ERR;
   }
 
