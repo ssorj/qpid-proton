@@ -85,7 +85,7 @@ void pn_delivery_map_free(pn_delivery_map_t *db)
   pn_free(db->deliveries);
 }
 
-PN_INLINE uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
+static inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
 {
   return i & 0x00000000FFFFFFFFUL;
 }
