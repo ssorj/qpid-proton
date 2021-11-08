@@ -21,7 +21,6 @@
 
 #include "util.h"
 
-#include "buffer.h"
 #include "memory.h"
 
 #include <proton/error.h>
@@ -149,4 +148,3 @@ pn_timestamp_t pn_timestamp_min( pn_timestamp_t a, pn_timestamp_t b )
   if (a) return a;
   return b;
 }
-

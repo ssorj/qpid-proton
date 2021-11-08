@@ -436,9 +436,7 @@ static int pni_data_grow(pn_data_t *data)
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   size_t offset = pn_buffer_size(data->buf);
-  int err = pn_buffer_append(data->buf, start, size);
-  if (err) return err;
-  err = pn_buffer_append(data->buf, "\0", 1);
+  int err = pn_buffer_append_string(data->buf, start, size);
   if (err) return err;
   return offset;
 }

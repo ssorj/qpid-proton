@@ -26,28 +26,127 @@
 #include <proton/object.h>
 #include <proton/types.h>
 
+#include <assert.h>
+#include <string.h>
+
+#include "util.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct pn_buffer_t pn_buffer_t;
+typedef struct pn_buffer_t {
+  char *bytes;
+  size_t capacity;
+  size_t size;
+} pn_buffer_t;
 
 pn_buffer_t *pn_buffer(size_t capacity);
 void pn_buffer_free(pn_buffer_t *buf);
-size_t pn_buffer_size(pn_buffer_t *buf);
-size_t pn_buffer_capacity(pn_buffer_t *buf);
-size_t pn_buffer_available(pn_buffer_t *buf);
 int pn_buffer_ensure(pn_buffer_t *buf, size_t size);
-int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size);
-int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size);
-size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst);
-int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
-void pn_buffer_clear(pn_buffer_t *buf);
-int pn_buffer_defrag(pn_buffer_t *buf);
-pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf);
-pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf);
-pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf);
-int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *string, size_t n);
+int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n);
+
+static inline size_t pn_buffer_capacity(pn_buffer_t *buf)
+{
+  assert(buf);
+  return buf->capacity;
+}
+
+static inline size_t pn_buffer_size(pn_buffer_t *buf)
+{
+  assert(buf);
+  return buf->size;
+}
+
+static inline size_t pn_buffer_available(pn_buffer_t *buf)
+{
+  assert(buf);
+  return buf->capacity - buf->size;
+}
+
+static inline void pn_buffer_clear(pn_buffer_t *buf)
+{
+  assert(buf);
+  buf->size = 0;
+}
+
+static inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
+{
+  assert(buf);
+  return pn_bytes(pn_buffer_size(buf), buf->bytes);
+}
+
+static inline pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
+{
+  assert(buf);
+  return pn_rwbytes(pn_buffer_size(buf), buf->bytes);
+}
+
+static inline pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf)
+{
+  assert(buf);
+  return pn_rwbytes(buf->capacity - buf->size, buf->bytes);
+}
+
+static inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
+{
+  assert(buf);
+
+  size_t capacity = pn_buffer_capacity(buf);
+  size_t old_size = pn_buffer_size(buf);
+  size_t new_size = old_size + size;
+
+  if (new_size > capacity) {
+    int err = pn_buffer_ensure(buf, new_size);
+    if (err) return err;
+  }
+
+  memcpy(buf->bytes + old_size, bytes, size);
+  buf->size = new_size;
+
+  return 0;
+}
+
+static inline int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, size_t size)
+{
+  assert(buf);
+
+  size_t capacity = pn_buffer_capacity(buf);
+  size_t old_size = pn_buffer_size(buf);
+  size_t new_size = old_size + size + 1;
+
+  if (new_size > capacity) {
+    int err = pn_buffer_ensure(buf, new_size);
+    if (err) return err;
+  }
+
+  memcpy(buf->bytes + old_size, bytes, size);
+  buf->bytes[new_size - 1] = '\0';
+  buf->size = new_size;
+
+  return 0;
+}
+
+static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst)
+{
+  assert(buf);
+
+  size_t old_size = pn_buffer_size(buf);
+  size = pn_min(size, old_size);
+  size_t new_size = old_size - size;
+
+  if (dst) {
+    memcpy(dst, buf->bytes, size);
+  }
+
+  if (new_size) {
+    memmove(buf->bytes, buf->bytes + size, new_size);
+  }
+
+  buf->size = new_size;
+
+  return size;
+}
 
 #ifdef __cplusplus
 }

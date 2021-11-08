@@ -22,8 +22,6 @@
  *
  */
 
-#include "buffer.h"
-
 #include <errno.h>
 #ifndef __cplusplus
 #include <stdbool.h>
