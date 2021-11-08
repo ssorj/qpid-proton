@@ -30,6 +30,7 @@
 #include <stdio.h>
 
 #include "buffer.h"
+#include "config.h"
 #include "memory.h"
 #include "util.h"
 
@@ -63,7 +64,7 @@ pn_buffer_t *pn_buffer(size_t capacity)
   return buf;
 }
 
-inline void pn_buffer_free(pn_buffer_t *buf)
+PN_INLINE void pn_buffer_free(pn_buffer_t *buf)
 {
   if (buf) {
     pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes);
@@ -71,17 +72,17 @@ inline void pn_buffer_free(pn_buffer_t *buf)
   }
 }
 
-inline size_t pn_buffer_size(pn_buffer_t *buf)
+PN_INLINE size_t pn_buffer_size(pn_buffer_t *buf)
 {
   return buf->size;
 }
 
-inline size_t pn_buffer_capacity(pn_buffer_t *buf)
+PN_INLINE size_t pn_buffer_capacity(pn_buffer_t *buf)
 {
   return buf->capacity;
 }
 
-inline size_t pn_buffer_available(pn_buffer_t *buf)
+PN_INLINE size_t pn_buffer_available(pn_buffer_t *buf)
 {
   return buf->capacity - buf->size;
 }
@@ -259,7 +260,7 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
   return 0;
 }
 
-inline void pn_buffer_clear(pn_buffer_t *buf)
+PN_INLINE void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;
   buf->size = 0;
@@ -284,14 +285,14 @@ static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {
   }
 }
 
-inline int pn_buffer_defrag(pn_buffer_t *buf)
+PN_INLINE int pn_buffer_defrag(pn_buffer_t *buf)
 {
   pn_buffer_rotate(buf, buf->start);
   buf->start = 0;
   return 0;
 }
 
-inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
+PN_INLINE pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
   if (!buf) {
     return (pn_bytes_t){0, NULL};
@@ -300,7 +301,7 @@ inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
   return (pn_bytes_t){.size=buf->size, .start=buf->bytes};
 }
 
-inline pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
+PN_INLINE pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
   if (!buf) {
     return (pn_rwbytes_t){0, NULL};
