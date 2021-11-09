@@ -136,7 +136,7 @@ PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
-int pn_string_grow(pn_string_t *string, size_t capacity)
+PN_NO_INLINE static int pni_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
   while (string->capacity < (capacity*sizeof(char) + 1)) {
@@ -156,10 +156,14 @@ int pn_string_grow(pn_string_t *string, size_t capacity)
   return 0;
 }
 
+int pn_string_grow(pn_string_t *string, size_t capacity) {
+  return pni_string_grow(string, capacity);
+}
+
 PN_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
   if (string->capacity < n * sizeof(char) + 1) {
-    int err = pn_string_grow(string, n);
+    int err = pni_string_grow(string, n);
     if (err) return err;
   }
 
@@ -176,7 +180,7 @@ PN_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
   return 0;
 }
 
-ssize_t pn_string_put(pn_string_t *string, char *dst)
+PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
 {
   assert(string);
   assert(dst);
@@ -235,7 +239,7 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
     if (err < 0) {
       return err;
     } else if ((size_t) err >= string->capacity - string->size) {
-      pn_string_grow(string, string->size + err);
+      pni_string_grow(string, string->size + err);
     } else {
       string->size += err;
       return 0;
@@ -255,10 +259,10 @@ PN_INLINE size_t pn_string_capacity(pn_string_t *string)
   return string->capacity - 1;
 }
 
-int pn_string_resize(pn_string_t *string, size_t size)
+PN_INLINE int pn_string_resize(pn_string_t *string, size_t size)
 {
   assert(string);
-  int err = pn_string_grow(string, size);
+  int err = pni_string_grow(string, size);
   if (err) return err;
   string->size = size;
   string->bytes[size] = '\0';

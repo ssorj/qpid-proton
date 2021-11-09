@@ -40,7 +40,7 @@ PN_INLINE size_t pn_list_size(pn_list_t *list)
   return list->size;
 }
 
-void *pn_list_get(pn_list_t *list, int index)
+PN_INLINE void *pn_list_get(pn_list_t *list, int index)
 {
   assert(list); assert(list->size);
   return list->elements[index % list->size];
@@ -55,7 +55,7 @@ void pn_list_set(pn_list_t *list, int index, void *value)
   pn_class_incref(list->clazz, value);
 }
 
-static void pni_list_ensure(pn_list_t *list, size_t capacity)
+PN_NO_INLINE static void pni_list_ensure(pn_list_t *list, size_t capacity)
 {
   assert(list);
   if (list->capacity < capacity) {
@@ -67,7 +67,7 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
   }
 }
 
-int pn_list_add(pn_list_t *list, void *value)
+PN_INLINE int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
   if (list->capacity <= list->size) {
@@ -130,7 +130,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
-PN_INLINE void pn_list_clear(pn_list_t *list)
+void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);
