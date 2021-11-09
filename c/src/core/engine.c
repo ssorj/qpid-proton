@@ -697,7 +697,7 @@ pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
     return pn_work_head(delivery->link->session->connection);
 }
 
-static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
+static inline void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   if (!delivery->work)
   {
@@ -706,7 +706,7 @@ static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
   }
 }
 
-static void pni_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
+static inline void pni_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   if (delivery->work)
   {
@@ -749,15 +749,11 @@ static void pni_add_tpwork(pn_delivery_t *delivery)
 
 PN_INLINE void pn_clear_tpwork(pn_delivery_t *delivery)
 {
-  pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
   {
+    pn_connection_t *connection = delivery->link->session->connection;
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
-    if (pn_refcount(delivery) > 0) {
-      pn_incref(delivery);
-      pn_decref(delivery);
-    }
   }
 }
 
@@ -1433,8 +1429,9 @@ static inline void pn_delivery_incref(void *object)
 
 static bool pni_preserve_delivery(pn_delivery_t *delivery)
 {
+  if (!delivery->local.settled) return true;
   pn_connection_t *conn = delivery->link->session->connection;
-  return !delivery->local.settled || (conn->transport && (delivery->state.init || delivery->tpwork));
+  return conn->transport && (delivery->state.init || delivery->tpwork);
 }
 
 static void pn_delivery_finalize(void *object)
@@ -1538,53 +1535,66 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
+
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
+
   if (!delivery) {
     static const pn_class_t clazz = PN_METACLASS(pn_delivery);
     delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
     if (!delivery) return NULL;
+
     delivery->tag = pn_buffer(16);
-    delivery->bytes = pn_buffer(64);
+    delivery->bytes = pn_buffer(128);
+
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
+
     delivery->context = pn_record();
   } else {
     assert(!delivery->state.init);
+
+    pn_buffer_clear(delivery->tag);
+    pn_buffer_clear(delivery->bytes);
+
+    pn_disposition_clear(&delivery->local);
+    pn_disposition_clear(&delivery->remote);
+
+    pn_record_clear(delivery->context);
   }
-  delivery->link = link;
-  pn_incref(delivery->link);  // keep link until finalized
-  pn_buffer_clear(delivery->tag);
+
   pn_buffer_append(delivery->tag, tag.start, tag.size);
-  pn_disposition_clear(&delivery->local);
-  pn_disposition_clear(&delivery->remote);
-  delivery->updated = false;
-  delivery->settled = false;
-  LL_ADD(link, unsettled, delivery);
-  delivery->referenced = true;
+
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
-  delivery->work = false;
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
-  delivery->tpwork = false;
-  pn_buffer_clear(delivery->bytes);
+
+  delivery->state = (pn_delivery_state_t) {0};
+
+  delivery->updated = false;
+  delivery->settled = false;
   delivery->done = false;
   delivery->aborted = false;
-  pn_record_clear(delivery->context);
+  delivery->work = false;
+  delivery->tpwork = false;
 
-  // begin delivery state
-  delivery->state.init = false;
-  delivery->state.sending = false; /* True if we have sent at least 1 frame */
-  delivery->state.sent = false;    /* True if we have sent the entire delivery */
-  // end delivery state
-
-  if (!link->current)
-    link->current = delivery;
+  delivery->referenced = true;
+  delivery->link = link;
+  pn_incref(delivery->link); // Keep link until finalized
+  LL_ADD(link, unsettled, delivery);
 
   link->unsettled_count++;
 
-  pn_work_update(link->session->connection, delivery);
+  if (!link->current) {
+    link->current = delivery;
+  }
+
+  if (link->current == delivery) {
+    if (link->endpoint.type == RECEIVER || (link->endpoint.type == SENDER && pn_link_credit(link))) {
+      pni_add_work(link->session->connection, delivery);
+    }
+  }
 
   // XXX: could just remove incref above
   pn_decref(delivery);
@@ -1592,7 +1602,64 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
-bool pn_delivery_buffered(pn_delivery_t *delivery)
+// pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
+// {
+//   assert(link);
+//   pn_list_t *pool = link->session->connection->delivery_pool;
+//   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
+//   if (!delivery) {
+//     static const pn_class_t clazz = PN_METACLASS(pn_delivery);
+//     delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
+//     if (!delivery) return NULL;
+//     delivery->tag = pn_buffer(16);
+//     delivery->bytes = pn_buffer(64);
+//     pn_disposition_init(&delivery->local);
+//     pn_disposition_init(&delivery->remote);
+//     delivery->context = pn_record();
+//   } else {
+//     assert(!delivery->state.init);
+//   }
+//   delivery->link = link;
+//   pn_incref(delivery->link);  // keep link until finalized
+//   pn_buffer_clear(delivery->tag);
+//   pn_buffer_append(delivery->tag, tag.start, tag.size);
+//   pn_disposition_clear(&delivery->local);
+//   pn_disposition_clear(&delivery->remote);
+//   delivery->updated = false;
+//   delivery->settled = false;
+//   LL_ADD(link, unsettled, delivery);
+//   delivery->referenced = true;
+//   delivery->work_next = NULL;
+//   delivery->work_prev = NULL;
+//   delivery->work = false;
+//   delivery->tpwork_next = NULL;
+//   delivery->tpwork_prev = NULL;
+//   delivery->tpwork = false;
+//   pn_buffer_clear(delivery->bytes);
+//   delivery->done = false;
+//   delivery->aborted = false;
+//   pn_record_clear(delivery->context);
+
+//   // begin delivery state
+//   delivery->state.init = false;
+//   delivery->state.sending = false; /* True if we have sent at least 1 frame */
+//   delivery->state.sent = false;    /* True if we have sent the entire delivery */
+//   // end delivery state
+
+//   if (!link->current)
+//     link->current = delivery;
+
+//   link->unsettled_count++;
+
+//   pn_work_update(link->session->connection, delivery);
+
+//   // XXX: could just remove incref above
+//   pn_decref(delivery);
+
+//   return delivery;
+// }
+
+PN_INLINE bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
   if (delivery->settled) return false;
@@ -1631,7 +1698,7 @@ pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
   return d;
 }
 
-bool pn_delivery_current(pn_delivery_t *delivery)
+PN_INLINE bool pn_delivery_current(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   return pn_link_current(link) == delivery;
@@ -1793,20 +1860,50 @@ static void pni_advance_receiver(pn_link_t *link)
 bool pn_link_advance(pn_link_t *link)
 {
   if (link && link->current) {
+    pn_connection_t *conn = link->session->connection;
     pn_delivery_t *prev = link->current;
+
     if (link->endpoint.type == SENDER) {
       pni_advance_sender(link);
     } else {
       pni_advance_receiver(link);
     }
+
+    if (prev->updated) {
+      pni_add_work(conn, prev);
+    } else {
+      pni_clear_work(conn, prev);
+    }
+
     pn_delivery_t *next = link->current;
-    pn_work_update(link->session->connection, prev);
-    if (next) pn_work_update(link->session->connection, next);
+
+    if (next) {
+      pni_add_work(conn, next);
+    }
+
     return prev != next;
   } else {
     return false;
   }
 }
+
+// bool pn_link_advance(pn_link_t *link)
+// {
+//   if (link && link->current) {
+//     pn_delivery_t *prev = link->current;
+//     if (link->endpoint.type == SENDER) {
+//       pni_advance_sender(link);
+//     } else {
+//       pni_advance_receiver(link);
+//     }
+//     pn_delivery_t *next = link->current;
+//     pn_work_update(link->session->connection, prev);
+//     if (next) pn_work_update(link->session->connection, next);
+//     return prev != next;
+//   } else {
+//     return false;
+//   }
+// }
 
 PN_INLINE int pn_link_credit(pn_link_t *link)
 {
