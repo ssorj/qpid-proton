@@ -27,8 +27,10 @@
 
 #if defined(__GNUC__)
 #  define PN_INLINE inline
+#  define PN_NO_INLINE __attribute__((noinline))
 #else
 #  define PN_INLINE
+#  define PN_NO_INLINE
 #endif
 
 #endif /*  _PROTON_SRC_CONFIG_H */
