@@ -23,6 +23,7 @@
 
 #include "core/config.h"
 #include "core/memory.h"
+#include "core/object/object_private.h"
 
 #include <stddef.h>
 #include <assert.h>
@@ -50,9 +51,9 @@ void pn_list_set(pn_list_t *list, int index, void *value)
 {
   assert(list); assert(list->size);
   void *old = list->elements[index % list->size];
-  pn_class_decref(list->clazz, old);
+  pni_class_decref(list->clazz, old);
   list->elements[index % list->size] = value;
-  pn_class_incref(list->clazz, value);
+  pni_class_incref(list->clazz, value);
 }
 
 PN_NO_INLINE static void pni_list_ensure(pn_list_t *list, size_t capacity)
@@ -74,7 +75,7 @@ PN_INLINE int pn_list_add(pn_list_t *list, void *value)
     pni_list_ensure(list, list->size + 1);
   }
   list->elements[list->size++] = value;
-  pn_class_incref(list->clazz, value);
+  pni_class_incref(list->clazz, value);
   return 0;
 }
 
@@ -119,7 +120,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
   index %= list->size;
 
   for (int i = 0; i < n; i++) {
-    pn_class_decref(list->clazz, list->elements[index + i]);
+    pni_class_decref(list->clazz, list->elements[index + i]);
   }
 
   size_t slide = list->size - (index + n);
@@ -201,7 +202,7 @@ static void pn_list_finalize(void *object)
   assert(object);
   pn_list_t *list = (pn_list_t *) object;
   for (size_t i = 0; i < list->size; i++) {
-    pn_class_decref(list->clazz, pn_list_get(list, i));
+    pni_class_decref(list->clazz, pn_list_get(list, i));
   }
   pni_mem_subdeallocate(pn_class(list), list, list->elements);
 }

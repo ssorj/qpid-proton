@@ -23,6 +23,7 @@
 
 #include "core/config.h"
 #include "core/memory.h"
+#include "core/object/object_private.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -74,7 +75,7 @@ PN_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
   assert(clazz);
   if (object) {
     clazz = clazz->reify(object);
-    clazz->incref(object);
+    pni_class_incref(clazz, object);
   }
   return object;
 }
@@ -83,7 +84,7 @@ PN_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   clazz = clazz->reify(object);
-  return clazz->refcount(object);
+  return pni_class_refcount(clazz, object);
 }
 
 int pn_class_decref(const pn_class_t *clazz, void *object)
@@ -92,22 +93,7 @@ int pn_class_decref(const pn_class_t *clazz, void *object)
 
   if (object) {
     clazz = clazz->reify(object);
-    clazz->decref(object);
-    int rc = clazz->refcount(object);
-    if (rc == 0) {
-      if (clazz->finalize) {
-        clazz->finalize(object);
-        // check the refcount again in case the finalizer created a
-        // new reference
-        rc = clazz->refcount(object);
-      }
-      if (rc == 0) {
-        clazz->free(object);
-        return 0;
-      }
-    } else {
-      return rc;
-    }
+    return pni_class_decref(clazz, object);
   }
 
   return 0;
@@ -121,7 +107,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
     int rc = clazz->refcount(object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
-      rc = pn_class_decref(clazz, object);
+      rc = pni_class_decref(clazz, object);
       assert(rc == 0);
     } else {
       if (clazz->finalize) {
