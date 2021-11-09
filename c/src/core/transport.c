@@ -90,7 +90,6 @@ static inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
   return i & 0x00000000FFFFFFFFUL;
 }
 
-
 static inline pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
 {
   return (pn_delivery_t *) pn_hash_get(db->deliveries, pni_sequence_make_hash(id) );
@@ -112,7 +111,7 @@ static inline pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, 
   return ds;
 }
 
-void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
+static inline void pni_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   if (delivery->state.init) {
     delivery->state.init = false;
@@ -120,6 +119,11 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
     delivery->state.sent = false;
     pn_hash_del(db->deliveries, pni_sequence_make_hash(delivery->state.id) );
   }
+}
+
+void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
+{
+  pni_delivery_map_del(db, delivery);
 }
 
 static inline void pni_delivery_map_clear(pn_delivery_map_t *dm)
@@ -130,7 +134,7 @@ static inline void pni_delivery_map_clear(pn_delivery_map_t *dm)
        entry = pn_hash_next(hash, entry))
   {
     pn_delivery_t *dlv = (pn_delivery_t *) pn_hash_value(hash, entry);
-    pn_delivery_map_del(dm, dlv);
+    pni_delivery_map_del(dm, dlv);
   }
   dm->next = 0;
 }
@@ -1357,7 +1361,7 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   assert(!delivery->work);
   pn_clear_tpwork(delivery);
-  pn_delivery_map_del(db, delivery);
+  pni_delivery_map_del(db, delivery);
   pn_incref(delivery);
   pn_decref(delivery);
 }
@@ -2689,27 +2693,40 @@ static void pni_close_head(pn_transport_t *transport)
   }
 }
 
+PN_NO_INLINE static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
+{
+  int more = 0;
+
+  if (!transport->remote_max_frame) {
+    // No limit, so double it
+    more = transport->output_size;
+  } else if (transport->remote_max_frame > transport->output_size) {
+    more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
+  }
+
+  if (more) {
+    char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf,
+                                                  transport->output_size + more);
+    if (newbuf) {
+      transport->output_buf = newbuf;
+      transport->output_size += more;
+      space += more;
+    }
+  }
+
+  return space;
+}
+
 // generate outbound data, return amount of pending output else error
-static ssize_t transport_produce(pn_transport_t *transport)
+static inline ssize_t transport_produce(pn_transport_t *transport)
 {
   if (transport->head_closed) return PN_EOS;
 
   ssize_t space = transport->output_size - transport->output_pending;
 
-  if (space <= 0) {     // can we expand the buffer?
-    int more = 0;
-    if (!transport->remote_max_frame)   // no limit, so double it
-      more = transport->output_size;
-    else if (transport->remote_max_frame > transport->output_size)
-      more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
-    if (more) {
-      char *newbuf = (char *)pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf, transport->output_size + more );
-      if (newbuf) {
-        transport->output_buf = newbuf;
-        transport->output_size += more;
-        space += more;
-      }
-    }
+  if (space <= 0) {
+    // can we expand the buffer?
+    space = pni_transport_grow_output_capacity(transport, space);
   }
 
   while (space > 0) {
@@ -2945,7 +2962,6 @@ PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == don
   return capacity;
 }
 
-
 PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
@@ -2954,7 +2970,7 @@ PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+PN_INLINE ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3017,7 +3033,7 @@ PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+PN_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 

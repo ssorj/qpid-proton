@@ -46,8 +46,6 @@ typedef struct {
 } pn_frame_t;
 
 ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max, pn_logger_t *logger);
-size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger);
-
 int pn_framing_send_amqp(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative);
 int pn_framing_send_amqp_with_payload(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload);
 int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative);
