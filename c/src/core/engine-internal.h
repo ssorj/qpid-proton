@@ -177,7 +177,7 @@ struct pn_transport_t {
   uint64_t input_frames_ct;
 
   /* output buffered for send */
-  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (128*1024)
+  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (8*1024)
   size_t output_size;
   size_t output_pending;
   char *output_buf;
@@ -377,6 +377,9 @@ void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
 
 ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n);
+
+void pni_transport_process_output(pn_transport_t *transport);
+void pni_transport_rotate_output(pn_transport_t *transport, size_t size);
 
 #if __cplusplus
 }

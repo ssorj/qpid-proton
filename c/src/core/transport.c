@@ -1796,7 +1796,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 }
 
 // process pending input until none remaining or EOS
-static ssize_t transport_consume(pn_transport_t *transport)
+static inline ssize_t transport_consume(pn_transport_t *transport)
 {
   // This allows whatever is driving the I/O to set the error
   // condition on the transport before doing pn_transport_close_head()
@@ -2950,7 +2950,7 @@ ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n) {
 }
 
 // input
-PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -2962,7 +2962,7 @@ PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == don
   return capacity;
 }
 
-PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
+char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -2970,7 +2970,7 @@ PN_INLINE char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-PN_INLINE ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -3005,7 +3005,6 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
     pni_close_tail(transport);
   }
 
-  if (n < 0 && n != PN_EOS) return n;
   return 0;
 }
 
@@ -3019,13 +3018,13 @@ int pn_transport_close_tail(pn_transport_t *transport)
 }
 
 // output
-PN_INLINE ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
+ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
   return transport_produce( transport );
 }
 
-PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
+const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3033,7 +3032,13 @@ PN_INLINE const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-PN_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+PN_INLINE void pni_transport_process_output(pn_transport_t *transport)
+{
+  assert(transport);
+  transport_produce(transport);
+}
+
+ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -3053,7 +3058,7 @@ PN_INLINE ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t
   return size;
 }
 
-PN_INLINE void pn_transport_pop(pn_transport_t *transport, size_t size)
+void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
   if (transport) {
     assert( transport->output_pending >= size );

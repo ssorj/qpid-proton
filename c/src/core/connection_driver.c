@@ -23,6 +23,7 @@
 #include <proton/connection_driver.h>
 #include <proton/event.h>
 #include <proton/transport.h>
+#include <assert.h>
 #include <string.h>
 #include "core/config.h"
 
@@ -70,36 +71,68 @@ PN_INLINE pn_rwbytes_t pn_connection_driver_sized_read_buffer(pn_connection_driv
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
-PN_INLINE pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
-  ssize_t cap = pn_transport_capacity(d->transport);
-  return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
+pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
+  assert(d);
+
+  pn_transport_t *transport = d->transport;
+
+  if (transport->tail_closed) {
+    return pn_rwbytes_null;
+  }
+
+  size_t capacity = transport->input_size - transport->input_pending;
+  char *buffer = &transport->input_buf[transport->input_pending];
+
+  return pn_rwbytes(capacity, buffer);
 }
 
-PN_INLINE void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
-  if (n > 0) pn_transport_process(d->transport, n);
+void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
+  assert(d);
+  pn_transport_process(d->transport, n);
 }
 
 bool pn_connection_driver_read_closed(pn_connection_driver_t *d) {
-  return pn_transport_tail_closed(d->transport);
+  assert(d);
+  return d->transport->tail_closed;
 }
 
 void pn_connection_driver_read_close(pn_connection_driver_t *d) {
+  assert(d);
+
   if (!pn_connection_driver_read_closed(d)) {
     pn_transport_close_tail(d->transport);
   }
 }
 
-PN_INLINE pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
-  ssize_t pending = pn_transport_pending(d->transport);
-  return (pending > 0) ?
-    pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
+pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
+  assert(d);
+
+  pn_transport_t *transport = d->transport;
+
+  pni_transport_process_output(transport);
+
+  return pn_bytes(transport->output_pending, transport->output_buf);
 }
 
-PN_INLINE pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
-  pn_transport_pop(d->transport, n);
-  ssize_t pending = d->transport->output_pending;
-  return (pending > 0) ?
-    pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
+pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t size) {
+  assert(d);
+
+  pn_transport_t *transport = d->transport;
+
+  assert(transport->output_pending >= size);
+
+  transport->output_pending -= size;
+  transport->bytes_output += size;
+
+  if (transport->output_pending) {
+    memmove(transport->output_buf, &transport->output_buf[size], transport->output_pending);
+  }
+
+  if (transport->output_pending == 0) {
+    pni_transport_process_output(transport);
+  }
+
+  return pn_bytes(transport->output_pending, transport->output_buf);
 }
 
 bool pn_connection_driver_write_closed(pn_connection_driver_t *d) {
