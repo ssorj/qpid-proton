@@ -66,10 +66,21 @@ pn_record_t *pn_record(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_record);
   pn_record_t *record = (pn_record_t *) pn_class_new(&clazz, sizeof(pn_record_t));
+  pn_record_def(record, PN_LEGCTX, PN_VOID);
   return record;
 }
 
-PN_NO_INLINE static pni_field_t *pni_record_create(pn_record_t *record) {
+static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
+  for (size_t i = 0; i < record->size; i++) {
+    pni_field_t *field = &record->fields[i];
+    if (field->key == key) {
+      return field;
+    }
+  }
+  return NULL;
+}
+
+static inline pni_field_t *pni_record_create(pn_record_t *record) {
   record->size++;
   if (record->size > record->capacity) {
     record->fields = (pni_field_t *) pni_mem_subreallocate(pn_class(record), record, record->fields, record->size * sizeof(pni_field_t));
@@ -80,24 +91,6 @@ PN_NO_INLINE static pni_field_t *pni_record_create(pn_record_t *record) {
   field->clazz = NULL;
   field->value = NULL;
   return field;
-}
-
-static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
-  if (key == PN_LEGCTX) {
-    pni_field_t *field = pni_record_create(record);
-    field->key = PN_LEGCTX;
-    field->clazz = PN_VOID;
-    return field;
-  }
-
-  for (size_t i = 0; i < record->size; i++) {
-    pni_field_t *field = &record->fields[i];
-    if (field->key == key) {
-      return field;
-    }
-  }
-
-  return NULL;
 }
 
 void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz)
@@ -140,6 +133,7 @@ PN_INLINE void *pn_record_get(pn_record_t *record, pn_handle_t key)
 void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
 {
   assert(record);
+
   pni_field_t *field = pni_record_find(record, key);
   if (field) {
     void *old = field->value;
@@ -149,10 +143,9 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
   }
 }
 
-PN_INLINE void pn_record_clear(pn_record_t *record)
+void pn_record_clear(pn_record_t *record)
 {
   assert(record);
-
   for (size_t i = 0; i < record->size; i++) {
     pni_field_t *field = &record->fields[i];
     pni_class_decref(field->clazz, field->value);
@@ -160,6 +153,6 @@ PN_INLINE void pn_record_clear(pn_record_t *record)
     field->clazz = NULL;
     field->value = NULL;
   }
-
   record->size = 0;
+  pn_record_def(record, PN_LEGCTX, PN_VOID);
 }
