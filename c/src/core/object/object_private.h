@@ -47,7 +47,10 @@ static inline int pni_class_refcount(const pn_class_t *clazz, void *object)
 static inline int pni_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  assert(object);
+
+  if (!object) {
+    return 0;
+  }
 
   clazz->decref(object);
 
