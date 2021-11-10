@@ -136,7 +136,8 @@ pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t siz
 }
 
 bool pn_connection_driver_write_closed(pn_connection_driver_t *d) {
-  return pn_transport_head_closed(d->transport);
+  assert(d);
+  return d->transport->head_closed;
 }
 
 void pn_connection_driver_write_close(pn_connection_driver_t *d) {

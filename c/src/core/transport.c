@@ -3102,11 +3102,11 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   return true;
 }
 
-PN_INLINE bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
+bool pn_transport_head_closed(pn_transport_t *transport) { return transport->head_closed; }
 
-PN_INLINE bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
+bool pn_transport_tail_closed(pn_transport_t *transport) { return transport->tail_closed; }
 
-PN_INLINE bool pn_transport_closed(pn_transport_t *transport) {
+bool pn_transport_closed(pn_transport_t *transport) {
   return transport->head_closed && transport->tail_closed;
 }
 
