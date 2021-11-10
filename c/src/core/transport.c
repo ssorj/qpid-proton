@@ -2933,7 +2933,7 @@ ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n) {
 }
 
 // input
-ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
+PN_INLINE ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
@@ -3037,7 +3037,7 @@ ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
   return size;
 }
 
-void pn_transport_pop(pn_transport_t *transport, size_t size)
+PN_INLINE void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
   if (transport) {
     assert( transport->output_pending >= size );
