@@ -138,7 +138,7 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;
   pn_data_t *disp_data;
-  //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
+//#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
 /* This is wrong and bad  we should really use a sensible starting size not unlimited */
 #define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
   uint32_t   local_max_frame;
