@@ -149,6 +149,13 @@ static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t n, char *dst)
   if (new_size) {
     buf->start += n;
     buf->size = new_size;
+
+    if (buf->start - buf->bytes > 1000 * 1000 * 10) {
+      // fprintf(stderr, "pn_buffer_pop_left (memmove): start_offset=%ld n=%ld new_size=%ld\n", buf->start - buf->bytes, n, new_size);
+
+      memmove(buf->bytes, buf->start, new_size);
+      buf->start = buf->bytes;
+    }
   } else {
     // fprintf(stderr, "pn_buffer_pop_left (clear): start_offset=%ld n=%ld new_size=%ld\n", buf->start - buf->bytes, n, new_size);
 
@@ -156,13 +163,6 @@ static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t n, char *dst)
   }
 
   // pn_buffer_pop_left (memmove): start_offset=1_048_576 n=131_072 new_size=35_089_796
-
-  if (buf->start - buf->bytes > 1000 * 1000 * 10) {
-    // fprintf(stderr, "pn_buffer_pop_left (memmove): start_offset=%ld n=%ld new_size=%ld\n", buf->start - buf->bytes, n, new_size);
-
-    memmove(buf->bytes, buf->start, new_size);
-    buf->start = buf->bytes;
-  }
 
   return n;
 }
