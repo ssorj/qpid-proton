@@ -50,10 +50,10 @@ PN_INLINE void *pn_list_get(pn_list_t *list, int index)
 void pn_list_set(pn_list_t *list, int index, void *value)
 {
   assert(list); assert(list->size);
-  void *old = list->elements[index % list->size];
-  pni_class_decref(list->clazz, old);
+  void *old = pn_list_get(list, index);
+  if (old) pni_class_decref(list->clazz, old);
   list->elements[index % list->size] = value;
-  pni_class_incref(list->clazz, value);
+  if (value) pni_class_incref(list->clazz, value);
 }
 
 PN_NO_INLINE static void pni_list_ensure(pn_list_t *list, size_t capacity)
@@ -75,7 +75,7 @@ PN_INLINE int pn_list_add(pn_list_t *list, void *value)
     pni_list_ensure(list, list->size + 1);
   }
   list->elements[list->size++] = value;
-  pni_class_incref(list->clazz, value);
+  if (value) pni_class_incref(list->clazz, value);
   return 0;
 }
 
@@ -120,7 +120,8 @@ void pn_list_del(pn_list_t *list, int index, int n)
   index %= list->size;
 
   for (int i = 0; i < n; i++) {
-    pni_class_decref(list->clazz, list->elements[index + i]);
+    void *elem = list->elements[index + i];
+    if (elem) pni_class_decref(list->clazz, elem);
   }
 
   size_t slide = list->size - (index + n);
@@ -202,7 +203,8 @@ static void pn_list_finalize(void *object)
   assert(object);
   pn_list_t *list = (pn_list_t *) object;
   for (size_t i = 0; i < list->size; i++) {
-    pni_class_decref(list->clazz, pn_list_get(list, i));
+    void *elem = pn_list_get(list, i);
+    if (elem) pni_class_decref(list->clazz, elem);
   }
   pni_mem_subdeallocate(pn_class(list), list, list->elements);
 }
@@ -214,7 +216,8 @@ static uintptr_t pn_list_hashcode(void *object)
   uintptr_t hash = 1;
 
   for (size_t i = 0; i < list->size; i++) {
-    hash = hash * 31 + pn_hashcode(pn_list_get(list, i));
+    void *elem = pn_list_get(list, i);
+    if (elem) hash = hash * 31 + pn_hashcode(elem);
   }
 
   return hash;

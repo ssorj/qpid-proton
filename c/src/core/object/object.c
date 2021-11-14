@@ -219,9 +219,8 @@ PN_INLINE const pn_class_t *pn_object_reify(void *object)
 
 PN_INLINE void pn_object_incref(void *object)
 {
-  if (object) {
-    pni_head(object)->refcount++;
-  }
+  assert(object);
+  pni_head(object)->refcount++;
 }
 
 PN_INLINE int pn_object_refcount(void *object)
@@ -232,6 +231,7 @@ PN_INLINE int pn_object_refcount(void *object)
 
 PN_INLINE void pn_object_decref(void *object)
 {
+  assert(object);
   pni_head_t *head = pni_head(object);
   assert(head->refcount > 0);
   head->refcount--;
