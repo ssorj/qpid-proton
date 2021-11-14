@@ -31,8 +31,8 @@
 #define pn_object_initialize NULL
 #define pn_object_finalize NULL
 #define pn_object_inspect NULL
-uintptr_t pn_object_hashcode(void *object) { return (uintptr_t) object; }
-intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
+#define pn_object_hashcode NULL
+#define pn_object_compare NULL
 
 const pn_class_t PN_OBJECT[] = {PN_CLASS(pn_object)};
 
@@ -129,6 +129,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
 PN_INLINE const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
+  assert(object);
 
   if (clazz->reify == &pn_object_reify) {
     return pni_head(object)->clazz;
@@ -152,22 +153,24 @@ PN_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
   }
 }
 
-intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
+PN_INLINE intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
 {
   assert(clazz);
 
   if (a == b) return 0;
 
-  clazz = clazz->reify(a);
+  if (a && b) {
+    clazz = pn_class_reify(clazz, a);
 
-  if (a && b && clazz->compare) {
-    return clazz->compare(a, b);
-  } else {
-    return (intptr_t) a - (intptr_t) b;
+    if (clazz->compare) {
+      return clazz->compare(a, b);
+    }
   }
+
+  return (intptr_t) a - (intptr_t) b;
 }
 
-bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
+PN_INLINE bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
 {
   return pn_class_compare(clazz, a, b) == 0;
 }
