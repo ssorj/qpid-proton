@@ -833,16 +833,29 @@ pn_session_t *pn_session_next(pn_session_t *ssn, pn_state_t state)
     return NULL;
 }
 
+static inline bool pni_link_matches(pn_endpoint_t *endpoint, pn_state_t state)
+{
+  if (endpoint->type == SENDER || endpoint->type == RECEIVER) {
+    if (!state) return true;
+
+    if ((state & PN_REMOTE_MASK) == 0 || (state & PN_LOCAL_MASK) == 0) {
+      return endpoint->state & state;
+    }
+
+    return endpoint->state == state;
+  }
+
+  return false;
+}
+
 pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
 {
-  if (!conn) return NULL;
+  assert(conn);
 
   pn_endpoint_t *endpoint = conn->endpoint_head;
 
-  while (endpoint)
-  {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state))
-      return (pn_link_t *) endpoint;
+  while (endpoint) {
+    if (pni_link_matches(endpoint, state)) return (pn_link_t *) endpoint;
     endpoint = endpoint->endpoint_next;
   }
 
@@ -851,14 +864,12 @@ pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
 
 pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 {
-  if (!link) return NULL;
+  assert(link);
 
   pn_endpoint_t *endpoint = link->endpoint.endpoint_next;
 
-  while (endpoint)
-  {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state))
-      return (pn_link_t *) endpoint;
+  while (endpoint) {
+    if (pni_link_matches(endpoint, state)) return (pn_link_t *) endpoint;
     endpoint = endpoint->endpoint_next;
   }
 
@@ -2412,14 +2423,13 @@ pn_link_t *pn_event_link(pn_event_t *event)
   return NULL;
 }
 
-pn_delivery_t *pn_event_delivery(pn_event_t *event)
+PN_INLINE pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (pn_class_id(pn_event_class(event))) {
-  case CID_pn_delivery:
+  if (pn_class_id(pn_event_class(event)) == CID_pn_delivery) {
     return (pn_delivery_t *) pn_event_context(event);
-  default:
-    return NULL;
   }
+
+  return NULL;
 }
 
 pn_transport_t *pn_event_transport(pn_event_t *event)

@@ -142,7 +142,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
     return NULL;
   }
 
-  clazz = clazz->reify(context);
+  clazz = pn_class_reify(clazz, context);
 
   pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
 
@@ -151,7 +151,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   }
 
   event->pool = collector->pool;
-  pn_incref(event->pool);
+  pn_object_incref(event->pool);
 
   if (tail) {
     tail->next = event;
@@ -164,7 +164,8 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   event->clazz = clazz;
   event->context = context;
   event->type = type;
-  pn_class_incref(clazz, event->context);
+
+  clazz->incref(event->context);
 
   return event;
 }
