@@ -50,6 +50,14 @@ int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst,
 
 const pn_class_t PN_VOID[] = {PN_METACLASS(pn_void)};
 
+typedef struct {
+  const pn_class_t *clazz;
+  int refcount;
+} pni_head_t;
+
+#define pni_head(PTR) \
+  (((pni_head_t *) (PTR)) - 1)
+
 const char *pn_class_name(const pn_class_t *clazz)
 {
   return clazz->name;
@@ -74,7 +82,7 @@ PN_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
-    clazz = clazz->reify(object);
+    clazz = pn_class_reify(clazz, object);
     pni_class_incref(clazz, object);
   }
   return object;
@@ -83,7 +91,7 @@ PN_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
 PN_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  clazz = clazz->reify(object);
+  clazz = pn_class_reify(clazz, object);
   return pni_class_refcount(clazz, object);
 }
 
@@ -92,7 +100,7 @@ int pn_class_decref(const pn_class_t *clazz, void *object)
   assert(clazz);
 
   if (object) {
-    clazz = clazz->reify(object);
+    clazz = pn_class_reify(clazz, object);
     return pni_class_decref(clazz, object);
   }
 
@@ -103,7 +111,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   if (object) {
-    clazz = clazz->reify(object);
+    clazz = pn_class_reify(clazz, object);
     int rc = clazz->refcount(object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
@@ -121,6 +129,11 @@ void pn_class_free(const pn_class_t *clazz, void *object)
 PN_INLINE const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
+
+  if (clazz->reify == &pn_object_reify) {
+    return pni_head(object)->clazz;
+  }
+
   return clazz->reify(object);
 }
 
@@ -130,7 +143,7 @@ PN_INLINE uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
 
   if (!object) return 0;
 
-  clazz = clazz->reify(object);
+  clazz = pn_class_reify(clazz, object);
 
   if (clazz->hashcode) {
     return clazz->hashcode(object);
@@ -163,7 +176,7 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
 {
   assert(clazz);
 
-  clazz = clazz->reify(object);
+  clazz = pn_class_reify(clazz, object);
 
   if (!pn_string_get(dst)) {
     pn_string_set(dst, "");
@@ -177,14 +190,6 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
 
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
-
-typedef struct {
-  const pn_class_t *clazz;
-  int refcount;
-} pni_head_t;
-
-#define pni_head(PTR) \
-  (((pni_head_t *) (PTR)) - 1)
 
 PN_INLINE void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
