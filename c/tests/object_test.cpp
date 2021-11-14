@@ -68,8 +68,8 @@ static pn_map_t *build_map(float load_factor, size_t capacity, ...) {
 
     if (count % 2) {
       pn_map_put(result, prev, arg);
-      pn_class_decref(PN_OBJECT, prev);
-      pn_class_decref(PN_OBJECT, arg);
+      if (prev) pn_class_decref(PN_OBJECT, prev);
+      if (arg) pn_class_decref(PN_OBJECT, arg);
     } else {
       prev = arg;
     }

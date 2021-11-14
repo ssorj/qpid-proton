@@ -81,30 +81,32 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
 PN_INLINE void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  if (object) {
-    clazz = pn_class_reify(clazz, object);
-    pni_class_incref(clazz, object);
-  }
+  assert(object);
+
+  clazz = pn_class_reify(clazz, object);
+  pni_class_incref(clazz, object);
+
   return object;
 }
 
 PN_INLINE int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
+  assert(object);
+
   clazz = pn_class_reify(clazz, object);
+
   return pni_class_refcount(clazz, object);
 }
 
 int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
+  assert(object);
 
-  if (object) {
-    clazz = pn_class_reify(clazz, object);
-    return pni_class_decref(clazz, object);
-  }
+  clazz = pn_class_reify(clazz, object);
 
-  return 0;
+  return pni_class_decref(clazz, object);
 }
 
 void pn_class_free(const pn_class_t *clazz, void *object)
