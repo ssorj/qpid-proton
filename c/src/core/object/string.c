@@ -34,9 +34,9 @@
 
 struct pn_string_t {
   char *bytes;
-  size_t size;
   size_t capacity;
-  bool is_null;
+  size_t size;
+  bool is_set;
 };
 
 static void pn_string_finalize(void *object)
@@ -48,7 +48,7 @@ static void pn_string_finalize(void *object)
 static uintptr_t pn_string_hashcode(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
-  if (string->is_null) {
+  if (!string->is_set) {
     return 0;
   }
 
@@ -67,17 +67,17 @@ static intptr_t pn_string_compare(void *oa, void *ob)
     return b->size - a->size;
   }
 
-  if (a->is_null) {
-    return 0;
-  } else {
+  if (a->is_set) {
     return memcmp(a->bytes, b->bytes, a->size);
+  } else {
+    return 0;
   }
 }
 
 static int pn_string_inspect(void *obj, pn_string_t *dst)
 {
   pn_string_t *str = (pn_string_t *) obj;
-  if (str->is_null) {
+  if (!str->is_set) {
     return pn_string_addf(dst, "null");
   }
 
@@ -118,10 +118,10 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 PN_INLINE const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
-  if (string->is_null) {
-    return NULL;
-  } else {
+  if (string->is_set) {
     return string->bytes;
+  } else {
+    return NULL;
   }
 }
 
@@ -162,20 +162,21 @@ int pn_string_grow(pn_string_t *string, size_t capacity) {
 
 PN_INLINE int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
+  if (!bytes) {
+    pn_string_clear(string);
+    return 0;
+  }
+
   if (string->capacity < n * sizeof(char) + 1) {
     int err = pni_string_grow(string, n);
     if (err) return err;
   }
 
-  if (bytes) {
-    memcpy(string->bytes, bytes, n * sizeof(char));
-    string->bytes[n] = '\0';
-    string->size = n;
-    string->is_null = false;
-  } else {
-    string->size = 0;
-    string->is_null = true;
-  }
+  memcpy(string->bytes, bytes, n * sizeof(char));
+
+  string->bytes[n] = '\0';
+  string->size = n;
+  string->is_set = true;
 
   return 0;
 }
@@ -185,7 +186,7 @@ PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
   assert(string);
   assert(dst);
 
-  if (!string->is_null) {
+  if (string->is_set) {
     memcpy(dst, string->bytes, string->size + 1);
   }
 
@@ -195,7 +196,7 @@ PN_INLINE ssize_t pn_string_put(pn_string_t *string, char *dst)
 PN_INLINE void pn_string_clear(pn_string_t *string)
 {
   string->size = 0;
-  string->is_null = true;
+  string->is_set = false;
 }
 
 int pn_string_format(pn_string_t *string, const char *format, ...)
@@ -228,7 +229,7 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 {
   va_list copy;
 
-  if (string->is_null) {
+  if (!string->is_set) {
     return PN_ERR;
   }
 
