@@ -25,6 +25,7 @@
 
 #include "core/config.h"
 #include "core/memory.h"
+#include "core/util.h"
 
 #include <stdio.h>
 #include <stddef.h>
@@ -105,13 +106,13 @@ pn_string_t *pn_string(const char *bytes)
 
 #define pn_string_initialize NULL
 
-pn_string_t *pn_stringn(const char *bytes, size_t n)
+PN_INLINE pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
   static const pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
-  string->capacity = n ? n * sizeof(char) : 16;
-  string->bytes = (char *) pni_mem_suballocate(&clazz, string, string->capacity);
+
   pn_string_setn(string, bytes, n);
+
   return string;
 }
 
@@ -139,8 +140,9 @@ PN_INLINE int pn_string_set(pn_string_t *string, const char *bytes)
 PN_NO_INLINE static int pni_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
-  while (string->capacity < (capacity*sizeof(char) + 1)) {
-    string->capacity *= 2;
+
+  while (string->capacity < (capacity * sizeof(char) + 1)) {
+    string->capacity = pn_max(2, string->capacity * 2);
     grow = true;
   }
 
