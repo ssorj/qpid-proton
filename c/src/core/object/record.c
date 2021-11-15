@@ -138,8 +138,8 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
   if (field) {
     void *old = field->value;
     field->value = value;
-    pni_class_incref(field->clazz, value);
-    pni_class_decref(field->clazz, old);
+    if (value) pni_class_incref(field->clazz, value);
+    if (old) pni_class_decref(field->clazz, old);
   }
 }
 
@@ -148,7 +148,7 @@ void pn_record_clear(pn_record_t *record)
   assert(record);
   for (size_t i = 0; i < record->size; i++) {
     pni_field_t *field = &record->fields[i];
-    pni_class_decref(field->clazz, field->value);
+    if (field->value) pni_class_decref(field->clazz, field->value);
     field->key = 0;
     field->clazz = NULL;
     field->value = NULL;

@@ -91,7 +91,7 @@ void pn_selectable_finalize(pn_selectable_t *sel)
     sel->finalize(sel);
   }
   pn_decref(sel->attachments);
-  pn_decref(sel->collector);
+  if (sel->collector) pn_decref(sel->collector);
 }
 
 #define pn_selectable_hashcode NULL
@@ -271,7 +271,7 @@ void pn_selectable_release(pn_selectable_t *selectable)
 
 void pn_selectable_free(pn_selectable_t *selectable)
 {
-  pn_decref(selectable);
+  if (selectable) pn_decref(selectable);
 }
 
 static void pni_readable(pn_selectable_t *selectable) {
@@ -292,7 +292,7 @@ static void pni_expired(pn_selectable_t *selectable) {
 
 void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector) {
   assert(selectable);
-  pn_decref(selectable->collector);
+  if (selectable->collector) pn_decref(selectable->collector);
   selectable->collector = collector;
   pn_incref(selectable->collector);
 

@@ -94,7 +94,7 @@ static void pn_reactor_finalize(pn_reactor_t *reactor) {
   pn_decref(reactor->attachments);
   pn_decref(reactor->collector);
   pn_decref(reactor->global);
-  pn_decref(reactor->handler);
+  if (reactor->handler) pn_decref(reactor->handler);
   pn_decref(reactor->children);
   pn_decref(reactor->timer);
   pn_decref(reactor->io);
