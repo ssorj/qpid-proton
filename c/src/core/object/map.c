@@ -225,14 +225,13 @@ static inline pni_entry_t *pni_map_get_entry(pn_map_t *map, void *key, pni_entry
   return NULL;
 }
 
-static inline pni_entry_t *pni_map_create_entry(pn_map_t *map, void *key, pni_entry_t **pprev)
+static inline pni_entry_t *pni_map_put_entry(pn_map_t *map, void *key)
 {
-start: ;
-
   uintptr_t hashcode = map->hashcode(key);
 
+start: ;
+
   pni_entry_t *entry = &map->entries[hashcode % map->addressable];
-  pni_entry_t *prev = NULL;
 
   if (entry->state == PNI_ENTRY_FREE) {
     entry->state = PNI_ENTRY_TAIL;
@@ -244,22 +243,19 @@ start: ;
 
   while (true) {
     if (map->equals(entry->key, key)) {
-      if (pprev) *pprev = prev;
       return entry;
     }
 
     if (entry->state == PNI_ENTRY_TAIL) {
       break;
-    } else {
-      prev = entry;
-      entry = &map->entries[entry->next];
     }
+
+    entry = &map->entries[entry->next];
   }
 
   if (pni_map_ensure(map, map->size + 1)) {
     // if we had to grow the table we need to start over
     goto start;
-    // return pni_map_create_entry(map, key, pprev);
   }
 
   size_t empty = 0;
@@ -274,7 +270,6 @@ start: ;
 
   entry->next = empty;
   entry->state = PNI_ENTRY_LINK;
-  if (pprev) *pprev = entry;
 
   map->entries[empty].state = PNI_ENTRY_TAIL;
   map->entries[empty].key = key;
@@ -288,7 +283,7 @@ start: ;
 int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
-  pni_entry_t *entry = pni_map_create_entry(map, key, NULL);
+  pni_entry_t *entry = pni_map_put_entry(map, key);
   void *dref_val = entry->value;
   entry->value = value;
   if (value) pni_class_incref(map->value, value);
