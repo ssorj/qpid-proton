@@ -40,12 +40,12 @@ pn_buffer_t *pn_buffer(size_t capacity)
   pn_buffer_t *buf = (pn_buffer_t *) pni_mem_allocate(PN_CLASSCLASS(pn_buffer), sizeof(pn_buffer_t));
 
   if (buf != NULL) {
-    buf->capacity = capacity;
+    buf->start = 0;
+    buf->end = capacity;
     buf->size = 0;
 
     if (capacity > 0) {
         buf->bytes = (char *) pni_mem_suballocate(PN_CLASSCLASS(pn_buffer), buf, capacity);
-        buf->start = buf->bytes;
 
         if (buf->bytes == NULL) {
             pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
@@ -53,7 +53,6 @@ pn_buffer_t *pn_buffer(size_t capacity)
         }
     } else {
         buf->bytes = NULL;
-        buf->start = NULL;
     }
   }
 
@@ -74,26 +73,29 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t n)
 {
   assert(buf);
 
-  size_t start_offset = buf->start - buf->bytes;
   size_t old_capacity = pn_buffer_capacity(buf);
   size_t old_size = pn_buffer_size(buf);
   size_t new_capacity = old_capacity;
   size_t new_size = old_size + n;
 
-  if (n <= old_capacity) {
+  if (new_size > old_capacity) {
+    // Reset the start offset
+
+    if (old_size) {
+      memmove(buf->bytes, &buf->bytes[buf->start], old_size);
+    }
+
+    buf->start = 0;
+  } else {
     return 0;
   }
 
   while (new_capacity < new_size) new_capacity = 2 * new_capacity;
 
-  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity + start_offset);
+  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity + buf->start);
   if (!buf->bytes) return PN_OUT_OF_MEMORY;
 
-  buf->start = buf->bytes + start_offset;
-  buf->capacity = new_capacity;
-
-  // fprintf(stderr, "pn_buffer_ensure: old_capacity=%ld old_size=%ld new_capacity=%ld new_size=%ld n=%ld\n",
-  //         old_capacity, old_size, new_capacity, new_size, n);
+  buf->end = new_capacity;
 
   return 0;
 }
@@ -101,5 +103,5 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t n)
 int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n)
 {
   assert(buf);
-  return pn_quote(str, buf->start, pn_min(n, pn_buffer_size(buf)));
+  return pn_quote(str, &buf->bytes[buf->start], pn_min(n, pn_buffer_size(buf)));
 }
