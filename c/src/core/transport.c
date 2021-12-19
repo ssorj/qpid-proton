@@ -416,6 +416,12 @@ static void pn_transport_initialize(void *object)
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
+  // XXX
+  transport->bl1 = 0;
+  transport->bl2 = 0;
+  transport->bl3 = 0;
+  transport->bl4 = 0;
+
   transport->connection = NULL;
   transport->context = pn_record();
 
@@ -649,6 +655,8 @@ static void pn_transport_finalize(void *object)
   pn_transport_unbind(transport);
   // we may have posted events, so stay alive until they are processed
   if (pn_refcount(transport) > 0) return;
+
+  fprintf(stderr, "bl1=%ld bl2=%ld bl3=%ld bl4=%ld\n", transport->bl1, transport->bl2, transport->bl3, transport->bl4);
 
   pn_ssl_free(transport);
   pn_sasl_free(transport);
@@ -2226,7 +2234,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       ssn_state->remote_incoming_window -= count;
 
       int sent = full_size - bytes.size;
-      pn_buffer_pop_left(delivery->bytes, sent, NULL);
+      pn_buffer_trim_left(delivery->bytes, sent);
       link->session->outgoing_bytes -= sent;
       if (!pn_buffer_size(delivery->bytes) && delivery->done) {
         state->sent = true;

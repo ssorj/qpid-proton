@@ -50,7 +50,7 @@ int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n);
 static inline size_t pn_buffer_capacity(pn_buffer_t *buf)
 {
   assert(buf);
-  return buf->capacity;
+  return buf->capacity - (buf->start - buf->bytes);
 }
 
 static inline size_t pn_buffer_size(pn_buffer_t *buf)
@@ -62,7 +62,7 @@ static inline size_t pn_buffer_size(pn_buffer_t *buf)
 static inline size_t pn_buffer_available(pn_buffer_t *buf)
 {
   assert(buf);
-  return buf->capacity - buf->size;
+  return pn_buffer_capacity(buf) - pn_buffer_size(buf);
 }
 
 static inline void pn_buffer_clear(pn_buffer_t *buf)
@@ -100,6 +100,10 @@ static inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t n
   size_t new_size = old_size + n;
 
   if (new_size > capacity) {
+    // Reset the start pointer
+    memmove(buf->bytes, buf->start, old_size);
+    buf->start = buf->bytes;
+
     int err = pn_buffer_ensure(buf, new_size);
     if (err) return err;
   }
@@ -119,6 +123,10 @@ static inline int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, s
   size_t new_size = old_size + n + 1;
 
   if (new_size > capacity) {
+    // Reset the start pointer
+    memmove(buf->bytes, buf->start, old_size);
+    buf->start = buf->bytes;
+
     int err = pn_buffer_ensure(buf, new_size);
     if (err) return err;
   }
@@ -130,7 +138,7 @@ static inline int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, s
   return 0;
 }
 
-static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t n, char *dst)
+static inline size_t pn_buffer_trim_left(pn_buffer_t *buf, size_t n)
 {
   assert(buf);
 
@@ -138,33 +146,26 @@ static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t n, char *dst)
   n = pn_min(n, old_size);
   size_t new_size = old_size - n;
 
-  if (dst) {
-    memcpy(dst, buf->start, n);
-  }
-
-  // if (new_size) {
-  //   memmove(buf->bytes, buf->bytes + size, new_size);
-  // }
-
   if (new_size) {
     buf->start += n;
     buf->size = new_size;
-
-    if (buf->start - buf->bytes > 1000 * 1000 * 10) {
-      // fprintf(stderr, "pn_buffer_pop_left (memmove): start_offset=%ld n=%ld new_size=%ld\n", buf->start - buf->bytes, n, new_size);
-
-      memmove(buf->bytes, buf->start, new_size);
-      buf->start = buf->bytes;
-    }
   } else {
-    // fprintf(stderr, "pn_buffer_pop_left (clear): start_offset=%ld n=%ld new_size=%ld\n", buf->start - buf->bytes, n, new_size);
-
     pn_buffer_clear(buf);
   }
 
-  // pn_buffer_pop_left (memmove): start_offset=1_048_576 n=131_072 new_size=35_089_796
-
   return n;
+}
+
+static inline size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t n, char *dst)
+{
+  assert(buf);
+  assert(dst);
+
+  n = pn_min(n, pn_buffer_size(buf));
+
+  memcpy(dst, buf->start, n);
+
+  return pn_buffer_trim_left(buf, n);
 }
 
 #ifdef __cplusplus

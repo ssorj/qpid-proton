@@ -673,7 +673,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned in
     ssize_t size = pni_passthru_layer.process_input(transport, layer, decoded.start+processed_size, decoded.size-processed_size);
     if (size==0) break;
     if (size<0) return size;
-    pn_buffer_pop_left(in, size, NULL);
+    pn_buffer_trim_left(in, size);
     processed_size += size;
   }
   return available;

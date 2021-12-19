@@ -176,6 +176,12 @@ struct pn_transport_t {
   uint64_t output_frames_ct;
   uint64_t input_frames_ct;
 
+  // XXX
+  uint64_t bl1;
+  uint64_t bl2;
+  uint64_t bl3;
+  uint64_t bl4;
+
   /* output buffered for send */
   #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (8*1024)
   size_t output_size;
