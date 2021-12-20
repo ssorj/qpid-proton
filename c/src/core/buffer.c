@@ -40,8 +40,8 @@ pn_buffer_t *pn_buffer(size_t capacity)
   pn_buffer_t *buf = (pn_buffer_t *) pni_mem_allocate(PN_CLASSCLASS(pn_buffer), sizeof(pn_buffer_t));
 
   if (buf != NULL) {
+    buf->capacity = capacity;
     buf->start = 0;
-    buf->end = capacity;
     buf->size = 0;
 
     if (capacity > 0) {
@@ -69,33 +69,46 @@ void pn_buffer_free(pn_buffer_t *buf)
   pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
 }
 
-int pn_buffer_ensure(pn_buffer_t *buf, size_t n)
+int pn_buffer_grow(pn_buffer_t *buf, size_t n)
 {
   assert(buf);
 
-  size_t old_capacity = pn_buffer_capacity(buf);
   size_t old_size = pn_buffer_size(buf);
+
+  if (buf->start) {
+    // Reset the start offset
+    memmove(buf->bytes, &buf->bytes[buf->start], old_size);
+    buf->start = 0;
+  }
+
+  size_t old_capacity = pn_buffer_capacity(buf);
   size_t new_capacity = old_capacity;
   size_t new_size = old_size + n;
 
   if (new_size > old_capacity) {
-    // Reset the start offset
-
-    if (old_size) {
-      memmove(buf->bytes, &buf->bytes[buf->start], old_size);
+    while (new_capacity < new_size) {
+      new_capacity = 2 * new_capacity;
     }
 
-    buf->start = 0;
-  } else {
-    return 0;
+    buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity);
+    if (!buf->bytes) return PN_OUT_OF_MEMORY;
+
+    buf->capacity = new_capacity;
   }
 
-  while (new_capacity < new_size) new_capacity = 2 * new_capacity;
+  return 0;
+}
 
-  buf->bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity + buf->start);
-  if (!buf->bytes) return PN_OUT_OF_MEMORY;
+int pn_buffer_ensure(pn_buffer_t *buf, size_t n)
+{
+  assert(buf);
 
-  buf->end = new_capacity;
+  size_t capacity = pn_buffer_capacity(buf) - buf->start;
+  size_t new_size = pn_buffer_size(buf) + n;
+
+  if (new_size > capacity) {
+    return pn_buffer_grow(buf, n);
+  }
 
   return 0;
 }

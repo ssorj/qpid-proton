@@ -36,26 +36,28 @@ extern "C" {
 #endif
 
 // The idea here is to (1) make trim and pop extra cheap and (2) make memory views extra cheap
+// Item 1 is achieved by having a start offset
+// Item 2 is achieved by avoiding it being a ring buffer
 // Trim and pop move the start offset
-// The capacity is computed relative to the start offset
 // The start offset is reset to 0 whenever we grow the capacity
 
 typedef struct pn_buffer_t {
   char *bytes;
+  size_t capacity;
   size_t start;
-  size_t end;
   size_t size;
 } pn_buffer_t;
 
 pn_buffer_t *pn_buffer(size_t capacity);
 void pn_buffer_free(pn_buffer_t *buf);
+int pn_buffer_grow(pn_buffer_t *buf, size_t size);
 int pn_buffer_ensure(pn_buffer_t *buf, size_t size);
 int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n);
 
 static inline size_t pn_buffer_capacity(pn_buffer_t *buf)
 {
   assert(buf);
-  return buf->end - buf->start;
+  return buf->capacity;
 }
 
 static inline size_t pn_buffer_size(pn_buffer_t *buf)
@@ -67,7 +69,7 @@ static inline size_t pn_buffer_size(pn_buffer_t *buf)
 static inline size_t pn_buffer_available(pn_buffer_t *buf)
 {
   assert(buf);
-  return pn_buffer_capacity(buf) - pn_buffer_size(buf);
+  return pn_buffer_capacity(buf) - buf->start - pn_buffer_size(buf);
 }
 
 static inline void pn_buffer_clear(pn_buffer_t *buf)
@@ -100,12 +102,12 @@ static inline int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t n
 {
   assert(buf);
 
-  size_t capacity = pn_buffer_capacity(buf);
+  size_t capacity = pn_buffer_capacity(buf) - buf->start;
   size_t old_size = pn_buffer_size(buf);
   size_t new_size = old_size + n;
 
   if (new_size > capacity) {
-    int err = pn_buffer_ensure(buf, new_size);
+    int err = pn_buffer_grow(buf, new_size);
     if (err) return err;
   }
 
@@ -119,12 +121,12 @@ static inline int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, s
 {
   assert(buf);
 
-  size_t capacity = pn_buffer_capacity(buf);
+  size_t capacity = pn_buffer_capacity(buf) - buf->start;
   size_t old_size = pn_buffer_size(buf);
   size_t new_size = old_size + n + 1;
 
   if (new_size > capacity) {
-    int err = pn_buffer_ensure(buf, new_size);
+    int err = pn_buffer_grow(buf, new_size);
     if (err) return err;
   }
 

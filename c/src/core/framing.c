@@ -121,7 +121,6 @@ static inline void pn_post_frame(pn_buffer_t *output, pn_logger_t *logger, uint8
     .frame_payload0 = performative,
     .frame_payload1 = payload
   };
-  pn_buffer_ensure(output, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
   pn_write_frame(output, frame, logger);
 }
 
