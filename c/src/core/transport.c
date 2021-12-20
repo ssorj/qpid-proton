@@ -1796,7 +1796,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 }
 
 // process pending input until none remaining or EOS
-static inline ssize_t transport_consume(pn_transport_t *transport)
+static ssize_t transport_consume(pn_transport_t *transport)
 {
   // This allows whatever is driving the I/O to set the error
   // condition on the transport before doing pn_transport_close_head()
@@ -2693,7 +2693,7 @@ static void pni_close_head(pn_transport_t *transport)
   }
 }
 
-PN_NO_INLINE static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
+static ssize_t pni_transport_grow_output_capacity(pn_transport_t *transport, ssize_t space)
 {
   int more = 0;
 
@@ -2718,7 +2718,7 @@ PN_NO_INLINE static ssize_t pni_transport_grow_output_capacity(pn_transport_t *t
 }
 
 // generate outbound data, return amount of pending output else error
-static inline ssize_t transport_produce(pn_transport_t *transport)
+static ssize_t transport_produce(pn_transport_t *transport)
 {
   if (transport->head_closed) return PN_EOS;
 
