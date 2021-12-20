@@ -779,7 +779,8 @@ int pn_transport_unbind(pn_transport_t *transport)
   pn_endpoint_t *endpoint = conn->endpoint_head;
   while (endpoint) {
     pn_condition_clear(&endpoint->remote_condition);
-    pn_modified(conn, endpoint, true);
+    pn_set_modified(conn, endpoint);
+    pn_emit_transport_event(conn);
     endpoint = endpoint->endpoint_next;
   }
 
@@ -1360,7 +1361,7 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
 static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   assert(!delivery->work);
-  pn_clear_tpwork(delivery);
+  pn_clear_tpwork(delivery->link->session->connection, delivery);
   pni_delivery_map_del(db, delivery);
   pn_incref(delivery);
   pn_decref(delivery);
@@ -2129,7 +2130,7 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_link_t *link = delivery->link;
   pn_session_t *ssn = link->session;
   pn_session_state_t *ssn_state = &ssn->state;
-  pn_modified(transport->connection, &link->session->endpoint, false);
+  pn_set_modified(transport->connection, &link->session->endpoint);
   pn_delivery_state_t *state = &delivery->state;
   assert(state->init);
   bool role = (link->endpoint.type == RECEIVER);
@@ -2297,7 +2298,7 @@ static int pni_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint
       if (settle) {
         pn_full_settle(dm, delivery);
       } else if (!pn_delivery_buffered(delivery)) {
-        pn_clear_tpwork(delivery);
+        pn_clear_tpwork(conn, delivery);
       }
 
       delivery = tp_next;
@@ -2521,7 +2522,7 @@ static int pni_process(pn_transport_t *transport)
   if ((err = pni_phase(transport, pni_process_conn_teardown))) return err;
 
   if (transport->connection->tpwork_head) {
-    pn_modified(transport->connection, &transport->connection->endpoint, false);
+    pn_set_modified(transport->connection, &transport->connection->endpoint);
   }
 
   return 0;
