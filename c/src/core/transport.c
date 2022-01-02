@@ -416,12 +416,6 @@ static void pn_transport_initialize(void *object)
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
-  // XXX
-  transport->bl1 = 0;
-  transport->bl2 = 0;
-  transport->bl3 = 0;
-  transport->bl4 = 0;
-
   transport->connection = NULL;
   transport->context = pn_record();
 
@@ -655,8 +649,6 @@ static void pn_transport_finalize(void *object)
   pn_transport_unbind(transport);
   // we may have posted events, so stay alive until they are processed
   if (pn_refcount(transport) > 0) return;
-
-  fprintf(stderr, "bl1=%ld bl2=%ld bl3=%ld bl4=%ld\n", transport->bl1, transport->bl2, transport->bl3, transport->bl4);
 
   pn_ssl_free(transport);
   pn_sasl_free(transport);
