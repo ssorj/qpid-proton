@@ -67,10 +67,103 @@ pn_cid_t pn_class_id(const pn_class_t *clazz)
   return clazz->cid;
 }
 
+static inline void *pni_object_new(const pn_class_t *clazz, size_t size)
+{
+  void *object = NULL;
+  pni_head_t *head = (pni_head_t *) pni_mem_zallocate(clazz, sizeof(pni_head_t) + size);
+  if (head != NULL) {
+    object = head + 1;
+    head->clazz = clazz;
+    head->refcount = 1;
+  }
+  return object;
+}
+
+static inline void pni_object_incref(void *object) {
+  if (object) {
+    pni_head(object)->refcount++;
+  }
+}
+
+static inline int pni_object_refcount(void *object)
+{
+  assert(object);
+  return pni_head(object)->refcount;
+}
+
+static inline void pni_object_decref(void *object)
+{
+  pni_head_t *head = pni_head(object);
+  assert(head->refcount > 0);
+  head->refcount--;
+}
+
+static inline void pni_object_free(void *object)
+{
+  pni_head_t *head = pni_head(object);
+  pni_mem_deallocate(head->clazz, head);
+}
+
+void *pn_object_new(const pn_class_t *clazz, size_t size) {
+  return pni_object_new(clazz, size);
+}
+
+void pn_object_incref(void *object) {
+  pni_object_incref(object);
+}
+
+int pn_object_refcount(void *object) {
+  return pni_object_refcount(object);
+}
+
+void pn_object_decref(void *object) {
+  pni_object_decref(object);
+}
+
+void pn_object_free(void *object) {
+  pni_object_free(object);
+}
+
+static inline void *pni_class_new(const pn_class_t *clazz, size_t size) {
+  return clazz->newinst
+  ? clazz->newinst(clazz, size)
+  : pni_object_new(clazz, size);
+}
+
+static inline void pni_class_incref(const pn_class_t *clazz, void *object) {
+  if (clazz->incref) {
+    clazz->incref(object);
+  } else {
+    pni_object_incref(object);
+  }
+}
+
+static inline void pni_class_decref(const pn_class_t *clazz, void *object) {
+  if (clazz->decref) {
+    clazz->decref(object);
+  } else {
+    pni_object_decref(object);
+  }
+}
+
+static inline int pni_class_refcount(const pn_class_t *clazz, void *object) {
+  return clazz->refcount
+  ? clazz->refcount(object)
+  : pni_object_refcount(object);
+}
+
+static inline void pni_class_free(const pn_class_t *clazz, void *object) {
+  if (clazz->free) {
+    clazz->free(object);
+  } else {
+    pni_object_free(object);
+  }
+}
+
 void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);
-  void *object = clazz->newinst(clazz, size);
+  void *object = pni_class_new(clazz, size);
   if (object && clazz->initialize) {
     clazz->initialize(object);
   }
@@ -83,8 +176,7 @@ void *pn_class_incref(const pn_class_t *clazz, void *object)
     if (clazz==PN_OBJECT) {
       clazz = pni_head(object)->clazz;
     }
-
-    clazz->incref(object);
+    pni_class_incref(clazz, object);
   }
   return object;
 }
@@ -95,7 +187,7 @@ int pn_class_refcount(const pn_class_t *clazz, void *object)
     clazz = pn_class(object);
   }
 
-  return clazz->refcount(object);
+  return pni_class_refcount(clazz, object);
 }
 
 int pn_class_decref(const pn_class_t *clazz, void *object)
@@ -104,18 +196,17 @@ int pn_class_decref(const pn_class_t *clazz, void *object)
     if (clazz==PN_OBJECT) {
       clazz = pni_head(object)->clazz;
     }
-
-    clazz->decref(object);
-    int rc = clazz->refcount(object);
+    pni_class_decref(clazz, object);
+    int rc = pni_class_refcount(clazz, object);
     if (rc == 0) {
       if (clazz->finalize) {
         clazz->finalize(object);
         // check the refcount again in case the finalizer created a
         // new reference
-        rc = clazz->refcount(object);
+        rc = pni_class_refcount(clazz, object);
       }
       if (rc == 0) {
-        clazz->free(object);
+        pni_class_free(clazz, object);
         return 0;
       }
     } else {
@@ -133,7 +224,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
       clazz = pni_head(object)->clazz;
     }
 
-    int rc = clazz->refcount(object);
+    int rc = pni_class_refcount(clazz, object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
       rc = pn_class_decref(clazz, object);
@@ -142,7 +233,7 @@ void pn_class_free(const pn_class_t *clazz, void *object)
       if (clazz->finalize) {
         clazz->finalize(object);
       }
-      clazz->free(object);
+      pni_class_free(clazz, object);
     }
   }
 }
@@ -186,50 +277,11 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
 
-void *pn_object_new(const pn_class_t *clazz, size_t size)
-{
-  void *object = NULL;
-  pni_head_t *head = (pni_head_t *) pni_mem_zallocate(clazz, sizeof(pni_head_t) + size);
-  if (head != NULL) {
-    object = head + 1;
-    head->clazz = clazz;
-    head->refcount = 1;
-  }
-  return object;
-}
-
-
-void pn_object_incref(void *object)
-{
-  if (object) {
-    pni_head(object)->refcount++;
-  }
-}
-
-int pn_object_refcount(void *object)
-{
-  assert(object);
-  return pni_head(object)->refcount;
-}
-
-void pn_object_decref(void *object)
-{
-  pni_head_t *head = pni_head(object);
-  assert(head->refcount > 0);
-  head->refcount--;
-}
-
-void pn_object_free(void *object)
-{
-  pni_head_t *head = pni_head(object);
-  pni_mem_deallocate(head->clazz, head);
-}
-
 void *pn_incref(void *object)
 {
   if (object) {
     const pn_class_t *clazz = pni_head(object)->clazz;
-    clazz->incref(object);
+    pni_class_incref(clazz, object);
   }
   return object;
 }
@@ -238,17 +290,17 @@ int pn_decref(void *object)
 {
   if (object) {
     const pn_class_t *clazz = pni_head(object)->clazz;
-    clazz->decref(object);
-    int rc = clazz->refcount(object);
+    pni_class_decref(clazz, object);
+    int rc = pni_class_refcount(clazz, object);
     if (rc == 0) {
       if (clazz->finalize) {
         clazz->finalize(object);
         // check the refcount again in case the finalizer created a
         // new reference
-        rc = clazz->refcount(object);
+        rc = pni_class_refcount(clazz, object);
       }
       if (rc == 0) {
-        clazz->free(object);
+        pni_class_free(clazz, object);
         return 0;
       }
     } else {
@@ -262,29 +314,29 @@ int pn_refcount(void *object)
 {
   assert(object);
   const pn_class_t *clazz = pni_head(object)->clazz;
-  return clazz->refcount(object);
+  return pni_class_refcount(clazz, object);
 }
 
 void pn_free(void *object)
 {
   if (object) {
     const pn_class_t *clazz = pni_head(object)->clazz;
-    int rc = clazz->refcount(object);
+    int rc = pni_class_refcount(clazz, object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
-      clazz->decref(object);
-      assert(clazz->refcount(object) == 0);
+      pni_class_decref(clazz, object);
+      assert(pni_class_refcount(clazz, object) == 0);
       if (clazz->finalize) {
         clazz->finalize(object);
       }
-      if (clazz->refcount(object) == 0) {
-        clazz->free(object);
+      if (pni_class_refcount(clazz, object) == 0) {
+        pni_class_free(clazz, object);
       }
     } else {
       if (clazz->finalize) {
         clazz->finalize(object);
       }
-      clazz->free(object);
+      pni_class_free(clazz, object);
     }
   }
 }
