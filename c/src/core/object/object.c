@@ -104,24 +104,8 @@ static inline void pni_object_free(void *object)
   pni_mem_deallocate(head->clazz, head);
 }
 
-void *pn_object_new(const pn_class_t *clazz, size_t size) {
-  return pni_object_new(clazz, size);
-}
-
 void pn_object_incref(void *object) {
   pni_object_incref(object);
-}
-
-int pn_object_refcount(void *object) {
-  return pni_object_refcount(object);
-}
-
-void pn_object_decref(void *object) {
-  pni_object_decref(object);
-}
-
-void pn_object_free(void *object) {
-  pni_object_free(object);
 }
 
 static inline void *pni_class_new(const pn_class_t *clazz, size_t size) {

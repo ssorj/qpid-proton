@@ -70,24 +70,20 @@ PN_EXTERN extern const pn_class_t PN_OBJECT[];
 PN_EXTERN extern const pn_class_t PN_VOID[];
 PN_EXTERN extern const pn_class_t PN_WEAKREF[];
 
-PN_EXTERN void *pn_object_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void pn_object_incref(void *object);
-PN_EXTERN int pn_object_refcount(void *object);
-PN_EXTERN void pn_object_decref(void *object);
-PN_EXTERN void pn_object_free(void *object);
 
 #define PN_CLASSCLASS(PREFIX) PREFIX ## __class
 
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
     CID_ ## PREFIX,                             \
-    pn_object_new,                              \
+    NULL,                                       \
     PREFIX ## _initialize,                      \
-    pn_object_incref,                           \
-    pn_object_decref,                           \
-    pn_object_refcount,                         \
+    NULL,                                       \
+    NULL,                                       \
+    NULL,                                       \
     PREFIX ## _finalize,                        \
-    pn_object_free,                             \
+    NULL,                                       \
     PREFIX ## _hashcode,                        \
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
