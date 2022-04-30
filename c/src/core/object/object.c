@@ -62,7 +62,7 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
-pn_cid_t pn_class_id(const pn_class_t *clazz)
+inline pn_cid_t pn_class_id(const pn_class_t *clazz)
 {
   return clazz->cid;
 }
@@ -80,9 +80,8 @@ static inline void *pni_object_new(const pn_class_t *clazz, size_t size)
 }
 
 static inline void pni_object_incref(void *object) {
-  if (object) {
-    pni_head(object)->refcount++;
-  }
+  assert(object);
+  pni_head(object)->refcount++;
 }
 
 static inline int pni_object_refcount(void *object)
@@ -104,7 +103,7 @@ static inline void pni_object_free(void *object)
   pni_mem_deallocate(head->clazz, head);
 }
 
-void pn_object_incref(void *object) {
+inline void pn_object_incref(void *object) {
   pni_object_incref(object);
 }
 
@@ -154,7 +153,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-void *pn_class_incref(const pn_class_t *clazz, void *object)
+inline void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   if (object) {
     if (clazz==PN_OBJECT) {
@@ -165,7 +164,7 @@ void *pn_class_incref(const pn_class_t *clazz, void *object)
   return object;
 }
 
-int pn_class_refcount(const pn_class_t *clazz, void *object)
+inline int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
   if (clazz==PN_OBJECT) {
     clazz = pn_class(object);
@@ -174,7 +173,7 @@ int pn_class_refcount(const pn_class_t *clazz, void *object)
   return pni_class_refcount(clazz, object);
 }
 
-int pn_class_decref(const pn_class_t *clazz, void *object)
+inline int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   if (object) {
     if (clazz==PN_OBJECT) {
@@ -261,7 +260,7 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
 
-void *pn_incref(void *object)
+inline void *pn_incref(void *object)
 {
   if (object) {
     const pn_class_t *clazz = pni_head(object)->clazz;
@@ -270,7 +269,7 @@ void *pn_incref(void *object)
   return object;
 }
 
-int pn_decref(void *object)
+inline int pn_decref(void *object)
 {
   if (object) {
     const pn_class_t *clazz = pni_head(object)->clazz;
@@ -294,7 +293,7 @@ int pn_decref(void *object)
   return 0;
 }
 
-int pn_refcount(void *object)
+inline int pn_refcount(void *object)
 {
   assert(object);
   const pn_class_t *clazz = pni_head(object)->clazz;
@@ -325,7 +324,7 @@ void pn_free(void *object)
   }
 }
 
-const pn_class_t *pn_class(void *object)
+inline const pn_class_t *pn_class(void *object)
 {
   if (object) {
     return pni_head(object)->clazz;
