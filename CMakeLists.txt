@@ -154,7 +154,7 @@ foreach (OPTION ${OPTIONS})
 endforeach (OPTION)
 
 # And add the option here too with help text
-option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ${DEFAULT_WARNING_ERROR})
+option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" NO)
 option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_UNDEFINED_ERROR})
 option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
 option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
@@ -385,13 +385,13 @@ if(SWIG_FOUND)
   # Prerequisites for Python wrapper:
   find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   if (PYTHONLIBS_FOUND)
-    set (DEFAULT_PYTHON ON)
+    set (DEFAULT_PYTHON OFF)
   endif ()
 
   # Prerequisites for Ruby:
   find_package(Ruby)
   if (RUBY_FOUND)
-    set (DEFAULT_RUBY ON)
+    set (DEFAULT_RUBY OFF)
   endif ()
 endif()
 
