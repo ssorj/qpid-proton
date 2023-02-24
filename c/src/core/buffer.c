@@ -22,6 +22,7 @@
 #include <proton/error.h>
 #include <proton/object.h>
 
+#include <assert.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -238,22 +239,40 @@ size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
   return sz1 + sz2;
 }
 
-int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
+void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
 {
-  if (left + right > buf->size) return PN_ARG_ERR;
+  assert(size <= buf->size);
 
   // In special case where we trim everything just clear buffer
-  if (left + right == buf->size) {
+  if (size == buf->size) {
     pn_buffer_clear(buf);
-    return 0;
+    return;
   }
-  buf->start += left;
-  if (buf->start >= buf->capacity)
+
+  buf->start += size;
+
+  if (buf->start >= buf->capacity) {
     buf->start -= buf->capacity;
+  }
 
-  buf->size -= left + right;
+  buf->size -= size;
+}
 
-  return 0;
+void pn_buffer_trim_right(pn_buffer_t *buf, size_t size)
+{
+  assert(size <= buf->size);
+
+  // In special case where we trim everything just clear buffer
+  if (size == buf->size) {
+    pn_buffer_clear(buf);
+    return;
+  }
+
+  if (buf->start >= buf->capacity) {
+    buf->start -= buf->capacity;
+  }
+
+  buf->size -= size;
 }
 
 void pn_buffer_clear(pn_buffer_t *buf)
