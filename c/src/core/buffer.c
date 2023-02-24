@@ -179,6 +179,33 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
   return 0;
 }
 
+int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, size_t size)
+{
+  size += 1;
+
+  if (pn_buffer_available(buf) < size) {
+    int err = pn_buffer_ensure(buf, size);
+    if (err) return err;
+  }
+
+  size_t tail = pni_buffer_tail(buf);
+  size_t tail_space = pni_buffer_tail_space(buf);
+  size_t n = pn_min(tail_space, size);
+
+  memcpy(buf->bytes + tail, bytes, n - 1);
+
+  if (size - n) {
+    memcpy(buf->bytes, bytes + n, size - n - 1);
+    buf->bytes[size - n - 1] = '\0';
+  } else {
+    buf->bytes[tail + n - 1] = '\0';
+  }
+
+  buf->size += size;
+
+  return 0;
+}
+
 static size_t pni_buffer_index(pn_buffer_t *buf, size_t index)
 {
   size_t result = buf->start + index;
