@@ -105,7 +105,7 @@ static bool pni_buffer_wrapped(pn_buffer_t *buf)
   return buf->size && pni_buffer_head(buf) >= pni_buffer_tail(buf);
 }
 
-static size_t pni_buffer_tail_space(pn_buffer_t *buf)
+static inline size_t pni_buffer_tail_space(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
     return pn_buffer_available(buf);
