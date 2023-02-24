@@ -234,7 +234,10 @@ size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
   }
 
   memcpy(dst, buf->bytes + start, sz1);
-  memcpy(dst + sz1, buf->bytes, sz2);
+
+  if (sz2) {
+    memcpy(dst + sz1, buf->bytes, sz2);
+  }
 
   return sz1 + sz2;
 }
