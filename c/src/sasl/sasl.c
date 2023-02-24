@@ -747,9 +747,7 @@ static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned 
     }
     processed += encode_size;
   }
-  ssize_t size = pn_buffer_get(out, 0, available, bytes);
-  pn_buffer_trim_left(out, size);
-  return size;
+  return pn_buffer_pop_left(out, available, bytes);
 }
 
 pn_sasl_t *pn_sasl(pn_transport_t *transport)

@@ -1929,8 +1929,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   pn_delivery_t *delivery = receiver->current;
   if (!delivery) return PN_STATE_ERR;
   if (delivery->aborted) return PN_ABORTED;
-  size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
-  pn_buffer_trim_left(delivery->bytes, size);
+  size_t size = pn_buffer_pop_left(delivery->bytes, n, bytes);
   if (size) {
     receiver->session->incoming_bytes -= size;
     if (!receiver->session->state.incoming_window) {

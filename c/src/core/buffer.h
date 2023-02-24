@@ -41,7 +41,7 @@ size_t pn_buffer_available(pn_buffer_t *buf);
 int pn_buffer_ensure(pn_buffer_t *buf, size_t size);
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size);
 int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, size_t size);
-size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst);
+size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst);
 void pn_buffer_trim_left(pn_buffer_t *buf, size_t size);
 void pn_buffer_trim_right(pn_buffer_t *buf, size_t size);
 void pn_buffer_clear(pn_buffer_t *buf);

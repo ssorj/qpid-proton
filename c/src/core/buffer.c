@@ -207,50 +207,39 @@ int pn_buffer_append_string(pn_buffer_t *buf, const char *bytes, size_t size)
   return 0;
 }
 
-static size_t pni_buffer_index(pn_buffer_t *buf, size_t index)
+size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst)
 {
-  size_t result = buf->start + index;
-  if (result >= buf->capacity) result -= buf->capacity;
-  return result;
-}
+  assert(buf->start < buf->capacity);
 
-size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
-{
   size = pn_min(size, buf->size);
-  size_t start = pni_buffer_index(buf, offset);
-  size_t stop = pni_buffer_index(buf, offset + size);
 
   if (size == 0) return 0;
 
-  size_t sz1;
-  size_t sz2;
+  size_t end = buf->start + size;
 
-  if (start >= stop) {
-    sz1 = buf->capacity - start;
-    sz2 = stop;
-  } else {
-    sz1 = stop - start;
-    sz2 = 0;
-  }
+  if (end >= buf->capacity) {
+    end -= buf->capacity;
 
-  memcpy(dst, buf->bytes + start, sz1);
+    size_t sz1 = buf->capacity - buf->start;
+    size_t sz2 = end;
 
-  if (sz2) {
+    assert(sz1 + sz2 == size);
+
+    memcpy(dst, buf->bytes + buf->start, sz1);
     memcpy(dst + sz1, buf->bytes, sz2);
+  } else {
+    memcpy(dst, buf->bytes + buf->start, size);
   }
 
-  return sz1 + sz2;
+  buf->start = end;
+  buf->size -= size;
+
+  return size;
 }
 
 void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
 {
   assert(size <= buf->size);
-
-  // In special case where we trim everything just clear buffer
-  if (size == buf->size) {
-    pn_buffer_clear(buf);
-    return;
-  }
 
   buf->start += size;
 
@@ -264,12 +253,6 @@ void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
 void pn_buffer_trim_right(pn_buffer_t *buf, size_t size)
 {
   assert(size <= buf->size);
-
-  // In special case where we trim everything just clear buffer
-  if (size == buf->size) {
-    pn_buffer_clear(buf);
-    return;
-  }
 
   if (buf->start >= buf->capacity) {
     buf->start -= buf->capacity;
