@@ -113,15 +113,6 @@ static size_t pni_buffer_tail_space(pn_buffer_t *buf)
   }
 }
 
-static size_t pni_buffer_head_space(pn_buffer_t *buf)
-{
-  if (pni_buffer_wrapped(buf)) {
-    return pn_buffer_available(buf);
-  } else {
-    return pni_buffer_head(buf);
-  }
-}
-
 static size_t pni_buffer_head_size(pn_buffer_t *buf)
 {
   if (pni_buffer_wrapped(buf)) {
@@ -168,40 +159,19 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
-  if (!size) return 0;
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
+  if (pn_buffer_available(buf) < size) {
+    int err = pn_buffer_ensure(buf, size);
+    if (err) return err;
+  }
 
   size_t tail = pni_buffer_tail(buf);
   size_t tail_space = pni_buffer_tail_space(buf);
   size_t n = pn_min(tail_space, size);
 
-  // Heuristic check for a strange usage in messenger
-  if (bytes!=buf->bytes+tail) {
-    memcpy(buf->bytes + tail, bytes, n);
+  memcpy(buf->bytes + tail, bytes, n);
+
+  if (size - n) {
     memcpy(buf->bytes, bytes + n, size - n);
-  }
-  buf->size += size;
-
-  return 0;
-}
-
-int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
-{
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
-
-  size_t head = pni_buffer_head(buf);
-  size_t head_space = pni_buffer_head_space(buf);
-  size_t n = pn_min(head_space, size);
-
-  memcpy(buf->bytes + head - n, bytes + size - n, n);
-  memcpy(buf->bytes + buf->capacity - (size - n), bytes, size - n);
-
-  if (buf->start >= size) {
-    buf->start -= size;
-  } else {
-    buf->start = buf->capacity - (size - buf->start);
   }
 
   buf->size += size;
