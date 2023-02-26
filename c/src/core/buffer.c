@@ -241,6 +241,13 @@ void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
 {
   assert(size <= buf->size);
 
+  // In the special case where we trim everything, just clear the
+  // buffer
+  if (size == buf->size) {
+    pn_buffer_clear(buf);
+    return;
+  }
+
   buf->start += size;
 
   if (buf->start >= buf->capacity) {
