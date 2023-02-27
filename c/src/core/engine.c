@@ -39,7 +39,7 @@
 #include <string.h>
 
 
-static void pni_session_bound(pn_session_t *ssn);
+static void pni_session_bound(pn_session_t *session);
 static void pni_link_bound(pn_link_t *link);
 
 static void pn_delivery_incref(void *object);
@@ -246,25 +246,25 @@ void pn_condition_free(pn_condition_t *c) {
   }
 }
 
-static void pni_add_session(pn_connection_t *conn, pn_session_t *ssn)
+static void pni_add_session(pn_connection_t *conn, pn_session_t *session)
 {
-  pn_list_add(conn->sessions, ssn);
-  ssn->connection = conn;
+  pn_list_add(conn->sessions, session);
+  session->connection = conn;
   pn_incref(conn);  // keep around until finalized
   pn_ep_incref(&conn->endpoint);
 }
 
-static void pni_remove_session(pn_connection_t *conn, pn_session_t *ssn)
+static void pni_remove_session(pn_connection_t *conn, pn_session_t *session)
 {
-  if (pn_list_remove(conn->sessions, ssn)) {
+  if (pn_list_remove(conn->sessions, session)) {
     pn_ep_decref(&conn->endpoint);
-    LL_REMOVE(conn, endpoint, &ssn->endpoint);
+    LL_REMOVE(conn, endpoint, &session->endpoint);
   }
 }
 
 pn_connection_t *pn_session_connection(pn_session_t *session)
 {
-  if (!session) return NULL;
+  assert(session);
   return session->connection;
 }
 
@@ -306,7 +306,8 @@ pn_record_t *pn_session_attachments(pn_session_t *session)
 
 void *pn_session_get_context(pn_session_t *session)
 {
-  return session ? pn_record_get(session->context, PN_LEGCTX) : 0;
+  assert(session);
+  return pn_record_get(session->context, PN_LEGCTX);
 }
 
 void pn_session_set_context(pn_session_t *session, void *context)
@@ -316,18 +317,18 @@ void pn_session_set_context(pn_session_t *session, void *context)
 }
 
 
-static void pni_add_link(pn_session_t *ssn, pn_link_t *link)
+static void pni_add_link(pn_session_t *session, pn_link_t *link)
 {
-  pn_list_add(ssn->links, link);
-  link->session = ssn;
-  pn_ep_incref(&ssn->endpoint);
+  pn_list_add(session->links, link);
+  link->session = session;
+  pn_ep_incref(&session->endpoint);
 }
 
-static void pni_remove_link(pn_session_t *ssn, pn_link_t *link)
+static void pni_remove_link(pn_session_t *session, pn_link_t *link)
 {
-  if (pn_list_remove(ssn->links, link)) {
-    pn_ep_decref(&ssn->endpoint);
-    LL_REMOVE(ssn->connection, endpoint, &link->endpoint);
+  if (pn_list_remove(session->links, link)) {
+    pn_ep_decref(&session->endpoint);
+    LL_REMOVE(session->connection, endpoint, &link->endpoint);
   }
 }
 
@@ -583,7 +584,8 @@ pn_collector_t* pn_connection_collector(pn_connection_t *connection) {
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
 {
-  return connection ? connection->endpoint.state : 0;
+  assert(connection);
+  return connection->endpoint.state;
 }
 
 const char *pn_connection_get_container(pn_connection_t *connection)
@@ -612,14 +614,14 @@ void pn_connection_set_hostname(pn_connection_t *connection, const char *hostnam
 
 const char *pn_connection_get_user(pn_connection_t *connection)
 {
-    assert(connection);
-    return pn_string_get(connection->auth_user);
+  assert(connection);
+  return pn_string_get(connection->auth_user);
 }
 
 void pn_connection_set_user(pn_connection_t *connection, const char *user)
 {
-    assert(connection);
-    pn_string_set(connection->auth_user, user);
+  assert(connection);
+  pn_string_set(connection->auth_user, user);
 }
 
 const char *pn_connection_get_authorization(pn_connection_t *connection)
@@ -765,10 +767,10 @@ void pn_clear_tpwork(pn_delivery_t *delivery)
   {
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
-    if (pn_refcount(delivery) > 0) {
-      pn_incref(delivery);
-      pn_decref(delivery);
-    }
+    // if (pn_refcount(delivery) > 0) {
+    //   pn_incref(delivery);
+    //   pn_decref(delivery);
+    // }
   }
 }
 
@@ -823,41 +825,40 @@ static bool pni_matches(pn_endpoint_t *endpoint, pn_endpoint_type_t type, pn_sta
 
 pn_endpoint_t *pn_find(pn_endpoint_t *endpoint, pn_endpoint_type_t type, pn_state_t state)
 {
-  while (endpoint)
-  {
-    if (pni_matches(endpoint, type, state))
+  while (endpoint) {
+    if (pni_matches(endpoint, type, state)) {
       return endpoint;
+    }
+
     endpoint = endpoint->endpoint_next;
   }
+
   return NULL;
 }
 
 pn_session_t *pn_session_head(pn_connection_t *conn, pn_state_t state)
 {
-  if (conn)
-    return (pn_session_t *) pn_find(conn->endpoint_head, SESSION, state);
-  else
-    return NULL;
+  assert(conn);
+  return (pn_session_t *) pn_find(conn->endpoint_head, SESSION, state);
 }
 
-pn_session_t *pn_session_next(pn_session_t *ssn, pn_state_t state)
+pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state)
 {
-  if (ssn)
-    return (pn_session_t *) pn_find(ssn->endpoint.endpoint_next, SESSION, state);
-  else
-    return NULL;
+  assert(session);
+  return (pn_session_t *) pn_find(session->endpoint.endpoint_next, SESSION, state);
 }
 
 pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
 {
-  if (!conn) return NULL;
+  assert(conn);
 
   pn_endpoint_t *endpoint = conn->endpoint_head;
 
-  while (endpoint)
-  {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state))
+  while (endpoint) {
+    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state)) {
       return (pn_link_t *) endpoint;
+    }
+
     endpoint = endpoint->endpoint_next;
   }
 
@@ -866,14 +867,15 @@ pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
 
 pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 {
-  if (!link) return NULL;
+  assert(link);
 
   pn_endpoint_t *endpoint = link->endpoint.endpoint_next;
 
-  while (endpoint)
-  {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state))
+  while (endpoint) {
+    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state)) {
       return (pn_link_t *) endpoint;
+    }
+
     endpoint = endpoint->endpoint_next;
   }
 
@@ -882,7 +884,10 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 
 static void pn_session_incref(void *object)
 {
+  assert(object);
+
   pn_session_t *session = (pn_session_t *) object;
+
   if (!session->endpoint.referenced) {
     session->endpoint.referenced = true;
     pn_incref(session->connection);
@@ -893,8 +898,10 @@ static void pn_session_incref(void *object)
 
 static bool pn_ep_bound(pn_endpoint_t *endpoint)
 {
+  assert(endpoint);
+
   pn_connection_t *conn = pni_ep_get_connection(endpoint);
-  pn_session_t *ssn;
+  pn_session_t *session;
   pn_link_t *lnk;
 
   if (!conn->transport) return false;
@@ -904,8 +911,8 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
   case CONNECTION:
     return ((pn_connection_t *)endpoint)->transport;
   case SESSION:
-    ssn = (pn_session_t *) endpoint;
-    return (((int16_t) ssn->state.local_channel) >= 0 || ((int16_t) ssn->state.remote_channel) >= 0);
+    session = (pn_session_t *) endpoint;
+    return (((int16_t) session->state.local_channel) >= 0 || ((int16_t) session->state.remote_channel) >= 0);
   case SENDER:
   case RECEIVER:
     lnk = (pn_link_t *) endpoint;
@@ -917,18 +924,23 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
 }
 
 static bool pni_connection_live(pn_connection_t *conn) {
+  assert(conn);
   return pn_refcount(conn) > 1;
 }
 
-static bool pni_session_live(pn_session_t *ssn) {
-  return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
+static bool pni_session_live(pn_session_t *session) {
+  assert(session);
+  return pni_connection_live(session->connection) || pn_refcount(session) > 1;
 }
 
 static bool pni_link_live(pn_link_t *link) {
+  assert(link);
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
 
 static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
+  assert(endpoint);
+
   switch (endpoint->type) {
   case CONNECTION:
     return pni_connection_live((pn_connection_t *)endpoint);
@@ -945,15 +957,17 @@ static bool pni_endpoint_live(pn_endpoint_t *endpoint) {
 
 static bool pni_preserve_child(pn_endpoint_t *endpoint)
 {
-  pn_connection_t *conn = pni_ep_get_connection(endpoint);
+  assert(endpoint);
+
   pn_endpoint_t *parent = pn_ep_parent(endpoint);
-  if (pni_endpoint_live(parent) && (!endpoint->freed || (pn_ep_bound(endpoint)))
-      && endpoint->referenced) {
+
+  if (pni_endpoint_live(parent) && (!endpoint->freed || (pn_ep_bound(endpoint))) && endpoint->referenced) {
     pn_object_incref(endpoint);
     endpoint->referenced = false;
     pn_decref(parent);
     return true;
   } else {
+    pn_connection_t *conn = pni_ep_get_connection(endpoint);
     LL_REMOVE(conn, transport, endpoint);
     return false;
   }
@@ -961,6 +975,8 @@ static bool pni_preserve_child(pn_endpoint_t *endpoint)
 
 static void pn_session_finalize(void *object)
 {
+  assert(object);
+
   pn_session_t *session = (pn_session_t *) object;
   pn_endpoint_t *endpoint = &session->endpoint;
 
@@ -1003,104 +1019,107 @@ pn_session_t *pn_session(pn_connection_t *conn)
 #define pn_session_free NULL
   static const pn_class_t clazz = PN_METACLASS(pn_session);
 #undef pn_session_free
-  pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
-  if (!ssn) return NULL;
-  pn_endpoint_init(&ssn->endpoint, SESSION, conn);
-  pni_add_session(conn, ssn);
-  ssn->links = pn_list(PN_WEAKREF, 0);
-  ssn->freed = pn_list(PN_WEAKREF, 0);
-  ssn->context = pn_record();
-  ssn->incoming_capacity = 0;
-  ssn->incoming_bytes = 0;
-  ssn->outgoing_bytes = 0;
-  ssn->incoming_deliveries = 0;
-  ssn->outgoing_deliveries = 0;
-  ssn->outgoing_window = AMQP_MAX_WINDOW_SIZE;
-  ssn->local_handle_max = PN_IMPL_HANDLE_MAX;
+  pn_session_t *session = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
+  if (!session) return NULL;
+  pn_endpoint_init(&session->endpoint, SESSION, conn);
+  pni_add_session(conn, session);
+  session->links = pn_list(PN_WEAKREF, 0);
+  session->freed = pn_list(PN_WEAKREF, 0);
+  session->context = pn_record();
+  session->incoming_capacity = 0;
+  session->incoming_bytes = 0;
+  session->outgoing_bytes = 0;
+  session->incoming_deliveries = 0;
+  session->outgoing_deliveries = 0;
+  session->outgoing_window = AMQP_MAX_WINDOW_SIZE;
+  session->local_handle_max = PN_IMPL_HANDLE_MAX;
 
   // begin transport state
-  memset(&ssn->state, 0, sizeof(ssn->state));
-  ssn->state.remote_handle_max = UINT32_MAX;
-  ssn->state.local_channel = (uint16_t)-1;
-  ssn->state.remote_channel = (uint16_t)-1;
-  pn_delivery_map_init(&ssn->state.incoming, 0);
-  pn_delivery_map_init(&ssn->state.outgoing, 0);
-  ssn->state.local_handles = pn_hash(PN_WEAKREF, 0, 0.75);
-  ssn->state.remote_handles = pn_hash(PN_WEAKREF, 0, 0.75);
+  memset(&session->state, 0, sizeof(session->state));
+  session->state.remote_handle_max = UINT32_MAX;
+  session->state.local_channel = (uint16_t)-1;
+  session->state.remote_channel = (uint16_t)-1;
+  pn_delivery_map_init(&session->state.incoming, 0);
+  pn_delivery_map_init(&session->state.outgoing, 0);
+  session->state.local_handles = pn_hash(PN_WEAKREF, 0, 0.75);
+  session->state.remote_handles = pn_hash(PN_WEAKREF, 0, 0.75);
   // end transport state
 
-  pn_collector_put_object(conn->collector, ssn, PN_SESSION_INIT);
+  pn_collector_put_object(conn->collector, session, PN_SESSION_INIT);
   if (conn->transport) {
-    pni_session_bound(ssn);
+    pni_session_bound(session);
   }
-  pn_decref(ssn);
-  return ssn;
+  pn_decref(session);
+  return session;
 }
 
-static void pni_session_bound(pn_session_t *ssn)
+static void pni_session_bound(pn_session_t *session)
 {
-  assert(ssn);
-  size_t nlinks = pn_list_size(ssn->links);
+  assert(session);
+  size_t nlinks = pn_list_size(session->links);
   for (size_t i = 0; i < nlinks; i++) {
-    pni_link_bound((pn_link_t *) pn_list_get(ssn->links, i));
+    pni_link_bound((pn_link_t *) pn_list_get(session->links, i));
   }
 }
 
-void pn_session_unbound(pn_session_t* ssn)
+void pn_session_unbound(pn_session_t* session)
 {
-  assert(ssn);
-  ssn->state.local_channel = (uint16_t)-1;
-  ssn->state.remote_channel = (uint16_t)-1;
-  ssn->incoming_bytes = 0;
-  ssn->outgoing_bytes = 0;
-  ssn->incoming_deliveries = 0;
-  ssn->outgoing_deliveries = 0;
+  assert(session);
+  session->state.local_channel = (uint16_t)-1;
+  session->state.remote_channel = (uint16_t)-1;
+  session->incoming_bytes = 0;
+  session->outgoing_bytes = 0;
+  session->incoming_deliveries = 0;
+  session->outgoing_deliveries = 0;
 }
 
-size_t pn_session_get_incoming_capacity(pn_session_t *ssn)
+size_t pn_session_get_incoming_capacity(pn_session_t *session)
 {
-  assert(ssn);
-  return ssn->incoming_capacity;
+  assert(session);
+  return session->incoming_capacity;
 }
 
-void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity)
+void pn_session_set_incoming_capacity(pn_session_t *session, size_t capacity)
 {
-  assert(ssn);
+  assert(session);
   // XXX: should this trigger a flow?
-  ssn->incoming_capacity = capacity;
+  session->incoming_capacity = capacity;
 }
 
-size_t pn_session_get_outgoing_window(pn_session_t *ssn)
+size_t pn_session_get_outgoing_window(pn_session_t *session)
 {
-  assert(ssn);
-  return ssn->outgoing_window;
+  assert(session);
+  return session->outgoing_window;
 }
 
-void pn_session_set_outgoing_window(pn_session_t *ssn, size_t window)
+void pn_session_set_outgoing_window(pn_session_t *session, size_t window)
 {
-  assert(ssn);
-  ssn->outgoing_window = window;
+  assert(session);
+  session->outgoing_window = window;
 }
 
-size_t pn_session_outgoing_bytes(pn_session_t *ssn)
+size_t pn_session_outgoing_bytes(pn_session_t *session)
 {
-  assert(ssn);
-  return ssn->outgoing_bytes;
+  assert(session);
+  return session->outgoing_bytes;
 }
 
-size_t pn_session_incoming_bytes(pn_session_t *ssn)
+size_t pn_session_incoming_bytes(pn_session_t *session)
 {
-  assert(ssn);
-  return ssn->incoming_bytes;
+  assert(session);
+  return session->incoming_bytes;
 }
 
 pn_state_t pn_session_state(pn_session_t *session)
 {
+  assert(session);
   return session->endpoint.state;
 }
 
 static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
 {
+  assert(terminus);
+
   terminus->type = type;
   terminus->address = pn_string(NULL);
   terminus->durability = PN_NONDURABLE;
@@ -1117,7 +1136,10 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
 
 static void pn_link_incref(void *object)
 {
+  assert(object);
+
   pn_link_t *link = (pn_link_t *) object;
+
   if (!link->endpoint.referenced) {
     link->endpoint.referenced = true;
     pn_incref(link->session);
@@ -1128,6 +1150,8 @@ static void pn_link_incref(void *object)
 
 static void pn_link_finalize(void *object)
 {
+  assert(object);
+
   pn_link_t *link = (pn_link_t *) object;
   pn_endpoint_t *endpoint = &link->endpoint;
 
@@ -1233,27 +1257,31 @@ void pn_link_unbound(pn_link_t* link)
 
 pn_terminus_t *pn_link_source(pn_link_t *link)
 {
-  return link ? &link->source : NULL;
+  assert(link);
+  return &link->source;
 }
 
 pn_terminus_t *pn_link_target(pn_link_t *link)
 {
-  return link ? &link->target : NULL;
+  assert(link);
+  return &link->target;
 }
 
 pn_terminus_t *pn_link_remote_source(pn_link_t *link)
 {
-  return link ? &link->remote_source : NULL;
+  assert(link);
+  return &link->remote_source;
 }
 
 pn_terminus_t *pn_link_remote_target(pn_link_t *link)
 {
-  return link ? &link->remote_target : NULL;
+  assert(link);
+  return &link->remote_target;
 }
 
 int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->type = type;
   return 0;
 }
@@ -1277,29 +1305,32 @@ int pn_terminus_set_address(pn_terminus_t *terminus, const char *address)
 
 pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus)
 {
-  return (pn_durability_t) (terminus ? terminus->durability : 0);
+  assert(terminus);
+  return terminus->durability;
 }
 
 int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durability)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->durability = durability;
   return 0;
 }
 
 pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus)
 {
-  return (pn_expiry_policy_t) (terminus ? terminus->expiry_policy : 0);
+  assert(terminus);
+  return terminus->expiry_policy;
 }
 
 bool pn_terminus_has_expiry_policy(const pn_terminus_t *terminus)
 {
-    return terminus && terminus->has_expiry_policy;
+  assert(terminus);
+  return terminus->has_expiry_policy;
 }
 
 int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t expiry_policy)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->expiry_policy = expiry_policy;
   terminus->has_expiry_policy = true;
   return 0;
@@ -1307,65 +1338,71 @@ int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t ex
 
 pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->timeout : 0;
+  assert(terminus);
+  return terminus->timeout;
 }
 
 int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t timeout)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->timeout = timeout;
   return 0;
 }
 
 bool pn_terminus_is_dynamic(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->dynamic : false;
+  assert(terminus);
+  return terminus->dynamic;
 }
 
 int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->dynamic = dynamic;
   return 0;
 }
 
 pn_data_t *pn_terminus_properties(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->properties : NULL;
+  assert(terminus);
+  return terminus->properties;
 }
 
 pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->capabilities : NULL;
+  assert(terminus);
+  return terminus->capabilities;
 }
 
 pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->outcomes : NULL;
+  assert(terminus);
+  return terminus->outcomes;
 }
 
 pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->filter : NULL;
+  assert(terminus);
+  return terminus->filter;
 }
 
 pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus)
 {
-  return terminus ? (pn_distribution_mode_t) terminus->distribution_mode : PN_DIST_MODE_UNSPECIFIED;
+  assert(terminus);
+  return terminus->distribution_mode;
 }
 
 int pn_terminus_set_distribution_mode(pn_terminus_t *terminus, pn_distribution_mode_t m)
 {
-  if (!terminus) return PN_ARG_ERR;
+  assert(terminus);
   terminus->distribution_mode = m;
   return 0;
 }
 
 int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
 {
-  if (!terminus || !src) {
-    return PN_ARG_ERR;
-  }
+  assert(terminus);
+  assert(src);
 
   terminus->type = src->type;
   int err = pn_terminus_set_address(terminus, pn_terminus_get_address(src));
@@ -1399,6 +1436,7 @@ pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 
 pn_state_t pn_link_state(pn_link_t *link)
 {
+  assert(link);
   return link->endpoint.state;
 }
 
@@ -1410,11 +1448,13 @@ const char *pn_link_name(pn_link_t *link)
 
 bool pn_link_is_sender(pn_link_t *link)
 {
+  assert(link);
   return link->endpoint.type == SENDER;
 }
 
 bool pn_link_is_receiver(pn_link_t *link)
 {
+  assert(link);
   return link->endpoint.type == RECEIVER;
 }
 
@@ -1433,7 +1473,10 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
 
 static void pn_delivery_incref(void *object)
 {
+  assert(object);
+
   pn_delivery_t *delivery = (pn_delivery_t *) object;
+
   if (delivery->link && !delivery->referenced) {
     delivery->referenced = true;
     pn_incref(delivery->link);
@@ -1444,12 +1487,16 @@ static void pn_delivery_incref(void *object)
 
 static bool pni_preserve_delivery(pn_delivery_t *delivery)
 {
+  assert(delivery);
+
   pn_connection_t *conn = delivery->link->session->connection;
   return !delivery->local.settled || (conn->transport && (delivery->state.init || delivery->tpwork));
 }
 
 static void pn_delivery_finalize(void *object)
 {
+  assert(object);
+
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   pn_link_t *link = delivery->link;
   //  assert(!delivery->state.init);
@@ -1471,9 +1518,9 @@ static void pn_delivery_finalize(void *object)
                         ? &link->session->state.outgoing
                         : &link->session->state.incoming,
                         delivery);
-    pn_buffer_clear(delivery->tag);
-    pn_buffer_clear(delivery->bytes);
-    pn_record_clear(delivery->context);
+    // pn_buffer_clear(delivery->tag);
+    // pn_buffer_clear(delivery->bytes);
+    // pn_record_clear(delivery->context);
     delivery->settled = true;
     pn_connection_t *conn = link->session->connection;
     assert(pn_refcount(delivery) == 0);
@@ -1539,54 +1586,67 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
+
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
+
   if (!delivery) {
-    delivery = (pn_delivery_t *) pn_class_new(&PN_CLASSCLASS(pn_delivery), sizeof(pn_delivery_t));
+    static const pn_class_t clazz = PN_METACLASS(pn_delivery);
+    delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
     if (!delivery) return NULL;
+
     delivery->tag = pn_buffer(16);
-    delivery->bytes = pn_buffer(64);
+    delivery->bytes = pn_buffer(128);
+
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
+
     delivery->context = pn_record();
   } else {
     assert(!delivery->state.init);
+
+    pn_buffer_clear(delivery->tag);
+    pn_buffer_clear(delivery->bytes);
+
+    pn_disposition_clear(&delivery->local);
+    pn_disposition_clear(&delivery->remote);
+
+    pn_record_clear(delivery->context);
   }
-  delivery->link = link;
-  pn_incref(delivery->link);  // keep link until finalized
-  pn_buffer_clear(delivery->tag);
+
   pn_buffer_append(delivery->tag, tag.start, tag.size);
-  pn_disposition_clear(&delivery->local);
-  pn_disposition_clear(&delivery->remote);
-  delivery->updated = false;
-  delivery->settled = false;
-  LL_ADD(link, unsettled, delivery);
-  delivery->referenced = true;
+
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
-  delivery->work = false;
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
-  delivery->tpwork = false;
-  pn_buffer_clear(delivery->bytes);
+
+  delivery->state = (pn_delivery_state_t) {0};
+
+  delivery->updated = false;
+  delivery->settled = false;
   delivery->done = false;
   delivery->aborted = false;
-  pn_record_clear(delivery->context);
+  delivery->work = false;
+  delivery->tpwork = false;
 
-  // begin delivery state
-  delivery->state.init = false;
-  delivery->state.sending = false; /* True if we have sent at least 1 frame */
-  delivery->state.sent = false;    /* True if we have sent the entire delivery */
-  // end delivery state
-
-  if (!link->current)
-    link->current = delivery;
+  delivery->referenced = true;
+  delivery->link = link;
+  pn_incref(delivery->link); // Keep link until finalized
+  LL_ADD(link, unsettled, delivery);
 
   link->unsettled_count++;
 
-  pn_work_update(link->session->connection, delivery);
+  if (!link->current) {
+    link->current = delivery;
+  }
 
-  // XXX: could just remove incref above
+  if (link->current == delivery) {
+    if (link->endpoint.type == RECEIVER || (link->endpoint.type == SENDER && pn_link_credit(link))) {
+      pni_add_work(link->session->connection, delivery);
+    }
+  }
+
   pn_decref(delivery);
 
   return delivery;
@@ -1595,46 +1655,56 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
+
   if (delivery->settled) return false;
+
   if (pn_link_is_sender(delivery->link)) {
     pn_delivery_state_t *state = &delivery->state;
-    if (state->sent) {
-      return false;
-    } else {
-      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
+
+    if (!state->sent) {
+      return delivery->done || pn_buffer_size(delivery->bytes) > 0;
     }
-  } else {
-    return false;
   }
+
+  return false;
 }
 
 int pn_link_unsettled(pn_link_t *link)
 {
+  assert(link);
   return link->unsettled_count;
 }
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 {
+  assert(link);
+
   pn_delivery_t *d = link->unsettled_head;
+
   while (d && d->local.settled) {
     d = d->unsettled_next;
   }
+
   return d;
 }
 
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
 {
+  assert(delivery);
+
   pn_delivery_t *d = delivery->unsettled_next;
+
   while (d && d->local.settled) {
     d = d->unsettled_next;
   }
+
   return d;
 }
 
 bool pn_delivery_current(pn_delivery_t *delivery)
 {
-  pn_link_t *link = delivery->link;
-  return pn_link_current(link) == delivery;
+  assert(delivery);
+  return pn_link_current(delivery->link) == delivery;
 }
 
 void pn_delivery_dump(pn_delivery_t *d)
@@ -1742,17 +1812,14 @@ pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition)
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
-  if (delivery) {
-    pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-    return pn_dtag(tag.start, tag.size);
-  } else {
-    return pn_dtag(0, 0);
-  }
+  assert(delivery);
+  pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+  return pn_dtag(tag.start, tag.size);
 }
 
 pn_delivery_t *pn_link_current(pn_link_t *link)
 {
-  if (!link) return NULL;
+  assert(link);
   return link->current;
 }
 
@@ -1792,35 +1859,49 @@ static void pni_advance_receiver(pn_link_t *link)
 
 bool pn_link_advance(pn_link_t *link)
 {
-  if (link && link->current) {
-    pn_delivery_t *prev = link->current;
-    if (link->endpoint.type == SENDER) {
-      pni_advance_sender(link);
-    } else {
-      pni_advance_receiver(link);
-    }
-    pn_delivery_t *next = link->current;
-    pn_work_update(link->session->connection, prev);
-    if (next) pn_work_update(link->session->connection, next);
-    return prev != next;
+  assert(link);
+  assert(link->current);
+
+  pn_connection_t *conn = link->session->connection;
+  pn_delivery_t *prev = link->current;
+
+  if (link->endpoint.type == SENDER) {
+    pni_advance_sender(link);
   } else {
-    return false;
+    pni_advance_receiver(link);
   }
+
+  if (prev->updated) {
+    pni_add_work(conn, prev);
+  } else {
+    pni_clear_work(conn, prev);
+  }
+
+  pn_delivery_t *next = link->current;
+
+  if (next) {
+    pni_add_work(conn, next);
+  }
+
+  return prev != next;
 }
 
 int pn_link_credit(pn_link_t *link)
 {
-  return link ? link->credit : 0;
+  assert(link);
+  return link->credit;
 }
 
 int pn_link_available(pn_link_t *link)
 {
-  return link ? link->available : 0;
+  assert(link);
+  return link->available;
 }
 
 int pn_link_queued(pn_link_t *link)
 {
-  return link ? link->queued : 0;
+  assert(link);
+  return link->queued;
 }
 
 int pn_link_remote_credit(pn_link_t *link)
@@ -1837,82 +1918,95 @@ bool pn_link_get_drain(pn_link_t *link)
 
 pn_snd_settle_mode_t pn_link_snd_settle_mode(pn_link_t *link)
 {
-  return link ? (pn_snd_settle_mode_t)link->snd_settle_mode
-      : PN_SND_MIXED;
+  assert(link);
+  return (pn_snd_settle_mode_t) link->snd_settle_mode;
 }
 
 pn_rcv_settle_mode_t pn_link_rcv_settle_mode(pn_link_t *link)
 {
-  return link ? (pn_rcv_settle_mode_t)link->rcv_settle_mode
-      : PN_RCV_FIRST;
+  assert(link);
+  return (pn_rcv_settle_mode_t) link->rcv_settle_mode;
 }
 
 pn_snd_settle_mode_t pn_link_remote_snd_settle_mode(pn_link_t *link)
 {
-  return link ? (pn_snd_settle_mode_t)link->remote_snd_settle_mode
-      : PN_SND_MIXED;
+  assert(link);
+  return (pn_snd_settle_mode_t) link->remote_snd_settle_mode;
 }
 
 pn_rcv_settle_mode_t pn_link_remote_rcv_settle_mode(pn_link_t *link)
 {
-  return link ? (pn_rcv_settle_mode_t)link->remote_rcv_settle_mode
-      : PN_RCV_FIRST;
+  assert(link);
+  return (pn_rcv_settle_mode_t) link->remote_rcv_settle_mode;
 }
+
 void pn_link_set_snd_settle_mode(pn_link_t *link, pn_snd_settle_mode_t mode)
 {
-  if (link)
-    link->snd_settle_mode = (uint8_t)mode;
+  assert(link);
+  link->snd_settle_mode = (uint8_t)mode;
 }
+
 void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t mode)
 {
-  if (link)
-    link->rcv_settle_mode = (uint8_t)mode;
+  assert(link);
+  link->rcv_settle_mode = (uint8_t)mode;
 }
 
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
   assert(delivery);
+
   if (!delivery->local.settled) {
     pn_link_t *link = delivery->link;
-    if (pn_delivery_current(delivery)) {
+
+    if (pn_link_current(link) == delivery) {
       pn_link_advance(link);
     }
 
     link->unsettled_count--;
     delivery->local.settled = true;
+
     pni_add_tpwork(delivery);
-    pn_work_update(delivery->link->session->connection, delivery);
-    pn_incref(delivery);
-    pn_decref(delivery);
+    pni_clear_work(delivery->link->session->connection, delivery);
   }
 }
 
 void pn_link_offered(pn_link_t *sender, int credit)
 {
+  assert(sender);
   sender->available = credit;
 }
 
 ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
 {
+  assert(sender);
+
   pn_delivery_t *current = pn_link_current(sender);
+
   if (!current) return PN_EOS;
   if (!bytes || !n) return 0;
+
   pn_buffer_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
+
   pni_add_tpwork(current);
+
   return n;
 }
 
 int pn_link_drained(pn_link_t *link)
 {
   assert(link);
+
   int drained = 0;
 
   if (pn_link_is_sender(link)) {
     if (link->drain && link->credit > 0) {
       link->drained = link->credit;
       link->credit = 0;
+
       pn_modified(link->session->connection, &link->endpoint, true);
+
       drained = link->drained;
     }
   } else {
@@ -1925,19 +2019,27 @@ int pn_link_drained(pn_link_t *link)
 
 ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
 {
-  if (!receiver) return PN_ARG_ERR;
+  assert(receiver);
+
   pn_delivery_t *delivery = receiver->current;
+
   if (!delivery) return PN_STATE_ERR;
   if (delivery->aborted) return PN_ABORTED;
+
   size_t size = pn_buffer_pop_left(delivery->bytes, n, bytes);
+
   if (size) {
     receiver->session->incoming_bytes -= size;
+
     if (!receiver->session->state.incoming_window) {
       pni_add_tpwork(delivery);
     }
+
     return size;
+  } else if (delivery->done) {
+    return PN_EOS;
   } else {
-    return delivery->done ? PN_EOS : 0;
+    return 0;
   }
 }
 
@@ -1946,8 +2048,11 @@ void pn_link_flow(pn_link_t *receiver, int credit)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
+
   receiver->credit += credit;
+
   pn_modified(receiver->session->connection, &receiver->endpoint, true);
+
   if (!receiver->drain_flag_mode) {
     pn_link_set_drain(receiver, false);
     receiver->drain_flag_mode = false;
@@ -1958,8 +2063,10 @@ void pn_link_drain(pn_link_t *receiver, int credit)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
+
   pn_link_set_drain(receiver, true);
   pn_link_flow(receiver, credit);
+
   receiver->drain_flag_mode = false;
 }
 
@@ -1967,8 +2074,11 @@ void pn_link_set_drain(pn_link_t *receiver, bool drain)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
+
   receiver->drain = drain;
+
   pn_modified(receiver->session->connection, &receiver->endpoint, true);
+
   receiver->drain_flag_mode = true;
 }
 
@@ -1976,29 +2086,36 @@ bool pn_link_draining(pn_link_t *receiver)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
+
   return receiver->drain && (pn_link_credit(receiver) > pn_link_queued(receiver));
 }
 
 uint64_t pn_link_max_message_size(pn_link_t *link)
 {
+  assert(link);
   return link->max_message_size;
 }
 
 void pn_link_set_max_message_size(pn_link_t *link, uint64_t size)
 {
+  assert(link);
   link->max_message_size = size;
 }
 
 uint64_t pn_link_remote_max_message_size(pn_link_t *link)
 {
+  assert(link);
   return link->remote_max_message_size;
 }
 
 pn_data_t *pn_link_properties(pn_link_t *link)
 {
   assert(link);
-  if (!link->properties)
+
+  if (!link->properties) {
       link->properties = pn_data(0);
+  }
+
   return link->properties;
 }
 
@@ -2041,47 +2158,46 @@ uint64_t pn_delivery_remote_state(pn_delivery_t *delivery)
 
 bool pn_delivery_settled(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->remote.settled : false;
+  assert(delivery);
+  return delivery->remote.settled;
 }
 
 bool pn_delivery_updated(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->updated : false;
+  assert(delivery);
+  return delivery->updated;
 }
 
 void pn_delivery_clear(pn_delivery_t *delivery)
 {
+  assert(delivery);
   delivery->updated = false;
   pn_work_update(delivery->link->session->connection, delivery);
 }
 
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
 {
-  if (!delivery) return;
+  assert(delivery);
   delivery->local.type = state;
   pni_add_tpwork(delivery);
 }
 
 bool pn_delivery_writable(pn_delivery_t *delivery)
 {
-  if (!delivery) return false;
-
+  assert(delivery);
   pn_link_t *link = delivery->link;
   return pn_link_is_sender(link) && pn_delivery_current(delivery) && pn_link_credit(link) > 0;
 }
 
 bool pn_delivery_readable(pn_delivery_t *delivery)
 {
-  if (delivery) {
-    pn_link_t *link = delivery->link;
-    return pn_link_is_receiver(link) && pn_delivery_current(delivery);
-  } else {
-    return false;
-  }
+  assert(delivery);
+  return pn_link_is_receiver(delivery->link) && pn_delivery_current(delivery);
 }
 
 size_t pn_delivery_pending(pn_delivery_t *delivery)
 {
+  assert(delivery);
   /* Aborted deliveries: for clients that don't check pn_delivery_aborted(),
      return 1 rather than 0. This will force them to call pn_link_recv() and get
      the PN_ABORTED error return code.
@@ -2092,10 +2208,12 @@ size_t pn_delivery_pending(pn_delivery_t *delivery)
 
 bool pn_delivery_partial(pn_delivery_t *delivery)
 {
+  assert(delivery);
   return !delivery->done;
 }
 
 void pn_delivery_abort(pn_delivery_t *delivery) {
+  assert(delivery);
   if (!delivery->local.settled) { /* Can't abort a settled delivery */
     delivery->aborted = true;
     pn_delivery_settle(delivery);
@@ -2105,6 +2223,7 @@ void pn_delivery_abort(pn_delivery_t *delivery) {
 }
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {
+  assert(delivery);
   return delivery->aborted;
 }
 
@@ -2153,6 +2272,7 @@ bool pn_condition_is_set(pn_condition_t *condition)
 void pn_condition_clear(pn_condition_t *condition)
 {
   assert(condition);
+
   if (condition->name) pn_string_clear(condition->name);
   if (condition->description) pn_string_clear(condition->description);
   if (condition->info) pn_data_clear(condition->info);
@@ -2161,6 +2281,7 @@ void pn_condition_clear(pn_condition_t *condition)
 const char *pn_condition_get_name(pn_condition_t *condition)
 {
   assert(condition);
+
   if (condition->name == NULL) {
     return NULL;
   } else {
@@ -2171,6 +2292,7 @@ const char *pn_condition_get_name(pn_condition_t *condition)
 int pn_condition_set_name(pn_condition_t *condition, const char *name)
 {
   assert(condition);
+
   if (condition->name == NULL) {
     condition->name = pn_string(name);
     return 0;
@@ -2182,6 +2304,7 @@ int pn_condition_set_name(pn_condition_t *condition, const char *name)
 const char *pn_condition_get_description(pn_condition_t *condition)
 {
   assert(condition);
+
   if (condition->description == NULL) {
     return NULL;
   } else {
@@ -2192,6 +2315,7 @@ const char *pn_condition_get_description(pn_condition_t *condition)
 int pn_condition_set_description(pn_condition_t *condition, const char *description)
 {
   assert(condition);
+
   if (condition->description == NULL) {
     condition->description = pn_string(description);
     return 0;
@@ -2228,9 +2352,11 @@ int pn_condition_format(pn_condition_t *condition, const char *name, const char 
 pn_data_t *pn_condition_info(pn_condition_t *condition)
 {
   assert(condition);
+
   if (condition->info == NULL) {
     condition->info = pn_data(0);
   }
+
   return condition->info;
 }
 
@@ -2267,7 +2393,9 @@ int pn_condition_redirect_port(pn_condition_t *condition)
 
 pn_connection_t *pn_event_connection(pn_event_t *event)
 {
-  pn_session_t *ssn;
+  assert(event);
+
+  pn_session_t *session;
   pn_transport_t *transport;
 
   switch (pn_class_id(pn_event_class(event))) {
@@ -2275,53 +2403,66 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
     return (pn_connection_t *) pn_event_context(event);
   case CID_pn_transport:
     transport = pn_event_transport(event);
-    if (transport)
+
+    if (transport) {
       return transport->connection;
+    }
+
     return NULL;
   default:
-    ssn = pn_event_session(event);
-    if (ssn)
-     return pn_session_connection(ssn);
+    session = pn_event_session(event);
+
+    if (session) {
+      return pn_session_connection(session);
+    }
+
+    return NULL;
   }
-  return NULL;
 }
 
 pn_session_t *pn_event_session(pn_event_t *event)
 {
-  pn_link_t *link;
-  switch (pn_class_id(pn_event_class(event))) {
-  case CID_pn_session:
+  assert(event);
+
+  if (pn_class_id(pn_event_class(event)) == CID_pn_session) {
     return (pn_session_t *) pn_event_context(event);
-  default:
-    link = pn_event_link(event);
-    if (link)
+  } else {
+    pn_link_t *link = pn_event_link(event);
+
+    if (link) {
       return pn_link_session(link);
+    }
   }
+
   return NULL;
 }
 
 pn_link_t *pn_event_link(pn_event_t *event)
 {
-  pn_delivery_t *dlv;
-  switch (pn_class_id(pn_event_class(event))) {
-  case CID_pn_link:
+  assert(event);
+
+  if (pn_class_id(pn_event_class(event)) == CID_pn_link) {
     return (pn_link_t *) pn_event_context(event);
-  default:
-    dlv = pn_event_delivery(event);
-    if (dlv)
+  } else {
+    pn_delivery_t *dlv = pn_event_delivery(event);
+
+    if (dlv) {
       return pn_delivery_link(dlv);
+    }
   }
+
   return NULL;
 }
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (pn_class_id(pn_event_class(event))) {
-  case CID_pn_delivery:
+  assert(event);
+
+  if (pn_class_id(pn_event_class(event)) == CID_pn_delivery) {
     return (pn_delivery_t *) pn_event_context(event);
-  default:
-    return NULL;
   }
+
+  return NULL;
 }
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
