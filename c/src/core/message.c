@@ -348,10 +348,10 @@ static pn_message_t *pni_message_new(size_t size)
   msg->inferred = false;
   msg->id_deprecated = NULL;
   msg->correlation_id_deprecated = NULL;
-  msg->instructions = pn_data(16);
-  msg->annotations = pn_data(16);
-  msg->properties = pn_data(16);
-  msg->body = pn_data(16);
+  msg->instructions = pn_data(0);
+  msg->annotations = pn_data(0);
+  msg->properties = pn_data(0);
+  msg->body = pn_data(0);
 
   msg->error = pn_error();
   return msg;
