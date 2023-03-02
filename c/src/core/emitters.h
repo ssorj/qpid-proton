@@ -96,7 +96,7 @@ static inline bool pni_emitter_remaining(pni_emitter_t* e, size_t need) {
 static inline void pni_emitter_writef8(pni_emitter_t* emitter, uint8_t value)
 {
   if (pni_emitter_remaining(emitter, 1)) {
-    emitter->output_start[emitter->position+0] = value;
+    emitter->output_start[emitter->position] = value;
   }
   emitter->position++;
 }
@@ -104,8 +104,9 @@ static inline void pni_emitter_writef8(pni_emitter_t* emitter, uint8_t value)
 static inline void pni_emitter_writef16(pni_emitter_t* emitter, uint16_t value)
 {
   if (pni_emitter_remaining(emitter, 2)) {
-    emitter->output_start[emitter->position+0] = 0xFF & (value >> 8);
-    emitter->output_start[emitter->position+1] = 0xFF & (value     );
+    char* bytes = &emitter->output_start[emitter->position];
+    bytes[0] = 0xFF & (value >> 8);
+    bytes[1] = 0xFF & (value     );
   }
   emitter->position += 2;
 }
@@ -113,24 +114,26 @@ static inline void pni_emitter_writef16(pni_emitter_t* emitter, uint16_t value)
 static inline void pni_emitter_writef32(pni_emitter_t* emitter, uint32_t value)
 {
   if (pni_emitter_remaining(emitter, 4)) {
-    emitter->output_start[emitter->position+0] = 0xFF & (value >> 24);
-    emitter->output_start[emitter->position+1] = 0xFF & (value >> 16);
-    emitter->output_start[emitter->position+2] = 0xFF & (value >>  8);
-    emitter->output_start[emitter->position+3] = 0xFF & (value      );
+    char* bytes = &emitter->output_start[emitter->position];
+    bytes[0] = 0xFF & (value >> 24);
+    bytes[1] = 0xFF & (value >> 16);
+    bytes[2] = 0xFF & (value >>  8);
+    bytes[3] = 0xFF & (value      );
   }
   emitter->position += 4;
 }
 
 static inline void pni_emitter_writef64(pni_emitter_t* emitter, uint64_t value) {
   if (pni_emitter_remaining(emitter, 8)) {
-    emitter->output_start[emitter->position+0] = 0xFF & (value >> 56);
-    emitter->output_start[emitter->position+1] = 0xFF & (value >> 48);
-    emitter->output_start[emitter->position+2] = 0xFF & (value >> 40);
-    emitter->output_start[emitter->position+3] = 0xFF & (value >> 32);
-    emitter->output_start[emitter->position+4] = 0xFF & (value >> 24);
-    emitter->output_start[emitter->position+5] = 0xFF & (value >> 16);
-    emitter->output_start[emitter->position+6] = 0xFF & (value >>  8);
-    emitter->output_start[emitter->position+7] = 0xFF & (value      );
+    char* bytes = &emitter->output_start[emitter->position];
+    bytes[0] = 0xFF & (value >> 56);
+    bytes[1] = 0xFF & (value >> 48);
+    bytes[2] = 0xFF & (value >> 40);
+    bytes[3] = 0xFF & (value >> 32);
+    bytes[4] = 0xFF & (value >> 24);
+    bytes[5] = 0xFF & (value >> 16);
+    bytes[6] = 0xFF & (value >>  8);
+    bytes[7] = 0xFF & (value      );
   }
   emitter->position += 8;
 }

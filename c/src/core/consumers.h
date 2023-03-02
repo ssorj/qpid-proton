@@ -53,7 +53,7 @@ static inline bool pni_consumer_readf8(pni_consumer_t *consumer, uint8_t* result
     consumer->position = consumer->size;
     return false;
   }
-  uint8_t r = consumer->output_start[consumer->position+0];
+  uint8_t r = consumer->output_start[consumer->position];
   consumer->position++;
   *result = r;
   return true;
@@ -65,10 +65,10 @@ static inline bool pni_consumer_readf16(pni_consumer_t *consumer, uint16_t* resu
     consumer->position = consumer->size;
     return false;
   }
-  uint16_t a = consumer->output_start[consumer->position+0];
-  uint16_t b = consumer->output_start[consumer->position+1];
-  uint16_t r = a << 8
-  | b;
+  const uint8_t* bytes = &consumer->output_start[consumer->position];
+  uint32_t a = bytes[0];
+  uint32_t b = bytes[1];
+  uint16_t r = a << 8 | b;
   consumer->position += 2;
   *result = r;
   return true;
@@ -80,14 +80,12 @@ static inline bool pni_consumer_readf32(pni_consumer_t *consumer, uint32_t* resu
     consumer->position = consumer->size;
     return false;
   }
-  uint32_t a = consumer->output_start[consumer->position+0];
-  uint32_t b = consumer->output_start[consumer->position+1];
-  uint32_t c = consumer->output_start[consumer->position+2];
-  uint32_t d = consumer->output_start[consumer->position+3];
-  uint32_t r = a << 24
-  | b << 16
-  | c <<  8
-  | d;
+  const uint8_t* bytes = &consumer->output_start[consumer->position];
+  uint32_t a = bytes[0];
+  uint32_t b = bytes[1];
+  uint32_t c = bytes[2];
+  uint32_t d = bytes[3];
+  uint32_t r = a << 24 | b << 16 | c <<  8 | d;
   consumer->position += 4;
   *result = r;
   return true;
@@ -95,11 +93,22 @@ static inline bool pni_consumer_readf32(pni_consumer_t *consumer, uint32_t* resu
 
 static inline bool pni_consumer_readf64(pni_consumer_t *consumer, uint64_t* result)
 {
-  uint32_t a;
-  if (!pni_consumer_readf32(consumer, &a)) return false;
-  uint32_t b;
-  if (!pni_consumer_readf32(consumer, &b)) return false;
-  *result = (uint64_t)a << 32 | (uint64_t)b;
+  if (consumer->position+8 > consumer->size) {
+    consumer->position = consumer->size;
+    return false;
+  }
+  const uint8_t* bytes = &consumer->output_start[consumer->position];
+  uint64_t a = bytes[0];
+  uint64_t b = bytes[1];
+  uint64_t c = bytes[2];
+  uint64_t d = bytes[3];
+  uint64_t e = bytes[4];
+  uint64_t f = bytes[5];
+  uint64_t g = bytes[6];
+  uint64_t h = bytes[7];
+  uint64_t r = a << 56 | b << 48 | c << 40 | d << 32 | e << 24 | f << 16 | g << 8 | h;
+  consumer->position += 8;
+  *result = r;
   return true;
 }
 
