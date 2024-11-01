@@ -1488,7 +1488,6 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (inext_init) {
     ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
-    pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
   } else {
     ssn->state.remote_incoming_window = iwin;
   }
@@ -1523,6 +1522,9 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     }
 
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+  } else {
+    // No link handle, so this is a session-only flow update
+    pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
   }
 
   return 0;
@@ -2203,7 +2205,8 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     // Aborted delivery with no data yet sent, drop it and issue a FLOW as we may have credit.
     *settle = true;
     state->sent = true;
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
+    pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+    // pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
     return 0;
   }
   *settle = false;
@@ -2276,7 +2279,14 @@ static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t 
   }
 
   if (pni_session_need_flow(ssn)) {
-    int err = pni_post_flow(transport, ssn, link);
+    int err;
+    if (pn_delivery_partial(delivery)) {
+      // If it's a streaming delivery, generate a session-only flow
+      // update by *not* passing the link
+      err = pni_post_flow(transport, ssn, NULL);
+    } else {
+      err = pni_post_flow(transport, ssn, link);
+    }
     if (err) return err;
   }
 

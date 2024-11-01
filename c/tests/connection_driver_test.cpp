@@ -129,7 +129,7 @@ TEST_CASE("driver_message_transfer") {
   REQUIRE(pn_link_is_receiver(rcv));
   pn_link_flow(rcv, 1);
   d.run();
-  CHECK_THAT((etypes{PN_SESSION_FLOW, PN_LINK_FLOW}), Equals(client.log_clear()));
+  CHECK_THAT((etypes{PN_LINK_FLOW}), Equals(client.log_clear()));
 
   /* Encode and send a message */
   auto_free<pn_message_t, pn_message_free> m(pn_message());
@@ -297,8 +297,8 @@ TEST_CASE("driver_message_abort") {
   CHECK(pn_link_current(snd) != sd); /* Settled, possibly freed */
   CHECK_FALSE(d.run());
   CHECK_THAT(server.log_clear(), Equals(etypes()));
-  /* Client gets transport/work after abort to ensure other messages are sent */
-  CHECK_THAT((etypes{PN_TRANSPORT, PN_LINK_WORK}), Equals(client.log_clear()));
+  /* Client gets transport/flow after abort to ensure other messages are sent */
+  CHECK_THAT((etypes{PN_TRANSPORT, PN_LINK_FLOW}), Equals(client.log_clear()));
   /* Aborted delivery consumes no credit */
   CHECK(1 == pn_link_credit(rcv));
   CHECK(1 == pn_link_credit(snd));
