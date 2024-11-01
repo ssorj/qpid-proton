@@ -180,7 +180,8 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              pn_modified_disposition_is_undeliverable,
                              pn_modified_disposition_set_undeliverable,
                              pn_modified_disposition_annotations,
-                             pn_declared_disposition)
+                             pn_declared_disposition,
+                             PN_SESSION_FLOW, PN_LINK_WORK)
 
 
 def isnull(obj):
