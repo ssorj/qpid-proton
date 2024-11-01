@@ -185,6 +185,8 @@ typedef enum {
    */
   PN_SESSION_REMOTE_CLOSE,
 
+  PN_SESSION_FLOW,
+
   /**
    * The session has been freed and any outstanding processing has
    * been completed. This is the final event that will ever be issued
@@ -239,6 +241,8 @@ typedef enum {
    * type point to the relevant link.
    */
   PN_LINK_FLOW,
+
+  PN_LINK_WORK,
 
   /**
    * The link has been freed and any outstanding processing has been

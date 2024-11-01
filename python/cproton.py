@@ -158,7 +158,8 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              pn_transport_require_encryption, pn_transport_set_channel_max,
                              pn_transport_set_idle_timeout, pn_transport_set_max_frame,
                              pn_transport_set_server, pn_transport_tick, pn_transport_trace,
-                             pn_transport_unbind)
+                             pn_transport_unbind,
+                             PN_SESSION_FLOW, PN_LINK_WORK)
 
 
 def isnull(obj):

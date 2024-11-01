@@ -66,6 +66,12 @@ class OutgoingMessageHandler(Handler):
                 and event.link.state & Endpoint.REMOTE_ACTIVE:
             self.on_sendable(event)
 
+    def on_link_work(self, event: Event):
+        if event.link.is_sender and event.link.credit \
+                and event.link.state & Endpoint.LOCAL_ACTIVE \
+                and event.link.state & Endpoint.REMOTE_ACTIVE:
+            self.on_sendable(event)
+
     def on_delivery(self, event: Event):
         dlv = event.delivery
         if dlv.link.is_sender and dlv.updated:

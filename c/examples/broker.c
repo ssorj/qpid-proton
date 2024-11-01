@@ -345,7 +345,8 @@ static bool handle(broker_t* b, pn_event_t* e, pn_connection_t *c) {
      pn_link_open(l);
      break;
    }
-   case PN_LINK_FLOW: {
+   case PN_LINK_FLOW:
+   case PN_LINK_WORK: {
      link_send(b, pn_event_link(e));
      break;
    }

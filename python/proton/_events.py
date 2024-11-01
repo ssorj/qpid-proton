@@ -29,7 +29,8 @@ from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT
     pn_collector, pn_collector_free, pn_collector_more, pn_collector_peek, pn_collector_pop, \
     pn_collector_put_pyref, pn_collector_release, pn_event_connection, pn_event_context, pn_event_delivery, pn_event_link, \
     pn_event_session, pn_event_transport, pn_event_type, pn_event_class_name, pn_event_type_name, \
-    isnull, void2py
+    isnull, void2py, \
+    PN_SESSION_FLOW, PN_LINK_WORK
 
 from ._delivery import Delivery
 from ._endpoints import Connection, Link, Session
@@ -268,6 +269,8 @@ class Event(EventBase):
     point to the relevant session.
     """
 
+    SESSION_FLOW = _core(PN_SESSION_FLOW, "on_session_flow")
+
     SESSION_FINAL = _core(PN_SESSION_FINAL, "on_session_final")
     """
     The session has been freed and any outstanding processing has
@@ -322,6 +325,8 @@ class Event(EventBase):
     The flow control state for a link has changed. Events of this
     type point to the relevant link.
     """
+
+    LINK_WORK = _core(PN_LINK_WORK, "on_link_work")
 
     LINK_FINAL = _core(PN_LINK_FINAL, "on_link_final")
     """

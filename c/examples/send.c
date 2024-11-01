@@ -91,7 +91,8 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      }
    }
 
-   case PN_LINK_FLOW: {
+   case PN_LINK_FLOW:
+   case PN_LINK_WORK: {
      /* The peer has given us some credit, now we can send messages */
      pn_link_t *sender = pn_event_link(event);
      while (pn_link_credit(sender) > 0 && app->sent < app->message_count) {

@@ -2532,10 +2532,11 @@ class EventTest(CollectorTest):
         rcv.flow(10)
         self.pump()
         self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                    Event.LINK_INIT, Event.LINK_REMOTE_OPEN, Event.LINK_FLOW)
+                    Event.LINK_INIT, Event.LINK_REMOTE_OPEN,
+                    Event.SESSION_FLOW, Event.LINK_FLOW)
         rcv.flow(10)
         self.pump()
-        self.expect(Event.LINK_FLOW)
+        self.expect(Event.SESSION_FLOW, Event.LINK_FLOW)
         return snd, rcv
 
     def testDeliveryEvents(self):
@@ -2567,7 +2568,7 @@ class EventTest(CollectorTest):
         assert snd.advance()
         self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
         self.pump()
-        self.expect(Event.LINK_FLOW)
+        self.expect(Event.LINK_WORK)
         rdlv = rcv.current
         assert rdlv is not None
         assert rdlv.tag == "delivery"

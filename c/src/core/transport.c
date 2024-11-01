@@ -1488,6 +1488,7 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (inext_init) {
     ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
+    pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
   } else {
     ssn->state.remote_incoming_window = iwin;
   }
@@ -2202,7 +2203,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     // Aborted delivery with no data yet sent, drop it and issue a FLOW as we may have credit.
     *settle = true;
     state->sent = true;
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+    pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
     return 0;
   }
   *settle = false;
@@ -2248,7 +2249,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
         link->session->outgoing_deliveries--;
       }
 
-      pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+      pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
     }
   }
 
