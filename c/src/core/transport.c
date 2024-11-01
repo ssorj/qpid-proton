@@ -1492,6 +1492,8 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     ssn->state.remote_incoming_window = iwin;
   }
 
+  pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
+
   if (handle_init) {
     pn_link_t *link = pni_handle_state(ssn, handle);
     if (!link) {
@@ -1522,9 +1524,6 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     }
 
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
-  } else {
-    // No link handle, so this is a session-only flow update
-    pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
   }
 
   return 0;
@@ -2206,7 +2205,6 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     *settle = true;
     state->sent = true;
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
-    // pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
     return 0;
   }
   *settle = false;

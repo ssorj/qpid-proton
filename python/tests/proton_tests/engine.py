@@ -2532,10 +2532,10 @@ class EventTest(CollectorTest):
         rcv.flow(10)
         self.pump()
         self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                    Event.LINK_INIT, Event.LINK_REMOTE_OPEN, Event.LINK_FLOW)
+                    Event.LINK_INIT, Event.LINK_REMOTE_OPEN, Event.SESSION_FLOW, Event.LINK_FLOW)
         rcv.flow(10)
         self.pump()
-        self.expect(Event.LINK_FLOW)
+        self.expect(Event.SESSION_FLOW, Event.LINK_FLOW)
         return snd, rcv
 
     def testDeliveryEvents(self):
@@ -2695,7 +2695,7 @@ class TeardownLeakTest(PeerTest):
 
         self.pump()
         self.expect_oneof((Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
-                           Event.LINK_REMOTE_OPEN, Event.LINK_FLOW),
+                           Event.LINK_REMOTE_OPEN, Event.SESSION_FLOW, Event.LINK_FLOW),
                           (Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
                            Event.LINK_REMOTE_OPEN))
 
