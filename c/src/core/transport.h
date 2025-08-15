@@ -22,6 +22,8 @@
  *
  */
 
+#include "proton/transport.h"
+
 #include "core/condition.h"
 #include "core/logger_private.h"
 

@@ -22,7 +22,7 @@
 
 #include "framing.h"
 
-#include "engine-internal.h"
+#include "core/transport.h"
 #include "util.h"
 
 #include <assert.h>

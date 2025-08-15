@@ -22,6 +22,8 @@
  *
  */
 
+#include "proton/connection.h"
+
 #include "proton/types.h"
 
 #include "core/endpoint.h"

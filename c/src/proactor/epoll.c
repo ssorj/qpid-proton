@@ -65,7 +65,6 @@
 #include "epoll-internal.h"
 #include "epoll_name_lookup.h"
 #include "proactor-internal.h"
-#include "core/engine-internal.h"
 #include "core/logger_private.h"
 #include "core/util.h"
 

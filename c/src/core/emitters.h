@@ -24,11 +24,13 @@
 
 /* Definitions of AMQP type codes */
 #include "encodings.h"
-#include "engine-internal.h"
 #include "protocol.h"
 #include "util.h"
 
 #include <proton/codec.h>
+
+#include "core/condition.h"
+#include "core/disposition.h"
 
 #include <stdbool.h>
 #include <stddef.h>

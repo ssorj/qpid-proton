@@ -17,12 +17,18 @@
  * under the License.
  */
 
-#include "engine-internal.h"
 #include <proton/condition.h>
 #include <proton/connection.h>
 #include <proton/connection_driver.h>
 #include <proton/event.h>
 #include <proton/transport.h>
+#include <proton/types.h>
+
+#include "core/connection.h"
+#include "core/logger_private.h"
+#include "core/object_private.h"
+#include "core/transport.h"
+
 #include <string.h>
 
 static pn_event_t *batch_next(pn_connection_driver_t *d) {

@@ -22,17 +22,20 @@
 #include "sasl-internal.h"
 
 #include "core/autodetect.h"
+#include "core/connection.h"
 #include "core/consumers.h"
-#include "core/engine-internal.h"
+#include "core/dispatcher.h"
 #include "core/framing.h"
 #include "core/frame_generators.h"
 #include "core/frame_consumers.h"
+#include "core/transport.h"
 #include "core/util.h"
 #include "core/util_str.h"
 #include "platform/platform_fmt.h"
 #include "protocol.h"
 
 #include "proton/annotations.h"
+#include "proton/event.h"
 #include "proton/ssl.h"
 #include "proton/types.h"
 
@@ -1065,4 +1068,3 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   pnx_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_SUCCESS : SASL_RECVED_FAILURE);
   return 0;
 }
-

@@ -21,8 +21,9 @@
 
 #include "platform/platform.h"
 #include "platform/platform_fmt.h"
-#include "core/engine-internal.h"
+#include "core/connection.h"
 #include "core/logger_private.h"
+#include "core/transport.h"
 #include "core/util.h"
 #include "core/util_str.h"
 

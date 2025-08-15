@@ -22,7 +22,22 @@
 /* for pn_work_head and related deprecations */
 #define PN_USE_DEPRECATED_API 1
 
-#include "engine-internal.h"
+#include "proton/annotations.h"
+#include "proton/engine.h"
+#include "proton/object.h"
+#include "proton/types.h"
+
+#include "core/buffer.h"
+#include "core/connection.h"
+#include "core/delivery.h"
+#include "core/dispatcher.h"
+#include "core/disposition.h"
+#include "core/endpoint.h"
+#include "core/link.h"
+#include "core/logger_private.h"
+#include "core/session.h"
+#include "core/terminus.h"
+#include "core/transport.h"
 
 #include "consumers.h"
 #include "core/frame_consumers.h"

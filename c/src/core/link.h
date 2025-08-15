@@ -22,6 +22,8 @@
  *
  */
 
+#include "proton/link.h"
+
 #include "proton/types.h"
 
 #include "core/terminus.h"

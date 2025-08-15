@@ -23,7 +23,6 @@
 #define PROTON_SASL_INTERNAL_H 1
 
 #include "core/buffer.h"
-#include "core/engine-internal.h"
 
 #include "proton/types.h"
 #include "proton/sasl.h"

@@ -22,9 +22,11 @@
  *
  */
 
+#include "proton/condition.h"
+
 #include "proton/types.h"
 
-#include "proton/condition.h"
+#include "core/object_private.h"
 
 struct pn_condition_t {
   pn_bytes_t info_raw;

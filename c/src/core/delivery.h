@@ -22,6 +22,8 @@
  *
  */
 
+#include "proton/delivery.h"
+
 #include "proton/types.h"
 
 #include "core/disposition.h"

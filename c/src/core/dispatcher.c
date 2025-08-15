@@ -22,12 +22,11 @@
 #include "dispatcher.h"
 
 #include "consumers.h"
+#include "core/transport.h"
 #include "dispatch_actions.h"
-#include "engine-internal.h"
 #include "framing.h"
 #include "logger_private.h"
 #include "protocol.h"
-
 
 int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload) {
   PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: type: %u: Unknown performative", frame_type);

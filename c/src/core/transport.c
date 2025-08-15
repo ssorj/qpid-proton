@@ -19,10 +19,15 @@
  *
  */
 
-#include "engine-internal.h"
+#include "core/transport.h"
+
 #include "framing.h"
+#include "core/connection.h"
+#include "core/delivery.h"
 #include "core/frame_generators.h"
 #include "core/frame_consumers.h"
+#include "core/link.h"
+#include "core/session.h"
 #include "memory.h"
 #include "platform/platform.h"
 #include "platform/platform_fmt.h"
