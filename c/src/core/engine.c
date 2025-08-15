@@ -93,7 +93,7 @@ static pn_event_type_t endpoint_event(pn_endpoint_type_t type, bool open) {
 static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
   if (!(endpoint->state & PN_LOCAL_ACTIVE)) {
-    PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
+    pni_set_local_state(&endpoint->state, PN_LOCAL_ACTIVE);
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put_object(conn->collector, endpoint,
                             endpoint_event((pn_endpoint_type_t) endpoint->type, true));
@@ -104,7 +104,7 @@ static void pn_endpoint_open(pn_endpoint_t *endpoint)
 static void pn_endpoint_close(pn_endpoint_t *endpoint)
 {
   if (!(endpoint->state & PN_LOCAL_CLOSED)) {
-    PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
+    pni_set_local_state(&endpoint->state, PN_LOCAL_CLOSED);
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put_object(conn->collector, endpoint,
                             endpoint_event((pn_endpoint_type_t) endpoint->type, false));

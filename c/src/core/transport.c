@@ -715,7 +715,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   }
 
   if (transport->open_rcvd) {
-    PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
+    pni_set_remote_state(&connection->endpoint.state, PN_REMOTE_ACTIVE);
     pni_post_remote_open_events(transport, connection);
     transport->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
@@ -1053,7 +1053,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   pn_connection_t *conn = transport->connection;
   if (conn) {
-    PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
+    pni_set_remote_state(&conn->endpoint.state, PN_REMOTE_ACTIVE);
     pni_post_remote_open_events(transport, conn);
   } else {
     transport->halt = true;
@@ -1107,7 +1107,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     ssn->state.remote_handle_max = handle_max;
   }
   pni_map_remote_channel(ssn, channel);
-  PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_ACTIVE);
+  pni_set_remote_state(&ssn->endpoint.state, PN_REMOTE_ACTIVE);
   pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_OPEN);
   return 0;
 }
@@ -1233,7 +1233,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   }
 
   pni_map_remote_handle(link, handle);
-  PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_ACTIVE);
+  pni_set_remote_state(&link->endpoint.state, PN_REMOTE_ACTIVE);
   pn_terminus_t *rsrc = &link->remote_source;
   if (source.start || src_dynamic) {
     pn_terminus_set_type(rsrc, PN_SOURCE);
@@ -1736,7 +1736,7 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (closed)
   {
-    PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_CLOSED);
+    pni_set_remote_state(&link->endpoint.state, PN_REMOTE_CLOSED);
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_CLOSE);
   } else {
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_DETACH);
@@ -1759,7 +1759,7 @@ int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, p
   pn_amqp_decode_close(payload, &cond, &desc, &info);
   pn_condition_t* condition = &ssn->endpoint.remote_condition;
   pn_condition_set(condition, cond, desc, info);
-  PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
+  pni_set_remote_state(&ssn->endpoint.state, PN_REMOTE_CLOSED);
   pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_CLOSE);
   pni_unmap_remote_channel(ssn);
   return 0;
@@ -1776,7 +1776,7 @@ int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   pn_condition_t* condition = &transport->remote_condition;
   pn_condition_set(condition, cond, desc, info);
   transport->close_rcvd = true;
-  PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
+  pni_set_remote_state(&conn->endpoint.state, PN_REMOTE_CLOSED);
   pn_collector_put_object(transport->connection->collector, conn, PN_CONNECTION_REMOTE_CLOSE);
   return 0;
 }

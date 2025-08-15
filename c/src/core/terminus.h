@@ -1,5 +1,5 @@
-#ifndef _PROTON_ENGINE_INTERNAL_H
-#define _PROTON_ENGINE_INTERNAL_H 1
+#ifndef PROTON_CORE_TERMINUS_H
+#define PROTON_CORE_TERMINUS_H 1
 
 /*
  *
@@ -22,29 +22,25 @@
  *
  */
 
-#include <proton/annotations.h>
-#include <proton/engine.h>
-#include <proton/object.h>
-#include <proton/types.h>
+#include "proton/types.h"
 
-#include "core/buffer.h"
-#include "core/connection.h"
-#include "core/delivery.h"
-#include "core/dispatcher.h"
-#include "core/disposition.h"
-#include "core/endpoint.h"
-#include "core/link.h"
-#include "core/logger_private.h"
-#include "core/session.h"
-#include "core/terminus.h"
-#include "core/transport.h"
+struct pn_terminus_t {
+  pn_string_t *address;
+  pn_bytes_t properties_raw;
+  pn_bytes_t capabilities_raw;
+  pn_bytes_t outcomes_raw;
+  pn_bytes_t filter_raw;
+  pn_data_t *properties;
+  pn_data_t *capabilities;
+  pn_data_t *outcomes;
+  pn_data_t *filter;
+  pn_seconds_t timeout;
+  uint8_t durability;
+  uint8_t expiry_policy;
+  uint8_t type;
+  uint8_t distribution_mode;
+  bool has_expiry_policy;
+  bool dynamic;
+};
 
-#if __cplusplus
-extern "C" {
-#endif
-
-#if __cplusplus
-}
-#endif
-
-#endif /* engine-internal.h */
+#endif /* terminus.h */

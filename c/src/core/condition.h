@@ -1,5 +1,5 @@
-#ifndef _PROTON_ENGINE_INTERNAL_H
-#define _PROTON_ENGINE_INTERNAL_H 1
+#ifndef PROTON_CORE_CONDITION_H
+#define PROTON_CORE_CONDITION_H 1
 
 /*
  *
@@ -22,29 +22,18 @@
  *
  */
 
-#include <proton/annotations.h>
-#include <proton/engine.h>
-#include <proton/object.h>
-#include <proton/types.h>
+#include "proton/types.h"
 
-#include "core/buffer.h"
-#include "core/connection.h"
-#include "core/delivery.h"
-#include "core/dispatcher.h"
-#include "core/disposition.h"
-#include "core/endpoint.h"
-#include "core/link.h"
-#include "core/logger_private.h"
-#include "core/session.h"
-#include "core/terminus.h"
-#include "core/transport.h"
+#include "proton/condition.h"
 
-#if __cplusplus
-extern "C" {
-#endif
+struct pn_condition_t {
+  pn_bytes_t info_raw;
+  pn_string_t *name;
+  pn_string_t *description;
+  pn_data_t *info;
+};
 
-#if __cplusplus
-}
-#endif
+void pn_condition_init(pn_condition_t *condition);
+void pn_condition_tini(pn_condition_t *condition);
 
-#endif /* engine-internal.h */
+#endif /* condition.h */
