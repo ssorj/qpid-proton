@@ -22,7 +22,11 @@
  *
  */
 
+#include "proton/disposition.h"
+
 #include "proton/types.h"
+
+#include "core/condition.h"
 
 typedef enum pn_disposition_type_t {
   PN_DISP_EMPTY = 0,
@@ -80,6 +84,8 @@ struct pn_disposition_t {
   bool settled;
 };
 
+void pn_disposition_init(pn_disposition_t *ds);
 void pn_disposition_clear(pn_disposition_t *ds);
+void pn_disposition_finalize(pn_disposition_t *ds);
 
 #endif /* disposition.h */

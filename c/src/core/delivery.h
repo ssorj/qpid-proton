@@ -26,7 +26,10 @@
 
 #include "proton/types.h"
 
+#include "core/buffer.h"
 #include "core/disposition.h"
+
+extern const pn_class_t PN_CLASSCLASS(pn_delivery);
 
 typedef struct {
   pn_sequence_t id;
@@ -57,8 +60,5 @@ struct pn_delivery_t {
   bool referenced;
   bool aborted;
 };
-
-void pn_real_settle(pn_delivery_t *delivery);  // will free delivery if link is freed
-void pn_clear_tpwork(pn_delivery_t *delivery);
 
 #endif /* delivery.h */

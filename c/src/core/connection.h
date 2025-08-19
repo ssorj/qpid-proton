@@ -26,9 +26,13 @@
 
 #include "proton/types.h"
 
+#include "core/delivery.h"
 #include "core/endpoint.h"
+#include "core/link.h"
 #include "core/object_private.h"
+#include "core/session.h"
 #include "core/transport.h"
+#include "core/util.h"
 
 struct pn_connection_t {
   pn_endpoint_t endpoint;
@@ -69,5 +73,39 @@ void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
 void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit);
+
+void pni_add_session(pn_connection_t *conn, pn_session_t *ssn);
+void pni_remove_session(pn_connection_t *conn, pn_session_t *ssn);
+
+// XXX Add conn
+static inline void pni_add_tpwork(pn_delivery_t *delivery)
+{
+  pn_connection_t *connection = delivery->link->session->connection;
+  if (!delivery->tpwork)
+  {
+    LL_ADD(connection, tpwork, delivery);
+    delivery->tpwork = true;
+  }
+  pn_modified(connection, &connection->endpoint, true);
+}
+
+// XXX Add conn
+static inline void pn_clear_tpwork(pn_delivery_t *delivery)
+{
+  pn_connection_t *connection = delivery->link->session->connection;
+  if (delivery->tpwork)
+  {
+    LL_REMOVE(connection, tpwork, delivery);
+    delivery->tpwork = false;
+    if (pn_refcount(delivery) > 0) {
+      pn_incref(delivery);
+      pn_decref(delivery);
+    }
+  }
+}
+
+static inline bool pni_connection_live(pn_connection_t *conn) {
+  return pn_refcount(conn) > 1;
+}
 
 #endif /* connection.h */

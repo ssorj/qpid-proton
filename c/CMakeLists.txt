@@ -270,11 +270,19 @@ set (qpid-proton-core
 
   src/core/dispatcher.c
   src/core/connection_driver.c
-  src/core/engine.c
   src/core/event.c
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
+
+  src/core/condition.c
+  src/core/connection.c
+  src/core/delivery.c
+  src/core/disposition.c
+  src/core/endpoint.c
+  src/core/link.c
+  src/core/session.c
+  src/core/terminus.c
 
   ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
   ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c

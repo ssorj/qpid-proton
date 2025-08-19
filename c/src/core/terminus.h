@@ -22,7 +22,12 @@
  *
  */
 
+#include "proton/terminus.h"
+
+#include "proton/codec.h"
 #include "proton/types.h"
+
+#include "core/object_private.h"
 
 struct pn_terminus_t {
   pn_string_t *address;
@@ -42,5 +47,8 @@ struct pn_terminus_t {
   bool has_expiry_policy;
   bool dynamic;
 };
+
+void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type);
+void pni_terminus_free(pn_terminus_t *terminus);
 
 #endif /* terminus.h */
