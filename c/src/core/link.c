@@ -256,8 +256,7 @@ void pn_link_detach(pn_link_t *link)
 
   link->detached = true;
   pn_collector_put_object(link->session->connection->collector, link, PN_LINK_LOCAL_DETACH);
-  pn_modified(link->session->connection, &link->endpoint, true);
-
+  pni_connection_add_endpoint_work(link->session->connection, &link->endpoint, true);
 }
 
 pn_link_t *pn_sender(pn_session_t *session, const char *name)
@@ -330,7 +329,7 @@ static void pni_advance_sender(pn_link_t *link)
     link->credit--;
     link->session->outgoing_deliveries++;
   }
-  pni_add_tpwork(link->current);
+  pni_connection_add_delivery_work(link->session->connection, link->current);
   link->current = link->current->unsettled_next;
 }
 
@@ -349,7 +348,7 @@ static void pni_advance_receiver(pn_link_t *link)
     ssn->incoming_bytes -= drop_count;
     if (!ssn->check_flow && ssn->state.incoming_window < ssn->incoming_window_lwm) {
       ssn->check_flow = true;
-      pni_add_tpwork(current);
+      pni_connection_add_delivery_work(link->session->connection, current);
     }
   }
 
@@ -366,8 +365,8 @@ bool pn_link_advance(pn_link_t *link)
       pni_advance_receiver(link);
     }
     pn_delivery_t *next = link->current;
-    pn_work_update(link->session->connection, prev);
-    if (next) pn_work_update(link->session->connection, next);
+    pni_connection_update_legacy_work(link->session->connection, prev);
+    if (next) pni_connection_update_legacy_work(link->session->connection, next);
     return prev != next;
   } else {
     return false;
@@ -449,7 +448,7 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
   if (!bytes || !n) return 0;
   pn_buffer_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
-  pni_add_tpwork(current);
+  pni_connection_add_delivery_work(sender->session->connection, current);
   return n;
 }
 
@@ -462,7 +461,7 @@ int pn_link_drained(pn_link_t *link)
     if (link->drain && link->credit > 0) {
       link->drained = link->credit;
       link->credit = 0;
-      pn_modified(link->session->connection, &link->endpoint, true);
+      pni_connection_add_endpoint_work(link->session->connection, &link->endpoint, true);
       drained = link->drained;
     }
   } else {
@@ -486,7 +485,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
     ssn->incoming_bytes -= size;
     if (!ssn->check_flow && ssn->state.incoming_window < ssn->incoming_window_lwm) {
       ssn->check_flow = true;
-      pni_add_tpwork(delivery);
+      pni_connection_add_delivery_work(ssn->connection, delivery);
     }
     return size;
   } else {
@@ -494,13 +493,12 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   }
 }
 
-
 void pn_link_flow(pn_link_t *receiver, int credit)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
   receiver->credit += credit;
-  pn_modified(receiver->session->connection, &receiver->endpoint, true);
+  pni_connection_add_endpoint_work(receiver->session->connection, &receiver->endpoint, true);
   if (!receiver->drain_flag_mode) {
     pn_link_set_drain(receiver, false);
     receiver->drain_flag_mode = false;
@@ -521,7 +519,7 @@ void pn_link_set_drain(pn_link_t *receiver, bool drain)
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
   receiver->drain = drain;
-  pn_modified(receiver->session->connection, &receiver->endpoint, true);
+  pni_connection_add_endpoint_work(receiver->session->connection, &receiver->endpoint, true);
   receiver->drain_flag_mode = true;
 }
 

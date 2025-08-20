@@ -66,7 +66,7 @@ void pn_endpoint_open(pn_endpoint_t *endpoint)
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put_object(conn->collector, endpoint,
                             endpoint_event((pn_endpoint_type_t) endpoint->type, true));
-    pn_modified(conn, endpoint, true);
+    pni_connection_add_endpoint_work(conn, endpoint, true);
   }
 }
 
@@ -77,7 +77,7 @@ void pn_endpoint_close(pn_endpoint_t *endpoint)
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put_object(conn->collector, endpoint,
                             endpoint_event((pn_endpoint_type_t) endpoint->type, false));
-    pn_modified(conn, endpoint, true);
+    pni_connection_add_endpoint_work(conn, endpoint, true);
   }
 }
 

@@ -67,32 +67,50 @@ struct pn_connection_t {
   struct pn_connection_driver_t *driver;
 };
 
-void pn_dump(pn_connection_t *conn);
-void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
-void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
-void pn_connection_bound(pn_connection_t *conn);
-void pn_connection_unbound(pn_connection_t *conn);
-void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit);
+void pni_connection_add_session(pn_connection_t *conn, pn_session_t *ssn);
+void pni_connection_remove_session(pn_connection_t *conn, pn_session_t *ssn);
+void pni_connection_bound(pn_connection_t *conn);
+void pni_connection_unbound(pn_connection_t *conn);
+void pni_connection_dump(pn_connection_t *conn);
 
-void pni_add_session(pn_connection_t *conn, pn_session_t *ssn);
-void pni_remove_session(pn_connection_t *conn, pn_session_t *ssn);
+static inline bool pni_connection_live(pn_connection_t *conn) {
+  return pn_refcount(conn) > 1;
+}
 
-// XXX Add conn
-static inline void pni_add_tpwork(pn_delivery_t *delivery)
+static inline void pni_connection_add_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
-  pn_connection_t *connection = delivery->link->session->connection;
+  if (!endpoint->modified) {
+    LL_ADD(connection, transport, endpoint);
+    endpoint->modified = true;
+  }
+
+  if (emit && connection->transport) {
+    pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
+  }
+}
+
+static inline void pni_connection_remove_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint)
+{
+  if (endpoint->modified) {
+    LL_REMOVE(connection, transport, endpoint);
+    endpoint->transport_next = NULL;
+    endpoint->transport_prev = NULL;
+    endpoint->modified = false;
+  }
+}
+
+static inline void pni_connection_add_delivery_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
   if (!delivery->tpwork)
   {
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
   }
-  pn_modified(connection, &connection->endpoint, true);
+  pni_connection_add_endpoint_work(connection, &connection->endpoint, true);
 }
 
-// XXX Add conn
-static inline void pn_clear_tpwork(pn_delivery_t *delivery)
+static inline void pni_connection_remove_delivery_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
-  pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
   {
     LL_REMOVE(connection, tpwork, delivery);
@@ -104,8 +122,43 @@ static inline void pn_clear_tpwork(pn_delivery_t *delivery)
   }
 }
 
-static inline bool pni_connection_live(pn_connection_t *conn) {
-  return pn_refcount(conn) > 1;
+static inline void pni_connection_add_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  if (!delivery->work)
+  {
+    LL_ADD(connection, work, delivery);
+    delivery->work = true;
+  }
+}
+
+static inline void pni_connection_remove_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  if (delivery->work)
+  {
+    LL_REMOVE(connection, work, delivery);
+    delivery->work = false;
+  }
+}
+
+static inline void pni_connection_update_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
+{
+  pn_link_t *link = pn_delivery_link(delivery);
+  pn_delivery_t *current = pn_link_current(link);
+  if (delivery->updated && !delivery->local.settled) {
+    pni_connection_add_legacy_work(connection, delivery);
+  } else if (delivery == current) {
+    if (link->endpoint.type == SENDER) {
+      if (pn_link_credit(link) > 0) {
+        pni_connection_add_legacy_work(connection, delivery);
+      } else {
+        pni_connection_remove_legacy_work(connection, delivery);
+      }
+    } else {
+      pni_connection_add_legacy_work(connection, delivery);
+    }
+  } else {
+    pni_connection_remove_legacy_work(connection, delivery);
+  }
 }
 
 #endif /* connection.h */

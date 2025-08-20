@@ -95,7 +95,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   link->unsettled_count++;
 
-  pn_work_update(link->session->connection, delivery);
+  pni_connection_update_legacy_work(link->session->connection, delivery);
 
   // XXX: could just remove incref above
   pn_decref(delivery);
@@ -131,7 +131,9 @@ static void pn_delivery_finalize(void *object)
     }
     referenced = delivery->referenced;
 
-    pn_clear_tpwork(delivery);
+    pn_connection_t *conn = link->session->connection;
+
+    pni_connection_remove_delivery_work(conn, delivery);
     LL_REMOVE(link, unsettled, delivery);
     pn_delivery_map_del(pn_link_is_sender(link)
                         ? &link->session->state.outgoing
@@ -142,7 +144,6 @@ static void pn_delivery_finalize(void *object)
     pn_buffer_clear(delivery->bytes);
     pn_record_clear(delivery->context);
     delivery->settled = true;
-    pn_connection_t *conn = link->session->connection;
     assert(pn_refcount(delivery) == 0);
     if (pni_connection_live(conn)) {
       pn_list_t *pool = link->session->connection->delivery_pool;
@@ -266,8 +267,9 @@ void pn_delivery_settle(pn_delivery_t *delivery)
 
     link->unsettled_count--;
     delivery->local.settled = true;
-    pni_add_tpwork(delivery);
-    pn_work_update(delivery->link->session->connection, delivery);
+    pn_connection_t *conn = delivery->link->session->connection;
+    pni_connection_add_delivery_work(conn, delivery);
+    pni_connection_update_legacy_work(conn, delivery);
     pn_incref(delivery);
     pn_decref(delivery);
   }
@@ -316,7 +318,7 @@ bool pn_delivery_updated(pn_delivery_t *delivery)
 void pn_delivery_clear(pn_delivery_t *delivery)
 {
   delivery->updated = false;
-  pn_work_update(delivery->link->session->connection, delivery);
+  pni_connection_update_legacy_work(delivery->link->session->connection, delivery);
 }
 
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
@@ -334,7 +336,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
         break;
       default:
         delivery->local.u.s_custom.type = state;
-        pni_add_tpwork(delivery);
+        pni_connection_add_delivery_work(delivery->link->session->connection, delivery);
         return;
     }
   }
@@ -354,7 +356,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
       delivery->local.u.s_custom.type = state;
       break;
   }
-  pni_add_tpwork(delivery);
+  pni_connection_add_delivery_work(delivery->link->session->connection, delivery);
 }
 
 bool pn_delivery_writable(pn_delivery_t *delivery)
@@ -401,4 +403,20 @@ void pn_delivery_abort(pn_delivery_t *delivery) {
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {
   return delivery->aborted;
+}
+
+pn_delivery_t *pn_work_head(pn_connection_t *connection)
+{
+  assert(connection);
+  return connection->work_head;
+}
+
+pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
+{
+  assert(delivery);
+
+  if (delivery->work)
+    return delivery->work_next;
+  else
+    return delivery->link->session->connection->work_head;
 }

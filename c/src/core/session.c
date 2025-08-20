@@ -52,7 +52,7 @@ void pn_session_free(pn_session_t *session)
     pn_link_t *link = (pn_link_t *)pn_list_get(session->links, 0);
     pn_link_free(link);
   }
-  pni_remove_session(session->connection, session);
+  pni_connection_remove_session(session->connection, session);
   pn_list_add(session->connection->freed, session);
   session->endpoint.freed = true;
   pn_endpoint_decref(&session->endpoint);
@@ -140,7 +140,7 @@ static void pn_session_finalize(void *object)
   pn_delivery_map_free(&session->state.outgoing);
   pn_free(session->state.local_handles);
   pn_free(session->state.remote_handles);
-  pni_remove_session(session->connection, session);
+  pni_connection_remove_session(session->connection, session);
   pn_list_remove(session->connection->freed, session);
 
   if (session->connection->transport) {
@@ -171,7 +171,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
   if (!ssn) return NULL;
   pn_endpoint_init(&ssn->endpoint, SESSION, conn);
-  pni_add_session(conn, ssn);
+  pni_connection_add_session(conn, ssn);
   ssn->links = pn_list(PN_WEAKREF, 0);
   ssn->freed = pn_list(PN_WEAKREF, 0);
   ssn->context = pn_record();
@@ -269,7 +269,7 @@ void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity)
   if (ssn->connection->transport) {
     ssn->check_flow = true;
     ssn->need_flow = true;
-    pn_modified(ssn->connection, &ssn->endpoint, false);
+    pni_connection_add_endpoint_work(ssn->connection, &ssn->endpoint, false);
   }
   pni_session_update_incoming_lwm(ssn);
   // If capacity invalid, failure occurs when transport calculates value of incoming window.

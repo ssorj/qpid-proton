@@ -19,9 +19,6 @@
  *
  */
 
-// In order to use pn_work_head
-#define PN_USE_DEPRECATED_API 1
-
 #include "core/connection.h"
 
 #include <assert.h>
@@ -255,97 +252,6 @@ const char *pn_connection_remote_hostname(pn_connection_t *connection)
   return connection->transport ? connection->transport->remote_hostname : NULL;
 }
 
-pn_delivery_t *pn_work_head(pn_connection_t *connection)
-{
-  assert(connection);
-  return connection->work_head;
-}
-
-pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
-{
-  assert(delivery);
-
-  if (delivery->work)
-    return delivery->work_next;
-  else
-    return pn_work_head(delivery->link->session->connection);
-}
-
-static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  if (!delivery->work)
-  {
-    LL_ADD(connection, work, delivery);
-    delivery->work = true;
-  }
-}
-
-static void pni_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  if (delivery->work)
-  {
-    LL_REMOVE(connection, work, delivery);
-    delivery->work = false;
-  }
-}
-
-void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
-{
-  pn_link_t *link = pn_delivery_link(delivery);
-  pn_delivery_t *current = pn_link_current(link);
-  if (delivery->updated && !delivery->local.settled) {
-    pni_add_work(connection, delivery);
-  } else if (delivery == current) {
-    if (link->endpoint.type == SENDER) {
-      if (pn_link_credit(link) > 0) {
-        pni_add_work(connection, delivery);
-      } else {
-        pni_clear_work(connection, delivery);
-      }
-    } else {
-      pni_add_work(connection, delivery);
-    }
-  } else {
-    pni_clear_work(connection, delivery);
-  }
-}
-
-void pn_dump(pn_connection_t *conn)
-{
-  pn_endpoint_t *endpoint = conn->transport_head;
-  while (endpoint)
-  {
-    printf("%p", (void *) endpoint);
-    endpoint = endpoint->transport_next;
-    if (endpoint)
-      printf(" -> ");
-  }
-  printf("\n");
-}
-
-void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
-{
-  if (!endpoint->modified) {
-    LL_ADD(connection, transport, endpoint);
-    endpoint->modified = true;
-  }
-
-  if (emit && connection->transport) {
-    pn_collector_put_object(connection->collector, connection->transport,
-                            PN_TRANSPORT);
-  }
-}
-
-void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
-{
-  if (endpoint->modified) {
-    LL_REMOVE(connection, transport, endpoint);
-    endpoint->transport_next = NULL;
-    endpoint->transport_prev = NULL;
-    endpoint->modified = false;
-  }
-}
-
 void pn_connection_reset(pn_connection_t *connection)
 {
   assert(connection);
@@ -390,7 +296,7 @@ void pn_connection_release(pn_connection_t *connection)
     // no transport available to consume transport work items,
     // so manually clear them:
     pn_endpoint_incref(&connection->endpoint);
-    pn_connection_unbound(connection);
+    pni_connection_unbound(connection);
   }
   pn_endpoint_decref(&connection->endpoint);
 }
@@ -400,7 +306,7 @@ void pn_connection_free(pn_connection_t *connection) {
   pn_decref(connection);
 }
 
-void pn_connection_bound(pn_connection_t *connection)
+void pni_connection_bound(pn_connection_t *connection)
 {
   pn_collector_put_object(connection->collector, connection, PN_CONNECTION_BOUND);
   pn_endpoint_incref(&connection->endpoint);
@@ -412,7 +318,7 @@ void pn_connection_bound(pn_connection_t *connection)
 }
 
 // invoked when transport has been removed:
-void pn_connection_unbound(pn_connection_t *connection)
+void pni_connection_unbound(pn_connection_t *connection)
 {
   connection->transport = NULL;
   if (connection->endpoint.freed) {
@@ -420,10 +326,10 @@ void pn_connection_unbound(pn_connection_t *connection)
     // cannot be re-assigned to a new transport.  Clear the
     // transport work lists to allow the connection to be freed.
     while (connection->transport_head) {
-        pn_clear_modified(connection, connection->transport_head);
+      pni_connection_remove_endpoint_work(connection, connection->transport_head);
     }
     while (connection->tpwork_head) {
-      pn_clear_tpwork(connection->tpwork_head);
+      pni_connection_remove_delivery_work(connection, connection->tpwork_head);
     }
   }
   pn_endpoint_decref(&connection->endpoint);
@@ -454,22 +360,6 @@ pn_transport_t *pn_connection_transport(pn_connection_t *connection)
   return connection->transport;
 }
 
-void pni_add_session(pn_connection_t *conn, pn_session_t *ssn)
-{
-  pn_list_add(conn->sessions, ssn);
-  ssn->connection = conn;
-  pn_incref(conn);  // keep around until finalized
-  pn_endpoint_incref(&conn->endpoint);
-}
-
-void pni_remove_session(pn_connection_t *conn, pn_session_t *ssn)
-{
-  if (pn_list_remove(conn->sessions, ssn)) {
-    pn_endpoint_decref(&conn->endpoint);
-    LL_REMOVE(conn, endpoint, &ssn->endpoint);
-  }
-}
-
 pn_condition_t *pn_connection_condition(pn_connection_t *connection)
 {
   assert(connection);
@@ -483,4 +373,31 @@ pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection)
   return transport ? &transport->remote_condition : NULL;
 }
 
-#undef PN_USE_DEPRECATED_API
+void pni_connection_add_session(pn_connection_t *conn, pn_session_t *ssn)
+{
+  pn_list_add(conn->sessions, ssn);
+  ssn->connection = conn;
+  pn_incref(conn);  // keep around until finalized
+  pn_endpoint_incref(&conn->endpoint);
+}
+
+void pni_connection_remove_session(pn_connection_t *conn, pn_session_t *ssn)
+{
+  if (pn_list_remove(conn->sessions, ssn)) {
+    pn_endpoint_decref(&conn->endpoint);
+    LL_REMOVE(conn, endpoint, &ssn->endpoint);
+  }
+}
+
+void pni_connection_dump(pn_connection_t *conn)
+{
+  pn_endpoint_t *endpoint = conn->transport_head;
+  while (endpoint)
+  {
+    printf("%p", (void *) endpoint);
+    endpoint = endpoint->transport_next;
+    if (endpoint)
+      printf(" -> ");
+  }
+  printf("\n");
+}
