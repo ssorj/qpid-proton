@@ -24,8 +24,9 @@
 
 #include "proton/session.h"
 
-#include "proton/connection.h"
+#include <assert.h>
 
+#include "proton/connection.h"
 #include "core/endpoint.h"
 
 typedef struct {
@@ -82,19 +83,18 @@ void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next);
 void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery);
 void pn_delivery_map_free(pn_delivery_map_t *db);
 
-// XXX session_unmap
-void pn_unmap_handle(pn_session_t *ssn, pn_link_t *link);
-void pni_session_bound(pn_session_t *ssn);
-void pn_session_unbound(pn_session_t* ssn);
-void pni_session_update_incoming_lwm(pn_session_t *ssn);
+void pni_session_bound(pn_session_t *session);
+void pni_session_unbound(pn_session_t *session);
+void pni_session_update_incoming_lwm(pn_session_t *session);
 
-static inline bool pni_connection_live(pn_connection_t *conn);
+static inline bool pni_connection_live(pn_connection_t *connection);
 
-static inline bool pni_session_live(pn_session_t *ssn) {
-  return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
+static inline bool pni_session_live(pn_session_t *session) {
+  assert(session);
+  return pni_connection_live(session->connection) || pn_refcount(session) > 1;
 }
 
-void pni_add_link(pn_session_t *ssn, pn_link_t *link);
-void pni_remove_link(pn_session_t *ssn, pn_link_t *link);
+void pni_session_add_link(pn_session_t *session, pn_link_t *link);
+void pni_session_remove_link(pn_session_t *session, pn_link_t *link);
 
 #endif /* session.h */

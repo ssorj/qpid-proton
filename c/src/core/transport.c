@@ -751,7 +751,7 @@ void pni_transport_unbind_channels(pn_hash_t *channels)
     pni_delivery_map_clear(&ssn->state.outgoing);
     pni_transport_unbind_handles(ssn->state.local_handles, true);
     pni_transport_unbind_handles(ssn->state.remote_handles, true);
-    pn_session_unbound(ssn);
+    pni_session_unbound(ssn);
     pn_endpoint_decref(&ssn->endpoint);
     pn_hash_del(channels, key);
   }

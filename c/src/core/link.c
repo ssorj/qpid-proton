@@ -59,7 +59,7 @@ static void pn_link_finalize(void *object)
   pni_terminus_free(&link->remote_target);
   pn_free(link->name);
   pni_endpoint_tini(endpoint);
-  pni_remove_link(link->session, link);
+  pni_session_remove_link(link->session, link);
   pn_hash_del(link->session->state.local_handles, link->state.local_handle);
   pn_hash_del(link->session->state.remote_handles, link->state.remote_handle);
   pn_list_remove(link->session->freed, link);
@@ -118,7 +118,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
   };
 
   pn_endpoint_init(&link->endpoint, type, session->connection);
-  pni_add_link(session, link);
+  pni_session_add_link(session, link);
   pn_incref(session);  // keep session until link finalized
 
   pni_terminus_init(&link->source, PN_SOURCE);
@@ -160,7 +160,7 @@ pn_terminus_t *pn_link_remote_target(pn_link_t *link)
 void pn_link_free(pn_link_t *link)
 {
   assert(!link->endpoint.freed);
-  pni_remove_link(link->session, link);
+  pni_session_remove_link(link->session, link);
   pn_list_add(link->session->freed, link);
   pn_delivery_t *delivery = link->unsettled_head;
   while (delivery) {
