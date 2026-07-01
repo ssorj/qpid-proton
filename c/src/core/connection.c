@@ -39,10 +39,10 @@ static void pn_connection_finalize(void *object);
 pn_connection_t *pn_connection(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_connection);
-  pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));
-  if (!conn) return NULL;
+  pn_connection_t *connection = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));
+  if (!connection) return NULL;
 
-  *conn = (pn_connection_t) {
+  *connection = (pn_connection_t) {
     .sessions = pn_list(PN_WEAKREF, 0),
     .freed = pn_list(PN_WEAKREF, 0),
     .context = pn_record(),
@@ -54,54 +54,60 @@ pn_connection_t *pn_connection(void)
     .delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0),
   };
 
-  pn_endpoint_init(&conn->endpoint, CONNECTION, conn);
+  pn_endpoint_init(&connection->endpoint, CONNECTION, connection);
 
-  return conn;
+  return connection;
 }
 
 static void pn_connection_finalize(void *object)
 {
-  pn_connection_t *conn = (pn_connection_t *) object;
-  pn_endpoint_t *endpoint = &conn->endpoint;
+  assert(object);
 
-  if (conn->transport) {
-    assert(!conn->transport->referenced);
-    pn_free(conn->transport);
+  pn_connection_t *connection = (pn_connection_t *) object;
+  pn_endpoint_t *endpoint = &connection->endpoint;
+
+  if (connection->transport) {
+    assert(!connection->transport->referenced);
+    pn_free(connection->transport);
   }
 
   // freeing the transport could post events
-  if (pn_refcount(conn) > 0) {
+  if (pn_refcount(connection) > 0) {
     return;
   }
 
-  pni_free_children(conn->sessions, conn->freed);
-  pn_free(conn->context);
-  pn_decref(conn->collector);
+  pni_free_children(connection->sessions, connection->freed);
+  pn_free(connection->context);
+  pn_decref(connection->collector);
 
-  pn_free(conn->container);
-  pn_free(conn->hostname);
-  pn_free(conn->auth_user);
-  pn_free(conn->authzid);
-  pn_free(conn->auth_password);
-  pn_bytes_free(conn->offered_capabilities_raw);
-  pn_bytes_free(conn->desired_capabilities_raw);
-  pn_bytes_free(conn->properties_raw);
-  pn_free(conn->offered_capabilities);
-  pn_free(conn->desired_capabilities);
-  pn_free(conn->properties);
-  pn_free(conn->remote_offered_capabilities);
-  pn_free(conn->remote_desired_capabilities);
-  pn_free(conn->remote_properties);
+  pn_free(connection->container);
+  pn_free(connection->hostname);
+  pn_free(connection->auth_user);
+  pn_free(connection->authzid);
+  pn_free(connection->auth_password);
+  pn_bytes_free(connection->offered_capabilities_raw);
+  pn_bytes_free(connection->desired_capabilities_raw);
+  pn_bytes_free(connection->properties_raw);
+  pn_free(connection->offered_capabilities);
+  pn_free(connection->desired_capabilities);
+  pn_free(connection->properties);
+  pn_free(connection->remote_offered_capabilities);
+  pn_free(connection->remote_desired_capabilities);
+  pn_free(connection->remote_properties);
   pni_endpoint_tini(endpoint);
-  pn_free(conn->delivery_pool);
+  pn_free(connection->delivery_pool);
 }
 
 void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector)
 {
+  assert(connection);
+
   pn_decref(connection->collector);
   connection->collector = collector;
   pn_incref(connection->collector);
+
   pn_endpoint_t *endpoint = connection->endpoint_head;
+
   while (endpoint) {
     pn_collector_put_object(connection->collector, endpoint, endpoint_init_event_map[endpoint->type]);
     endpoint = endpoint->endpoint_next;
@@ -109,12 +115,14 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
 }
 
 pn_collector_t* pn_connection_collector(pn_connection_t *connection) {
+  assert(connection);
   return connection->collector;
 }
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
 {
-  return connection ? connection->endpoint.state : 0;
+  assert(connection);
+  return connection->endpoint.state;
 }
 
 const char *pn_connection_get_container(pn_connection_t *connection)
@@ -167,12 +175,14 @@ void pn_connection_set_authorization(pn_connection_t *connection, const char *au
 
 void pn_connection_set_password(pn_connection_t *connection, const char *password)
 {
-    assert(connection);
-    // Make sure the previous password is erased, if there was one.
-    size_t n = pn_string_size(connection->auth_password);
-    const char* s = pn_string_get(connection->auth_password);
-    if (n > 0 && s) memset((void*)s, 0, n);
-    pn_string_set(connection->auth_password, password);
+  assert(connection);
+
+  // Make sure the previous password is erased, if there was one.
+  size_t n = pn_string_size(connection->auth_password);
+  const char* s = pn_string_get(connection->auth_password);
+  if (n > 0 && s) memset((void*)s, 0, n);
+
+  pn_string_set(connection->auth_password, password);
 }
 
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
@@ -199,8 +209,7 @@ pn_data_t *pn_connection_properties(pn_connection_t *connection)
 pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  if (!connection->transport)
-    return NULL;
+  if (!connection->transport) return NULL;
   pni_switch_to_data(&connection->transport->remote_offered_capabilities_raw, &connection->remote_offered_capabilities);
   return connection->remote_offered_capabilities;
 }
@@ -208,8 +217,7 @@ pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection
 pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  if (!connection->transport)
-    return NULL;
+  if (!connection->transport) return NULL;
   pni_switch_to_data(&connection->transport->remote_desired_capabilities_raw, &connection->remote_desired_capabilities);
   return connection->remote_desired_capabilities;
 }
@@ -217,8 +225,7 @@ pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection
 pn_data_t *pn_connection_remote_properties(pn_connection_t *connection)
 {
   assert(connection);
-  if (!connection->transport)
-    return NULL;
+  if (!connection->transport) return NULL;
   pni_switch_to_data(&connection->transport->remote_properties_raw, &connection->remote_properties);
   return connection->remote_properties;
 }
@@ -226,13 +233,15 @@ pn_data_t *pn_connection_remote_properties(pn_connection_t *connection)
 const char *pn_connection_remote_container(pn_connection_t *connection)
 {
   assert(connection);
-  return connection->transport ? connection->transport->remote_container : NULL;
+  if (!connection->transport) return NULL;
+  return connection->transport->remote_container;
 }
 
 const char *pn_connection_remote_hostname(pn_connection_t *connection)
 {
   assert(connection);
-  return connection->transport ? connection->transport->remote_hostname : NULL;
+  if (!connection->transport) return NULL;
+  return connection->transport->remote_hostname;
 }
 
 void pn_connection_reset(pn_connection_t *connection)
@@ -256,7 +265,9 @@ void pn_connection_close(pn_connection_t *connection)
 
 void pn_connection_release(pn_connection_t *connection)
 {
+  assert(connection);
   assert(!connection->endpoint.freed);
+
   // free those endpoints that haven't been freed by the application
   LL_REMOVE(connection, endpoint, &connection->endpoint);
   while (connection->endpoint_head) {
@@ -275,12 +286,14 @@ void pn_connection_release(pn_connection_t *connection)
     }
   }
   connection->endpoint.freed = true;
+
   if (!connection->transport) {
-    // no transport available to consume transport work items,
-    // so manually clear them:
+    // No transport available to consume transport work items, so
+    // manually clear them
     pn_endpoint_incref(&connection->endpoint);
     pni_connection_unbound(connection);
   }
+
   pn_endpoint_decref(&connection->endpoint);
 }
 
@@ -303,18 +316,23 @@ void pni_connection_bound(pn_connection_t *connection)
 // invoked when transport has been removed:
 void pni_connection_unbound(pn_connection_t *connection)
 {
+  assert(connection);
+
   connection->transport = NULL;
+
   if (connection->endpoint.freed) {
-    // connection has been freed prior to unbinding, thus it
-    // cannot be re-assigned to a new transport.  Clear the
-    // transport work lists to allow the connection to be freed.
+    // Connection has been freed prior to unbinding, thus it cannot be
+    // re-assigned to a new transport.  Clear the transport work lists
+    // to allow the connection to be freed.
     while (connection->transport_head) {
       pni_connection_remove_endpoint_work(connection, connection->transport_head);
     }
+
     while (connection->tpwork_head) {
       pni_connection_remove_delivery_work(connection, connection->tpwork_head);
     }
   }
+
   pn_endpoint_decref(&connection->endpoint);
 }
 
@@ -324,17 +342,16 @@ pn_record_t *pn_connection_attachments(pn_connection_t *connection)
   return connection->context;
 }
 
-void *pn_connection_get_context(pn_connection_t *conn)
+void *pn_connection_get_context(pn_connection_t *connection)
 {
-  // XXX: we should really assert on conn here, but this causes
-  // messenger tests to fail
-  return conn ? pn_record_get(conn->context, PN_LEGCTX) : NULL;
+  assert(connection);
+  return pn_record_get(connection->context, PN_LEGCTX);
 }
 
-void pn_connection_set_context(pn_connection_t *conn, void *context)
+void pn_connection_set_context(pn_connection_t *connection, void *context)
 {
-  assert(conn);
-  pn_record_set(conn->context, PN_LEGCTX, context);
+  assert(connection);
+  pn_record_set(connection->context, PN_LEGCTX, context);
 }
 
 pn_transport_t *pn_connection_transport(pn_connection_t *connection)
@@ -356,31 +373,39 @@ pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection)
   return transport ? &transport->remote_condition : NULL;
 }
 
-void pni_connection_add_session(pn_connection_t *conn, pn_session_t *ssn)
+void pni_connection_add_session(pn_connection_t *connection, pn_session_t *session)
 {
-  pn_list_add(conn->sessions, ssn);
-  ssn->connection = conn;
-  pn_incref(conn);  // keep around until finalized
-  pn_endpoint_incref(&conn->endpoint);
+  assert(connection);
+  assert(session);
+
+  pn_list_add(connection->sessions, session);
+  session->connection = connection;
+  pn_incref(connection); // Keep around until finalized
+  pn_endpoint_incref(&connection->endpoint);
 }
 
-void pni_connection_remove_session(pn_connection_t *conn, pn_session_t *ssn)
+void pni_connection_remove_session(pn_connection_t *connection, pn_session_t *session)
 {
-  if (pn_list_remove(conn->sessions, ssn)) {
-    pn_endpoint_decref(&conn->endpoint);
-    LL_REMOVE(conn, endpoint, &ssn->endpoint);
+  assert(connection);
+  assert(session);
+
+  if (pn_list_remove(connection->sessions, session)) {
+    pn_endpoint_decref(&connection->endpoint);
+    LL_REMOVE(connection, endpoint, &session->endpoint);
   }
 }
 
-void pni_connection_dump(pn_connection_t *conn)
+void pni_connection_dump(pn_connection_t *connection)
 {
-  pn_endpoint_t *endpoint = conn->transport_head;
-  while (endpoint)
-  {
+  assert(connection);
+
+  pn_endpoint_t *endpoint = connection->transport_head;
+
+  while (endpoint) {
     printf("%p", (void *) endpoint);
     endpoint = endpoint->transport_next;
-    if (endpoint)
-      printf(" -> ");
+    if (endpoint) printf(" -> ");
   }
+
   printf("\n");
 }

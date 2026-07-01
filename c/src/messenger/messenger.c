@@ -1257,6 +1257,7 @@ void pn_messenger_process_delivery(pn_messenger_t *messenger, pn_event_t *event)
 void pn_messenger_process_transport(pn_messenger_t *messenger, pn_event_t *event)
 {
   pn_connection_t *conn = pn_event_connection(event);
+  if (!conn) return;
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
   if (ctx) {
     pni_conn_modified(ctx);

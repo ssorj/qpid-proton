@@ -24,6 +24,8 @@
 
 #include "proton/connection.h"
 
+#include <assert.h>
+
 #include "proton/types.h"
 
 #include "core/delivery.h"
@@ -67,18 +69,22 @@ struct pn_connection_t {
   struct pn_connection_driver_t *driver;
 };
 
-void pni_connection_add_session(pn_connection_t *conn, pn_session_t *ssn);
-void pni_connection_remove_session(pn_connection_t *conn, pn_session_t *ssn);
-void pni_connection_bound(pn_connection_t *conn);
-void pni_connection_unbound(pn_connection_t *conn);
-void pni_connection_dump(pn_connection_t *conn);
+void pni_connection_add_session(pn_connection_t *connection, pn_session_t *ssn);
+void pni_connection_remove_session(pn_connection_t *connection, pn_session_t *ssn);
+void pni_connection_bound(pn_connection_t *connection);
+void pni_connection_unbound(pn_connection_t *connection);
+void pni_connection_dump(pn_connection_t *connection);
 
-static inline bool pni_connection_live(pn_connection_t *conn) {
-  return pn_refcount(conn) > 1;
+static inline bool pni_connection_live(pn_connection_t *connection) {
+  assert(connection);
+  return pn_refcount(connection) > 1;
 }
 
 static inline void pni_connection_add_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
 {
+  assert(connection);
+  assert(endpoint);
+
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
     endpoint->modified = true;
@@ -91,6 +97,9 @@ static inline void pni_connection_add_endpoint_work(pn_connection_t *connection,
 
 static inline void pni_connection_remove_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint)
 {
+  assert(connection);
+  assert(endpoint);
+
   if (endpoint->modified) {
     LL_REMOVE(connection, transport, endpoint);
     endpoint->transport_next = NULL;
@@ -101,20 +110,26 @@ static inline void pni_connection_remove_endpoint_work(pn_connection_t *connecti
 
 static inline void pni_connection_add_delivery_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
-  if (!delivery->tpwork)
-  {
+  assert(connection);
+  assert(delivery);
+
+  if (!delivery->tpwork) {
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
   }
+
   pni_connection_add_endpoint_work(connection, &connection->endpoint, true);
 }
 
 static inline void pni_connection_remove_delivery_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
-  if (delivery->tpwork)
-  {
+  assert(connection);
+  assert(delivery);
+
+  if (delivery->tpwork) {
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
+
     if (pn_refcount(delivery) > 0) {
       pn_incref(delivery);
       pn_decref(delivery);
@@ -124,8 +139,10 @@ static inline void pni_connection_remove_delivery_work(pn_connection_t *connecti
 
 static inline void pni_connection_add_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
-  if (!delivery->work)
-  {
+  assert(connection);
+  assert(delivery);
+
+  if (!delivery->work) {
     LL_ADD(connection, work, delivery);
     delivery->work = true;
   }
@@ -133,8 +150,10 @@ static inline void pni_connection_add_legacy_work(pn_connection_t *connection, p
 
 static inline void pni_connection_remove_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
-  if (delivery->work)
-  {
+  assert(connection);
+  assert(delivery);
+
+  if (delivery->work) {
     LL_REMOVE(connection, work, delivery);
     delivery->work = false;
   }
@@ -142,8 +161,12 @@ static inline void pni_connection_remove_legacy_work(pn_connection_t *connection
 
 static inline void pni_connection_update_legacy_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
+  assert(connection);
+  assert(delivery);
+
   pn_link_t *link = pn_delivery_link(delivery);
   pn_delivery_t *current = pn_link_current(link);
+
   if (delivery->updated && !delivery->local.settled) {
     pni_connection_add_legacy_work(connection, delivery);
   } else if (delivery == current) {
