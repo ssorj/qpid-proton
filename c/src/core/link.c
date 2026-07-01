@@ -99,51 +99,41 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
   static const pn_class_t clazz = PN_METACLASS(pn_link);
 #undef pn_link_new
 #undef pn_link_free
+
   pn_link_t *link = (pn_link_t *) pn_class_new(&clazz, sizeof(pn_link_t));
+  if (!link) return NULL;
+
+  *link = (pn_link_t) {
+    .name = name,
+    .context = pn_record(),
+    .snd_settle_mode = PN_SND_MIXED,
+    .rcv_settle_mode = PN_RCV_FIRST,
+    .remote_snd_settle_mode = PN_SND_MIXED,
+    .remote_rcv_settle_mode = PN_RCV_FIRST,
+    .drain_flag_mode = true,
+    .state = {
+      .local_handle  = -1,
+      .remote_handle = -1,
+    },
+  };
 
   pn_endpoint_init(&link->endpoint, type, session->connection);
   pni_add_link(session, link);
   pn_incref(session);  // keep session until link finalized
-  link->name = name;
+
   pni_terminus_init(&link->source, PN_SOURCE);
   pni_terminus_init(&link->target, PN_TARGET);
   pni_terminus_init(&link->remote_source, PN_UNSPECIFIED);
   pni_terminus_init(&link->remote_target, PN_UNSPECIFIED);
-  link->unsettled_head = link->unsettled_tail = link->current = NULL;
-  link->unsettled_count = 0;
-  link->max_message_size = 0;
-  link->remote_max_message_size = 0;
-  link->available = 0;
-  link->credit = 0;
-  link->queued = 0;
-  link->more_id = 0;
-  link->drain = false;
-  link->drain_flag_mode = true;
-  link->drained = 0;
-  link->context = pn_record();
-  link->snd_settle_mode = PN_SND_MIXED;
-  link->rcv_settle_mode = PN_RCV_FIRST;
-  link->remote_snd_settle_mode = PN_SND_MIXED;
-  link->remote_rcv_settle_mode = PN_RCV_FIRST;
-  link->detached = false;
-  link->more_pending = false;
-  link->properties = 0;
-  link->properties_raw = (pn_bytes_t){0, NULL};
-  link->remote_properties = 0;
-  link->remote_properties_raw = (pn_bytes_t){0, NULL};
-
-  // begin transport state
-  link->state.local_handle = -1;
-  link->state.remote_handle = -1;
-  link->state.delivery_count = 0;
-  link->state.link_credit = 0;
-  // end transport state
 
   pn_collector_put_object(session->connection->collector, link, PN_LINK_INIT);
+
   if (session->connection->transport) {
     pni_link_bound(link);
   }
+
   pn_decref(link);
+
   return link;
 }
 

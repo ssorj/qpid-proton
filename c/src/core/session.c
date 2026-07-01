@@ -165,44 +165,45 @@ static void pn_session_finalize(void *object)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
+
 #define pn_session_free NULL
   static const pn_class_t clazz = PN_METACLASS(pn_session);
 #undef pn_session_free
+
   pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
   if (!ssn) return NULL;
-  pn_endpoint_init(&ssn->endpoint, SESSION, conn);
-  pni_connection_add_session(conn, ssn);
-  ssn->links = pn_list(PN_WEAKREF, 0);
-  ssn->freed = pn_list(PN_WEAKREF, 0);
-  ssn->context = pn_record();
-  ssn->incoming_capacity = 0;
-  ssn->incoming_bytes = 0;
-  ssn->outgoing_bytes = 0;
-  ssn->incoming_deliveries = 0;
-  ssn->outgoing_deliveries = 0;
-  ssn->outgoing_window = AMQP_MAX_WINDOW_SIZE;
-  ssn->local_handle_max = PN_IMPL_HANDLE_MAX;
-  ssn->incoming_window_lwm = 1;
-  ssn->check_flow = false;
-  ssn->need_flow = false;
-  ssn->lwm_default = true;
 
-  // begin transport state
-  memset(&ssn->state, 0, sizeof(ssn->state));
-  ssn->state.remote_handle_max = UINT32_MAX;
-  ssn->state.local_channel = (uint16_t)-1;
-  ssn->state.remote_channel = (uint16_t)-1;
+  *ssn = (pn_session_t) {
+    .links = pn_list(PN_WEAKREF, 0),
+    .freed = pn_list(PN_WEAKREF, 0),
+    .context = pn_record(),
+    .outgoing_window = AMQP_MAX_WINDOW_SIZE,
+    .local_handle_max = PN_IMPL_HANDLE_MAX,
+    .incoming_window_lwm = 1,
+    .lwm_default = true,
+    .state = {
+      .remote_handle_max = UINT32_MAX,
+      .local_channel = (uint16_t) - 1,
+      .remote_channel = (uint16_t) - 1,
+      .local_handles = pn_hash(PN_WEAKREF, 0, 0.75),
+      .remote_handles = pn_hash(PN_WEAKREF, 0, 0.75),
+    },
+  };
+
   pn_delivery_map_init(&ssn->state.incoming, 0);
   pn_delivery_map_init(&ssn->state.outgoing, 0);
-  ssn->state.local_handles = pn_hash(PN_WEAKREF, 0, 0.75);
-  ssn->state.remote_handles = pn_hash(PN_WEAKREF, 0, 0.75);
-  // end transport state
+
+  pn_endpoint_init(&ssn->endpoint, SESSION, conn);
+  pni_connection_add_session(conn, ssn);
 
   pn_collector_put_object(conn->collector, ssn, PN_SESSION_INIT);
+
   if (conn->transport) {
     pni_session_bound(ssn);
   }
+
   pn_decref(ssn);
+
   return ssn;
 }
 

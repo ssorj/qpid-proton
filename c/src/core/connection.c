@@ -42,36 +42,19 @@ pn_connection_t *pn_connection(void)
   pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));
   if (!conn) return NULL;
 
-  conn->endpoint_head = NULL;
-  conn->endpoint_tail = NULL;
+  *conn = (pn_connection_t) {
+    .sessions = pn_list(PN_WEAKREF, 0),
+    .freed = pn_list(PN_WEAKREF, 0),
+    .context = pn_record(),
+    .container = pn_string(NULL),
+    .hostname = pn_string(NULL),
+    .auth_user = pn_string(NULL),
+    .authzid = pn_string(NULL),
+    .auth_password = pn_string(NULL),
+    .delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0),
+  };
+
   pn_endpoint_init(&conn->endpoint, CONNECTION, conn);
-  conn->transport_head = NULL;
-  conn->transport_tail = NULL;
-  conn->sessions = pn_list(PN_WEAKREF, 0);
-  conn->freed = pn_list(PN_WEAKREF, 0);
-  conn->transport = NULL;
-  conn->work_head = NULL;
-  conn->work_tail = NULL;
-  conn->tpwork_head = NULL;
-  conn->tpwork_tail = NULL;
-  conn->container = pn_string(NULL);
-  conn->hostname = pn_string(NULL);
-  conn->auth_user = pn_string(NULL);
-  conn->authzid = pn_string(NULL);
-  conn->auth_password = pn_string(NULL);
-  conn->offered_capabilities_raw = (pn_bytes_t){0, NULL};
-  conn->desired_capabilities_raw = (pn_bytes_t){0, NULL};
-  conn->properties_raw = (pn_bytes_t){0, NULL};
-  conn->offered_capabilities = NULL;
-  conn->desired_capabilities = NULL;
-  conn->properties = NULL;
-  conn->remote_offered_capabilities = NULL;
-  conn->remote_desired_capabilities = NULL;
-  conn->remote_properties = NULL;
-  conn->collector = NULL;
-  conn->context = pn_record();
-  conn->delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0);
-  conn->driver = NULL;
 
   return conn;
 }
