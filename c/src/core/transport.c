@@ -735,7 +735,7 @@ void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state)
     uintptr_t key = pn_hash_key(handles, h);
     pn_link_t *link = (pn_link_t *) pn_hash_value(handles, h);
     if (reset_state) {
-      pn_link_unbound(link);
+      pni_link_unbound(link);
     }
     pn_endpoint_decref(&link->endpoint);
     pn_hash_del(handles, key);

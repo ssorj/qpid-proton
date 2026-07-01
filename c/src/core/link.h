@@ -24,6 +24,8 @@
 
 #include "proton/link.h"
 
+#include <assert.h>
+
 #include "proton/types.h"
 
 #include "core/session.h"
@@ -73,13 +75,12 @@ struct pn_link_t {
 };
 
 pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name);
-void pn_link_dump(pn_link_t *link);
-void pn_link_unbound(pn_link_t* link);
+void pni_link_bound(pn_link_t *link);
+void pni_link_unbound(pn_link_t* link);
 
 static inline bool pni_link_live(pn_link_t *link) {
+  assert(link);
   return pni_session_live(link->session) || pn_refcount(link) > 1;
 }
-
-void pni_link_bound(pn_link_t *link);
 
 #endif /* link.h */
