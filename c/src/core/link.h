@@ -40,7 +40,7 @@ typedef struct {
 } pn_link_state_t;
 
 struct pn_link_t {
-  pn_endpoint_t endpoint;
+  pni_endpoint_t endpoint;
   pn_terminus_t source;
   pn_terminus_t target;
   pn_terminus_t remote_source;

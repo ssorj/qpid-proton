@@ -59,7 +59,7 @@ typedef struct {
 } pn_session_state_t;
 
 struct pn_session_t {
-  pn_endpoint_t endpoint;
+  pni_endpoint_t endpoint;
   pn_session_state_t state;
   pn_connection_t *connection;  // reference counted
   pn_list_t *links;

@@ -36,13 +36,13 @@ pn_connection_t *pn_session_connection(pn_session_t *session)
 void pn_session_open(pn_session_t *session)
 {
   assert(session);
-  pn_endpoint_open(&session->endpoint);
+  pni_endpoint_open(&session->endpoint);
 }
 
 void pn_session_close(pn_session_t *session)
 {
   assert(session);
-  pn_endpoint_close(&session->endpoint);
+  pni_endpoint_close(&session->endpoint);
 }
 
 void pn_session_free(pn_session_t *session)
@@ -56,7 +56,7 @@ void pn_session_free(pn_session_t *session)
   pni_connection_remove_session(session->connection, session);
   pn_list_add(session->connection->freed, session);
   session->endpoint.freed = true;
-  pn_endpoint_decref(&session->endpoint);
+  pni_endpoint_decref(&session->endpoint);
 
   // the finalize logic depends on endpoint.freed, so we incref/decref
   // to give it a chance to rerun
@@ -89,7 +89,7 @@ void pni_session_add_link(pn_session_t *session, pn_link_t *link)
 
   pn_list_add(session->links, link);
   link->session = session;
-  pn_endpoint_incref(&session->endpoint);
+  pni_endpoint_incref(&session->endpoint);
 }
 
 void pni_session_remove_link(pn_session_t *session, pn_link_t *link)
@@ -98,7 +98,7 @@ void pni_session_remove_link(pn_session_t *session, pn_link_t *link)
   assert(link);
 
   if (pn_list_remove(session->links, link)) {
-    pn_endpoint_decref(&session->endpoint);
+    pni_endpoint_decref(&session->endpoint);
     LL_REMOVE(session->connection, endpoint, &link->endpoint);
   }
 }
@@ -106,13 +106,13 @@ void pni_session_remove_link(pn_session_t *session, pn_link_t *link)
 pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state)
 {
   assert(connection);
-  return (pn_session_t *) pn_find(connection->endpoint_head, SESSION, state);
+  return (pn_session_t *) pni_endpoint_find(connection->endpoint_head, SESSION, state);
 }
 
 pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state)
 {
   assert(session);
-  return (pn_session_t *) pn_find(session->endpoint.endpoint_next, SESSION, state);
+  return (pn_session_t *) pni_endpoint_find(session->endpoint.endpoint_next, SESSION, state);
 }
 
 static void pn_session_incref(void *object)
@@ -134,14 +134,14 @@ static void pn_session_finalize(void *object)
   assert(object);
 
   pn_session_t *session = (pn_session_t *) object;
-  pn_endpoint_t *endpoint = &session->endpoint;
+  pni_endpoint_t *endpoint = &session->endpoint;
 
-  if (pni_preserve_child(endpoint)) {
+  if (pni_endpoint_preserve_child(endpoint)) {
     return;
   }
 
   pn_free(session->context);
-  pni_free_children(session->links, session->freed);
+  pni_endpoint_free_children(session->links, session->freed);
   pni_endpoint_tini(endpoint);
   pn_delivery_map_free(&session->state.incoming);
   pn_delivery_map_free(&session->state.outgoing);
@@ -200,7 +200,7 @@ pn_session_t *pn_session(pn_connection_t *connection)
   pn_delivery_map_init(&session->state.incoming, 0);
   pn_delivery_map_init(&session->state.outgoing, 0);
 
-  pn_endpoint_init(&session->endpoint, SESSION, connection);
+  pni_endpoint_init(&session->endpoint, SESSION, connection);
   pni_connection_add_session(connection, session);
 
   pn_collector_put_object(connection->collector, session, PN_SESSION_INIT);

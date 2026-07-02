@@ -506,7 +506,7 @@ static void pni_map_remote_channel(pn_session_t *session, uint16_t channel)
   pn_transport_t *transport = session->connection->transport;
   pn_hash_put(transport->remote_channels, channel, session);
   session->state.remote_channel = channel;
-  pn_endpoint_incref(&session->endpoint);
+  pni_endpoint_incref(&session->endpoint);
 }
 
 void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state);
@@ -520,7 +520,7 @@ static void pni_unmap_remote_channel(pn_session_t *ssn)
   uint16_t channel = ssn->state.remote_channel;
   ssn->state.remote_channel = -2;
   if (pn_hash_get(transport->remote_channels, channel)) {
-    pn_endpoint_decref(&ssn->endpoint);
+    pni_endpoint_decref(&ssn->endpoint);
   }
   // note: may free the session:
   pn_hash_del(transport->remote_channels, channel);
@@ -672,8 +672,14 @@ static void pn_transport_finalize(void *object)
   pni_logger_fini(&transport->logger);
 }
 
+static inline void endpoint_set_remote_state(pni_endpoint_t *endpoint, uint8_t remote_state)
+{
+  endpoint->state = (endpoint->state & PN_LOCAL_MASK) | remote_state;
+}
+
 static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
     pn_collector_put_object(connection->collector, connection, PN_CONNECTION_REMOTE_OPEN);
+
     if (transport->remote_idle_timeout) {
       pn_collector_put_object(connection->collector, transport, PN_TRANSPORT);
     }
@@ -720,7 +726,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   }
 
   if (transport->open_rcvd) {
-    pni_set_remote_state(&connection->endpoint.state, PN_REMOTE_ACTIVE);
+    endpoint_set_remote_state(&connection->endpoint, PN_REMOTE_ACTIVE);
     pni_post_remote_open_events(transport, connection);
     transport->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
@@ -737,7 +743,7 @@ void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state)
     if (reset_state) {
       pni_link_unbound(link);
     }
-    pn_endpoint_decref(&link->endpoint);
+    pni_endpoint_decref(&link->endpoint);
     pn_hash_del(handles, key);
   }
 }
@@ -752,7 +758,7 @@ void pni_transport_unbind_channels(pn_hash_t *channels)
     pni_transport_unbind_handles(ssn->state.local_handles, true);
     pni_transport_unbind_handles(ssn->state.remote_handles, true);
     pni_session_unbound(ssn);
-    pn_endpoint_decref(&ssn->endpoint);
+    pni_endpoint_decref(&ssn->endpoint);
     pn_hash_del(channels, key);
   }
 }
@@ -777,7 +783,7 @@ int pn_transport_unbind(pn_transport_t *transport)
     ssn = pn_session_next(ssn, 0);
   }
 
-  pn_endpoint_t *endpoint = conn->endpoint_head;
+  pni_endpoint_t *endpoint = conn->endpoint_head;
   while (endpoint) {
     pn_condition_clear(&endpoint->remote_condition);
     pni_connection_add_endpoint_work(conn, endpoint, true);
@@ -823,7 +829,7 @@ static void pni_map_remote_handle(pn_link_t *link, uint32_t handle)
 {
   link->state.remote_handle = handle;
   pn_hash_put(link->session->state.remote_handles, handle, link);
-  pn_endpoint_incref(&link->endpoint);
+  pni_endpoint_incref(&link->endpoint);
 }
 
 static void pni_unmap_remote_handle(pn_link_t *link)
@@ -831,7 +837,7 @@ static void pni_unmap_remote_handle(pn_link_t *link)
   uintptr_t handle = link->state.remote_handle;
   link->state.remote_handle = -2;
   if (pn_hash_get(link->session->state.remote_handles, handle)) {
-    pn_endpoint_decref(&link->endpoint);
+    pni_endpoint_decref(&link->endpoint);
   }
   // may delete link:
   pn_hash_del(link->session->state.remote_handles, handle);
@@ -1058,7 +1064,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   pn_connection_t *conn = transport->connection;
   if (conn) {
-    pni_set_remote_state(&conn->endpoint.state, PN_REMOTE_ACTIVE);
+    endpoint_set_remote_state(&conn->endpoint, PN_REMOTE_ACTIVE);
     pni_post_remote_open_events(transport, conn);
   } else {
     transport->halt = true;
@@ -1112,14 +1118,14 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     ssn->state.remote_handle_max = handle_max;
   }
   pni_map_remote_channel(ssn, channel);
-  pni_set_remote_state(&ssn->endpoint.state, PN_REMOTE_ACTIVE);
+  endpoint_set_remote_state(&ssn->endpoint, PN_REMOTE_ACTIVE);
   pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_OPEN);
   return 0;
 }
 
 static pn_link_t *pni_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
 {
-  pn_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
+  pni_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
 
   for (size_t i = 0; i < pn_list_size(ssn->links); i++)
   {
@@ -1238,7 +1244,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   }
 
   pni_map_remote_handle(link, handle);
-  pni_set_remote_state(&link->endpoint.state, PN_REMOTE_ACTIVE);
+  endpoint_set_remote_state(&link->endpoint, PN_REMOTE_ACTIVE);
   pn_terminus_t *rsrc = &link->remote_source;
   if (source.start || src_dynamic) {
     pn_terminus_set_type(rsrc, PN_SOURCE);
@@ -1741,7 +1747,7 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (closed)
   {
-    pni_set_remote_state(&link->endpoint.state, PN_REMOTE_CLOSED);
+    endpoint_set_remote_state(&link->endpoint, PN_REMOTE_CLOSED);
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_CLOSE);
   } else {
     pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_DETACH);
@@ -1764,7 +1770,7 @@ int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, p
   pn_amqp_decode_close(payload, &cond, &desc, &info);
   pn_condition_t* condition = &ssn->endpoint.remote_condition;
   pn_condition_set(condition, cond, desc, info);
-  pni_set_remote_state(&ssn->endpoint.state, PN_REMOTE_CLOSED);
+  endpoint_set_remote_state(&ssn->endpoint, PN_REMOTE_CLOSED);
   pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_CLOSE);
   pni_unmap_remote_channel(ssn);
   return 0;
@@ -1781,7 +1787,7 @@ int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   pn_condition_t* condition = &transport->remote_condition;
   pn_condition_set(condition, cond, desc, info);
   transport->close_rcvd = true;
-  pni_set_remote_state(&conn->endpoint.state, PN_REMOTE_CLOSED);
+  endpoint_set_remote_state(&conn->endpoint, PN_REMOTE_CLOSED);
   pn_collector_put_object(transport->connection->collector, conn, PN_CONNECTION_REMOTE_CLOSE);
   return 0;
 }
@@ -1855,7 +1861,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
   return consumed;
 }
 
-static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_conn_setup(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION)
   {
@@ -1955,11 +1961,11 @@ static int pni_map_local_channel(pn_session_t *ssn)
   }
   state->local_channel = channel;
   pn_hash_put(transport->local_channels, channel, ssn);
-  pn_endpoint_incref(&ssn->endpoint);
+  pni_endpoint_incref(&ssn->endpoint);
   return 1;
 }
 
-static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_ssn_setup(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == SESSION && transport->open_sent)
   {
@@ -2015,11 +2021,11 @@ static int pni_map_local_handle(pn_link_t *link) {
   if ( !valid )
     return 0;
   pn_hash_put(ssn_state->local_handles, state->local_handle, link);
-  pn_endpoint_incref(&link->endpoint);
+  pni_endpoint_incref(&link->endpoint);
   return 1;
 }
 
-static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_link_setup(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (transport->open_sent && (endpoint->type == SENDER ||
                                endpoint->type == RECEIVER))
@@ -2138,7 +2144,7 @@ static inline bool pni_session_need_flow(pn_session_t *ssn) {
   return false;
 }
 
-static int pni_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_flow_receiver(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == RECEIVER && endpoint->state & PN_LOCAL_ACTIVE)
   {
@@ -2319,7 +2325,7 @@ static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t 
   return 0;
 }
 
-static int pni_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_tpwork(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION && !transport->close_sent)
   {
@@ -2355,7 +2361,7 @@ static int pni_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint
   return 0;
 }
 
-static int pni_process_flush_disp(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_flush_disp(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == SESSION) {
     pn_session_t *session = (pn_session_t *) endpoint;
@@ -2374,7 +2380,7 @@ static int pni_process_flush_disp(pn_transport_t *transport, pn_endpoint_t *endp
   return 0;
 }
 
-static int pni_process_flow_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_flow_sender(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == SENDER && endpoint->state & PN_LOCAL_ACTIVE)
   {
@@ -2402,13 +2408,13 @@ static void pni_unmap_local_handle(pn_link_t *link) {
   uintptr_t handle = state->local_handle;
   state->local_handle = -2;
   if (pn_hash_get(link->session->state.local_handles, handle)) {
-    pn_endpoint_decref(&link->endpoint);
+    pni_endpoint_decref(&link->endpoint);
   }
   // may delete link
   pn_hash_del(link->session->state.local_handles, handle);
 }
 
-static int pni_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_link_teardown(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == SENDER || endpoint->type == RECEIVER)
   {
@@ -2470,13 +2476,13 @@ static void pni_unmap_local_channel(pn_session_t *ssn) {
   uintptr_t channel = state->local_channel;
   state->local_channel = -2;
   if (pn_hash_get(transport->local_channels, channel)) {
-    pn_endpoint_decref(&ssn->endpoint);
+    pni_endpoint_decref(&ssn->endpoint);
   }
   // may delete session
   pn_hash_del(transport->local_channels, channel);
 }
 
-static int pni_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_ssn_teardown(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == SESSION)
   {
@@ -2500,7 +2506,7 @@ static int pni_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *en
   return 0;
 }
 
-static int pni_process_conn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
+static int pni_process_conn_teardown(pn_transport_t *transport, pni_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION)
   {
@@ -2516,13 +2522,13 @@ static int pni_process_conn_teardown(pn_transport_t *transport, pn_endpoint_t *e
   return 0;
 }
 
-static int pni_phase(pn_transport_t *transport, int (*phase)(pn_transport_t *, pn_endpoint_t *))
+static int pni_phase(pn_transport_t *transport, int (*phase)(pn_transport_t *, pni_endpoint_t *))
 {
   pn_connection_t *conn = transport->connection;
-  pn_endpoint_t *endpoint = conn->transport_head;
+  pni_endpoint_t *endpoint = conn->transport_head;
   while (endpoint)
   {
-    pn_endpoint_t *next = endpoint->transport_next;
+    pni_endpoint_t *next = endpoint->transport_next;
     int err = phase(transport, endpoint);
     if (err) return err;
     endpoint = next;

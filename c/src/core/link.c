@@ -46,9 +46,9 @@ static void pn_link_finalize(void *object)
   assert(object);
 
   pn_link_t *link = (pn_link_t *) object;
-  pn_endpoint_t *endpoint = &link->endpoint;
+  pni_endpoint_t *endpoint = &link->endpoint;
 
-  if (pni_preserve_child(endpoint)) {
+  if (pni_endpoint_preserve_child(endpoint)) {
     return;
   }
 
@@ -125,7 +125,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
     },
   };
 
-  pn_endpoint_init(&link->endpoint, type, session->connection);
+  pni_endpoint_init(&link->endpoint, type, session->connection);
   pni_session_add_link(session, link);
   pn_incref(session);  // keep session until link finalized
 
@@ -186,7 +186,7 @@ void pn_link_free(pn_link_t *link)
   }
 
   link->endpoint.freed = true;
-  pn_endpoint_decref(&link->endpoint);
+  pni_endpoint_decref(&link->endpoint);
 
   // The finalize logic depends on endpoint.freed (modified above), so
   // we incref/decref to give it a chance to rerun
@@ -212,14 +212,31 @@ pn_record_t *pn_link_attachments(pn_link_t *link)
   return link->context;
 }
 
+static bool link_matches(pni_endpoint_t *endpoint, uint8_t state)
+{
+  assert(endpoint);
+
+  if (endpoint->type != SENDER && endpoint->type != RECEIVER) return false;
+
+  if (!state) return true;
+
+  int st = endpoint->state;
+
+  if ((state & PN_REMOTE_MASK) == 0 || (state & PN_LOCAL_MASK) == 0) {
+    return st & state;
+  }
+
+  return st == state;
+}
+
 pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state)
 {
   assert(connection);
 
-  pn_endpoint_t *endpoint = connection->endpoint_head;
+  pni_endpoint_t *endpoint = connection->endpoint_head;
 
   while (endpoint) {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state)) {
+    if (link_matches(endpoint, state)) {
       return (pn_link_t *) endpoint;
     }
 
@@ -234,10 +251,10 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 {
   assert(link);
 
-  pn_endpoint_t *endpoint = link->endpoint.endpoint_next;
+  pni_endpoint_t *endpoint = link->endpoint.endpoint_next;
 
   while (endpoint) {
-    if (pni_matches(endpoint, SENDER, state) || pni_matches(endpoint, RECEIVER, state)) {
+    if (link_matches(endpoint, state)) {
       return (pn_link_t *) endpoint;
     }
 
@@ -250,13 +267,13 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 void pn_link_open(pn_link_t *link)
 {
   assert(link);
-  pn_endpoint_open(&link->endpoint);
+  pni_endpoint_open(&link->endpoint);
 }
 
 void pn_link_close(pn_link_t *link)
 {
   assert(link);
-  pn_endpoint_close(&link->endpoint);
+  pni_endpoint_close(&link->endpoint);
 }
 
 void pn_link_detach(pn_link_t *link)

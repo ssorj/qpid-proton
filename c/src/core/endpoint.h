@@ -22,29 +22,28 @@
  *
  */
 
-
 #include "proton/event.h"
 
 #include "proton/connection.h"
 
 #include "core/condition.h"
 
-typedef enum pn_endpoint_type_t {
+typedef enum pni_endpoint_type_t {
   CONNECTION,
   SESSION,
   SENDER,
   RECEIVER
-} pn_endpoint_type_t;
+} pni_endpoint_type_t;
 
-typedef struct pn_endpoint_t pn_endpoint_t;
+typedef struct pni_endpoint_t pni_endpoint_t;
 
-struct pn_endpoint_t {
+struct pni_endpoint_t {
   pn_condition_t condition;
   pn_condition_t remote_condition;
-  pn_endpoint_t *endpoint_next;
-  pn_endpoint_t *endpoint_prev;
-  pn_endpoint_t *transport_next;
-  pn_endpoint_t *transport_prev;
+  pni_endpoint_t *endpoint_next;
+  pni_endpoint_t *endpoint_prev;
+  pni_endpoint_t *transport_next;
+  pni_endpoint_t *transport_prev;
   int refcount; // when this hits zero we generate a final event
   uint8_t state;
   uint8_t type;
@@ -53,27 +52,18 @@ struct pn_endpoint_t {
   bool referenced;
 };
 
-void pn_endpoint_incref(pn_endpoint_t *endpoint);
-void pn_endpoint_decref(pn_endpoint_t *endpoint);
+void pni_endpoint_incref(pni_endpoint_t *endpoint);
+void pni_endpoint_decref(pni_endpoint_t *endpoint);
 
-void pn_endpoint_open(pn_endpoint_t *endpoint);
-void pn_endpoint_close(pn_endpoint_t *endpoint);
-void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn);
-void pni_endpoint_tini(pn_endpoint_t *endpoint);
+void pni_endpoint_open(pni_endpoint_t *endpoint);
+void pni_endpoint_close(pni_endpoint_t *endpoint);
+void pni_endpoint_init(pni_endpoint_t *endpoint, int type, pn_connection_t *conn);
+void pni_endpoint_tini(pni_endpoint_t *endpoint);
 
-bool pni_matches(pn_endpoint_t *endpoint, pn_endpoint_type_t type, pn_state_t state);
-pn_endpoint_t *pn_find(pn_endpoint_t *endpoint, pn_endpoint_type_t type, pn_state_t state);
+pni_endpoint_t *pni_endpoint_find(pni_endpoint_t *endpoint, pni_endpoint_type_t type, pn_state_t state);
 
-bool pni_preserve_child(pn_endpoint_t *endpoint);
-void pni_free_children(pn_list_t *children, pn_list_t *freed);
-
-static inline void pni_set_local_state(uint8_t *state, uint8_t local_state) {
-  *state = (*state & PN_REMOTE_MASK) | local_state;
-}
-
-static inline void pni_set_remote_state(uint8_t *state, uint8_t remote_state) {
-  *state = (*state & PN_LOCAL_MASK) | remote_state;
-}
+bool pni_endpoint_preserve_child(pni_endpoint_t *endpoint);
+void pni_endpoint_free_children(pn_list_t *children, pn_list_t *freed);
 
 static const pn_event_type_t endpoint_init_event_map[] = {
   PN_CONNECTION_INIT,  /* CONNECTION */

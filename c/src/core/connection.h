@@ -37,11 +37,11 @@
 #include "core/util.h"
 
 struct pn_connection_t {
-  pn_endpoint_t endpoint;
-  pn_endpoint_t *endpoint_head;
-  pn_endpoint_t *endpoint_tail;
-  pn_endpoint_t *transport_head;  // reference counted
-  pn_endpoint_t *transport_tail;
+  pni_endpoint_t endpoint;
+  pni_endpoint_t *endpoint_head;
+  pni_endpoint_t *endpoint_tail;
+  pni_endpoint_t *transport_head;  // reference counted
+  pni_endpoint_t *transport_tail;
   pn_list_t *sessions;
   pn_list_t *freed;
   pn_transport_t *transport;
@@ -80,7 +80,7 @@ static inline bool pni_connection_live(pn_connection_t *connection) {
   return pn_refcount(connection) > 1;
 }
 
-static inline void pni_connection_add_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit)
+static inline void pni_connection_add_endpoint_work(pn_connection_t *connection, pni_endpoint_t *endpoint, bool emit)
 {
   assert(connection);
   assert(endpoint);
@@ -95,7 +95,7 @@ static inline void pni_connection_add_endpoint_work(pn_connection_t *connection,
   }
 }
 
-static inline void pni_connection_remove_endpoint_work(pn_connection_t *connection, pn_endpoint_t *endpoint)
+static inline void pni_connection_remove_endpoint_work(pn_connection_t *connection, pni_endpoint_t *endpoint)
 {
   assert(connection);
   assert(endpoint);

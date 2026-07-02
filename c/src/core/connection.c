@@ -54,7 +54,7 @@ pn_connection_t *pn_connection(void)
     .delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0),
   };
 
-  pn_endpoint_init(&connection->endpoint, CONNECTION, connection);
+  pni_endpoint_init(&connection->endpoint, CONNECTION, connection);
 
   return connection;
 }
@@ -64,7 +64,7 @@ static void pn_connection_finalize(void *object)
   assert(object);
 
   pn_connection_t *connection = (pn_connection_t *) object;
-  pn_endpoint_t *endpoint = &connection->endpoint;
+  pni_endpoint_t *endpoint = &connection->endpoint;
 
   if (connection->transport) {
     assert(!connection->transport->referenced);
@@ -76,7 +76,7 @@ static void pn_connection_finalize(void *object)
     return;
   }
 
-  pni_free_children(connection->sessions, connection->freed);
+  pni_endpoint_free_children(connection->sessions, connection->freed);
   pn_free(connection->context);
   pn_decref(connection->collector);
 
@@ -106,7 +106,7 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
   connection->collector = collector;
   pn_incref(connection->collector);
 
-  pn_endpoint_t *endpoint = connection->endpoint_head;
+  pni_endpoint_t *endpoint = connection->endpoint_head;
 
   while (endpoint) {
     pn_collector_put_object(connection->collector, endpoint, endpoint_init_event_map[endpoint->type]);
@@ -247,20 +247,20 @@ const char *pn_connection_remote_hostname(pn_connection_t *connection)
 void pn_connection_reset(pn_connection_t *connection)
 {
   assert(connection);
-  pn_endpoint_t *endpoint = &connection->endpoint;
+  pni_endpoint_t *endpoint = &connection->endpoint;
   endpoint->state = PN_LOCAL_UNINIT | PN_REMOTE_UNINIT;
 }
 
 void pn_connection_open(pn_connection_t *connection)
 {
   assert(connection);
-  pn_endpoint_open(&connection->endpoint);
+  pni_endpoint_open(&connection->endpoint);
 }
 
 void pn_connection_close(pn_connection_t *connection)
 {
   assert(connection);
-  pn_endpoint_close(&connection->endpoint);
+  pni_endpoint_close(&connection->endpoint);
 }
 
 void pn_connection_release(pn_connection_t *connection)
@@ -271,7 +271,7 @@ void pn_connection_release(pn_connection_t *connection)
   // free those endpoints that haven't been freed by the application
   LL_REMOVE(connection, endpoint, &connection->endpoint);
   while (connection->endpoint_head) {
-    pn_endpoint_t *ep = connection->endpoint_head;
+    pni_endpoint_t *ep = connection->endpoint_head;
     switch (ep->type) {
     case SESSION:
       // note: this will free all child links:
@@ -290,11 +290,11 @@ void pn_connection_release(pn_connection_t *connection)
   if (!connection->transport) {
     // No transport available to consume transport work items, so
     // manually clear them
-    pn_endpoint_incref(&connection->endpoint);
+    pni_endpoint_incref(&connection->endpoint);
     pni_connection_unbound(connection);
   }
 
-  pn_endpoint_decref(&connection->endpoint);
+  pni_endpoint_decref(&connection->endpoint);
 }
 
 void pn_connection_free(pn_connection_t *connection) {
@@ -305,7 +305,7 @@ void pn_connection_free(pn_connection_t *connection) {
 void pni_connection_bound(pn_connection_t *connection)
 {
   pn_collector_put_object(connection->collector, connection, PN_CONNECTION_BOUND);
-  pn_endpoint_incref(&connection->endpoint);
+  pni_endpoint_incref(&connection->endpoint);
 
   size_t nsessions = pn_list_size(connection->sessions);
   for (size_t i = 0; i < nsessions; i++) {
@@ -333,7 +333,7 @@ void pni_connection_unbound(pn_connection_t *connection)
     }
   }
 
-  pn_endpoint_decref(&connection->endpoint);
+  pni_endpoint_decref(&connection->endpoint);
 }
 
 pn_record_t *pn_connection_attachments(pn_connection_t *connection)
@@ -381,7 +381,7 @@ void pni_connection_add_session(pn_connection_t *connection, pn_session_t *sessi
   pn_list_add(connection->sessions, session);
   session->connection = connection;
   pn_incref(connection); // Keep around until finalized
-  pn_endpoint_incref(&connection->endpoint);
+  pni_endpoint_incref(&connection->endpoint);
 }
 
 void pni_connection_remove_session(pn_connection_t *connection, pn_session_t *session)
@@ -390,7 +390,7 @@ void pni_connection_remove_session(pn_connection_t *connection, pn_session_t *se
   assert(session);
 
   if (pn_list_remove(connection->sessions, session)) {
-    pn_endpoint_decref(&connection->endpoint);
+    pni_endpoint_decref(&connection->endpoint);
     LL_REMOVE(connection, endpoint, &session->endpoint);
   }
 }
@@ -399,7 +399,7 @@ void pni_connection_dump(pn_connection_t *connection)
 {
   assert(connection);
 
-  pn_endpoint_t *endpoint = connection->transport_head;
+  pni_endpoint_t *endpoint = connection->transport_head;
 
   while (endpoint) {
     printf("%p", (void *) endpoint);
