@@ -546,8 +546,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   if (!delivery) return PN_STATE_ERR;
   if (delivery->aborted) return PN_ABORTED;
 
-  size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
-  pn_buffer_trim(delivery->bytes, size, 0);
+  size_t size = pn_buffer_pop_left(delivery->bytes, n, bytes);
 
   if (size) {
     pn_session_t *session = receiver->session;
