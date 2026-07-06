@@ -36,45 +36,18 @@
 
 PN_STRUCT_CLASSDEF(pn_buffer)
 
-static inline size_t buffer_wrap(size_t index, size_t capacity)
+static int buffer_grow(pn_buffer_t *buf, size_t size)
 {
-  return (index >= capacity) ? (index - capacity) : index;
-}
+  size_t required = buf->size + size;
 
-static inline size_t buffer_space(const pn_buffer_t *buf)
-{
-  return buf->capacity - buf->size;
-}
+  assert(required >= buf->size);
 
-static int buffer_defrag(pn_buffer_t *buf)
-{
-  size_t len1 = buf->capacity - buf->start;
-  size_t len2 = buf->size - len1;
-
-  char *tmp = (char *) pni_mem_allocate(PN_CLASSCLASS(pn_buffer), buf->size);
-  if (!tmp) return PN_OUT_OF_MEMORY;
-
-  memcpy(tmp, buf->bytes + buf->start, len1);
-  memcpy(tmp + len1, buf->bytes, len2);
-  memcpy(buf->bytes, tmp, buf->size);
-
-  pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), tmp);
-
-  buf->start = 0;
-
-  return 0;
-}
-
-static int buffer_grow(pn_buffer_t *buf, size_t needed)
-{
-  size_t required = buf->size + needed;
-
-  assert(required < buf->size);
-
-  if (buf->start + buf->size > buf->capacity) {
-    int err = buffer_defrag(buf);
-    if (err) return err;
+  if (buf->start > 0 && (buf->start + required > buf->capacity)) {
+    memmove(buf->bytes, buf->bytes + buf->start, buf->size);
+    buf->start = 0;
   }
+
+  if (required <= buf->capacity) return 0;
 
   size_t new_capacity = buf->capacity ? buf->capacity : 16;
 
@@ -127,20 +100,12 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 
   if (!size) return 0;
 
-  if (buffer_space(buf) < size) {
+  if (buf->start + buf->size + size > buf->capacity) {
     int err = buffer_grow(buf, size);
     if (err) return err;
   }
 
-  size_t end = buffer_wrap(buf->start + buf->size, buf->capacity);
-  size_t first_chunk = buf->capacity - end;
-
-  if (size <= first_chunk) {
-    memcpy(buf->bytes + end, bytes, size);
-  } else {
-    memcpy(buf->bytes + end, bytes, first_chunk);
-    memcpy(buf->bytes, bytes + first_chunk, size - first_chunk);
-  }
+  memcpy(buf->bytes + buf->start + buf->size, bytes, size);
 
   buf->size += size;
 
@@ -150,11 +115,6 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
   assert(buf);
-
-  if (buf->start + buf->size > buf->capacity) {
-    // XXX This can fail!
-    buffer_defrag(buf);
-  }
 
   return (pn_bytes_t) {
     .start = buf->bytes + buf->start,
@@ -167,29 +127,25 @@ void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
   assert(buf);
   assert(size <= buf->size);
 
-  buf->start = buffer_wrap(buf->start + size, buf->capacity);
+  buf->start += size;
   buf->size -= size;
+
+  if (buf->size == 0) buf->start = 0;
 }
 
 size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst)
 {
   assert(buf);
-  assert(buf->start <= buf->capacity);
 
   if (buf->size < size) size = buf->size;
   if (!size) return 0;
 
-  size_t first_chunk = buf->capacity - buf->start;
+  memcpy(dst, buf->bytes + buf->start, size);
 
-  if (size <= first_chunk) {
-    memcpy(dst, buf->bytes + buf->start, size);
-  } else {
-    memcpy(dst, buf->bytes + buf->start, first_chunk);
-    memcpy(dst + first_chunk, buf->bytes, size - first_chunk);
-  }
-
-  buf->start = buffer_wrap(buf->start + size, buf->capacity);
+  buf->start += size;
   buf->size -= size;
+
+  if (buf->size == 0) buf->start = 0;
 
   return size;
 }
