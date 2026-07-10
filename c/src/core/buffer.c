@@ -36,7 +36,7 @@
 
 PN_STRUCT_CLASSDEF(pn_buffer)
 
-static int buffer_grow(pn_buffer_t *buf, size_t size)
+int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
   size_t required = buf->size + size;
 
@@ -49,15 +49,25 @@ static int buffer_grow(pn_buffer_t *buf, size_t size)
 
   if (required <= buf->capacity) return 0;
 
-  size_t new_capacity = buf->capacity ? buf->capacity : 16;
+  // Compute next power of two greater than or equal to required
 
-  while (new_capacity < required) {
-    if (new_capacity > SIZE_MAX >> 1) {
-      new_capacity = required;
-      break;
-    }
+  size_t new_capacity = required - 1;
 
-    new_capacity <<= 1;
+  new_capacity |= (new_capacity >> 1);
+  new_capacity |= (new_capacity >> 2);
+  new_capacity |= (new_capacity >> 4);
+  new_capacity |= (new_capacity >> 8);
+  new_capacity |= (new_capacity >> 16);
+
+  #if UINTPTR_MAX == 0xffffffffffffffffULL
+  new_capacity |= (new_capacity >> 32);
+  #endif
+
+  new_capacity++;
+
+  // Handle overflow (if required - 1 smeared wraps to 0 after increment)
+  if (new_capacity == 0) {
+    new_capacity = required;
   }
 
   char *new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity);
@@ -75,7 +85,7 @@ pn_buffer_t *pn_buffer(size_t capacity)
   if (!buf) return NULL;
 
   if (capacity > 0) {
-    int err = buffer_grow(buf, capacity);
+    int err = pn_buffer_ensure(buf, capacity);
 
     if (err) {
       pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
@@ -92,88 +102,4 @@ void pn_buffer_free(pn_buffer_t *buf)
 
   pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes);
   pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
-}
-
-char *pn_buffer_write_ptr(pn_buffer_t *buf, size_t size)
-{
-  assert(buf);
-
-  if (!size) return buf->bytes + buf->start + buf->size;
-
-  if (buf->start + buf->size + size > buf->capacity) {
-    int err = buffer_grow(buf, size);
-    if (err) return NULL;
-  }
-
-  return buf->bytes + buf->start + buf->size;
-}
-
-// ---
-
-int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
-{
-  assert(buf);
-
-  if (!size) return 0;
-
-  char *dst = pn_buffer_write_ptr(buf, size);
-  if (!dst) return PN_OUT_OF_MEMORY;
-
-  memcpy(dst, bytes, size);
-  pn_buffer_advance_write(buf, size);
-
-  return 0;
-}
-
-pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
-{
-  assert(buf);
-
-  return (pn_bytes_t) {
-    .start = buf->bytes + buf->start,
-    .size = buf->size,
-  };
-}
-
-void pn_buffer_trim_left(pn_buffer_t *buf, size_t size)
-{
-  assert(buf);
-  assert(size <= buf->size);
-
-  buf->start += size;
-  buf->size -= size;
-
-  if (buf->size == 0) buf->start = 0;
-}
-
-size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst)
-{
-  assert(buf);
-
-  if (buf->size < size) size = buf->size;
-  if (!size) return 0;
-
-  memcpy(dst, pn_buffer_read_ptr(buf, size), size);
-  pn_buffer_advance_read(buf, size);
-
-  return size;
-}
-
-// XXX Only messenger uses this.  Remove it when messenger is gone.
-pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
-{
-  assert(buf);
-
-  pn_bytes_t bytes = pn_buffer_bytes(buf);
-
-  return (pn_rwbytes_t) {
-    .start = (char *) bytes.start,
-    .size = bytes.size,
-  };
-}
-
-// XXX Only messenger uses this.  Remove it when messenger is gone.
-int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
-{
-  return buffer_grow(buf, size);
 }

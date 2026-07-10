@@ -509,7 +509,7 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
   if (!delivery) return PN_EOS;
   if (!bytes || !n) return 0;
 
-  pn_buffer_append(delivery->bytes, bytes, n);
+  pn_buffer_write(delivery->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
   pni_connection_add_delivery_work(sender->session->connection, delivery);
 
@@ -546,7 +546,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   if (!delivery) return PN_STATE_ERR;
   if (delivery->aborted) return PN_ABORTED;
 
-  size_t size = pn_buffer_pop_left(delivery->bytes, n, bytes);
+  size_t size = pn_buffer_read(delivery->bytes, n, bytes);
 
   if (size) {
     pn_session_t *session = receiver->session;

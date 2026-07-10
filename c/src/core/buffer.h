@@ -22,10 +22,13 @@
  *
  */
 
+#include <proton/error.h>
 #include <proton/import_export.h>
 #include <proton/types.h>
 
 #include <assert.h>
+#include <string.h>
+
 #include "core/object_private.h"
 
 #ifdef __cplusplus
@@ -42,66 +45,103 @@ struct pn_buffer_t {
 typedef struct pn_buffer_t pn_buffer_t;
 
 PN_EXTERN pn_buffer_t *pn_buffer(size_t capacity);
-PN_EXTERN void pn_buffer_free(pn_buffer_t *buf);
-PN_EXTERN int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size);
-PN_EXTERN pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf);
-PN_EXTERN void pn_buffer_trim_left(pn_buffer_t *buf, size_t size);
-PN_EXTERN size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst);
+PN_EXTERN void pn_buffer_free(pn_buffer_t *buffer);
+PN_EXTERN int pn_buffer_ensure(pn_buffer_t *buffer, size_t size);
 
-// XXX Only messenger uses this.  Remove it when messenger is gone.
-PN_EXTERN pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf);
-// XXX Only messenger uses this.  Remove it when messenger is gone.
-PN_EXTERN int pn_buffer_ensure(pn_buffer_t *buf, size_t needed);
-
-static inline size_t pn_buffer_size(pn_buffer_t *buf)
+static inline size_t pn_buffer_size(pn_buffer_t *buffer)
 {
-  return buf->size;
+  return buffer->size;
 }
 
-static inline size_t pn_buffer_capacity(pn_buffer_t *buf)
+static inline size_t pn_buffer_capacity(pn_buffer_t *buffer)
 {
-  return buf->capacity;
+  return buffer->capacity;
 }
 
-static inline size_t pn_buffer_available(pn_buffer_t *buf)
+static inline void pn_buffer_clear(pn_buffer_t *buffer)
 {
-  return buf->capacity - buf->size;
+  buffer->start = 0;
+  buffer->size = 0;
 }
 
-static inline void pn_buffer_clear(pn_buffer_t *buf)
+static inline char *pn_buffer_write_ptr(pn_buffer_t *buffer, size_t size)
 {
-  buf->start = 0;
-  buf->size = 0;
+  assert(buffer);
+
+  if (!size) return buffer->bytes + buffer->start + buffer->size;
+
+  if (buffer->start + buffer->size + size > buffer->capacity) {
+    int err = pn_buffer_ensure(buffer, size);
+    if (err) return NULL;
+  }
+
+  return buffer->bytes + buffer->start + buffer->size;
 }
 
-PN_EXTERN char *pn_buffer_write_ptr(pn_buffer_t *buf, size_t size);
-
-static inline void pn_buffer_advance_write(pn_buffer_t *buf, size_t size)
+static inline void pn_buffer_advance_write(pn_buffer_t *buffer, size_t size)
 {
-  assert(buf);
-  assert(buf->start + buf->size + size <= buf->capacity);
+  assert(buffer);
+  assert(buffer->start + buffer->size + size <= buffer->capacity);
 
-  buf->size += size;
+  buffer->size += size;
 }
 
-static inline char *pn_buffer_read_ptr(pn_buffer_t *buf, size_t size)
+static inline int pn_buffer_write(pn_buffer_t *buffer, const char *bytes, size_t size)
 {
-  assert(buf);
+  assert(buffer);
 
-  if (buf->size < size) return NULL;
+  if (!size) return 0;
 
-  return buf->bytes + buf->start;
+  char *dst = pn_buffer_write_ptr(buffer, size);
+  if (!dst) return PN_OUT_OF_MEMORY;
+
+  memcpy(dst, bytes, size);
+  pn_buffer_advance_write(buffer, size);
+
+  return 0;
 }
 
-static inline void pn_buffer_advance_read(pn_buffer_t *buf, size_t size)
+static inline char *pn_buffer_read_ptr(pn_buffer_t *buffer)
 {
-  assert(buf);
-  assert(size <= buf->size);
+  assert(buffer);
 
-  buf->start += size;
-  buf->size -= size;
+  return buffer->bytes + buffer->start;
+}
 
-  if (buf->size == 0) buf->start = 0;
+static inline void pn_buffer_advance_read(pn_buffer_t *buffer, size_t size)
+{
+  assert(buffer);
+  assert(size <= buffer->size);
+
+  buffer->start += size;
+  buffer->size -= size;
+
+  if (buffer->size == 0) buffer->start = 0;
+}
+
+static inline size_t pn_buffer_read(pn_buffer_t *buffer, size_t size, char *dst)
+{
+  assert(buffer);
+
+  if (buffer->size < size) size = buffer->size;
+  if (!size) return 0;
+
+  memcpy(dst, pn_buffer_read_ptr(buffer), size);
+  pn_buffer_advance_read(buffer, size);
+
+  return size;
+}
+
+static inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buffer)
+{
+  assert(buffer);
+
+  pn_bytes_t bytes;
+
+  bytes.start = buffer->bytes + buffer->start;
+  bytes.size = buffer->size;
+
+  return bytes;
 }
 
 #ifdef __cplusplus

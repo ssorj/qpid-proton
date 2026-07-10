@@ -130,5 +130,5 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
 
 ssize_t pn_dispatcher_output(pn_transport_t *transport, char *bytes, size_t size)
 {
-  return pn_buffer_pop_left(transport->output_buffer, size, bytes);
+  return pn_buffer_read(transport->output_buffer, size, bytes);
 }

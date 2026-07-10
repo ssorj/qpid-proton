@@ -1008,7 +1008,7 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   size_t pending = pn_delivery_pending(d);
   int err = pn_buffer_ensure(buf, pending + 1);
   if (err) return pn_error_format(messenger->error, err, "get: error growing buffer");
-  char *encoded = pn_buffer_memory(buf).start;
+  char *encoded = (char *) pn_buffer_bytes(buf).start;
   ssize_t n = pn_link_recv(receiver, encoded, pending);
   if (n != (ssize_t) pending) {
     return pn_error_format(messenger->error, n,
@@ -1055,7 +1055,7 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   if (n != PN_EOS) {
     return pn_error_format(messenger->error, n, "PN_EOS expected");
   }
-  pn_buffer_append(buf, encoded, pending); // XXX
+  pn_buffer_write(buf, encoded, pending); // XXX
 
   return 0;
 }
@@ -1988,7 +1988,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
   pni_rewrite(messenger, msg);
   while (true) {
-    char *encoded = pn_buffer_memory(buf).start;
+    char *encoded = (char *) pn_buffer_bytes(buf).start;
     size_t size = pn_buffer_capacity(buf);
     int err = pn_message_encode(msg, encoded, &size);
     if (err == PN_OVERFLOW) {
@@ -2004,7 +2004,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
                              pn_error_text(pn_message_error(msg)));
     } else {
       pni_restore(messenger, msg);
-      pn_buffer_append(buf, encoded, size); // XXX
+      pn_buffer_write(buf, encoded, size); // XXX
       pn_link_t *sender = pn_messenger_target(messenger, address, 0);
       if (!sender) {
         int err = pn_error_code(messenger->error);

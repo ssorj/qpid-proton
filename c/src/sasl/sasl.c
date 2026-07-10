@@ -671,7 +671,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned in
     ssize_t size = pni_sasl_impl_decode(transport, pn_bytes(decode_size, bytes+processed), &decoded);
     if (size<0) return size;
     if (size>0) {
-      size = pn_buffer_append(in, decoded.start, decoded.size);
+      size = pn_buffer_write(in, decoded.start, decoded.size);
       if (size) return size;
     }
     processed += decode_size;
@@ -682,7 +682,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned in
     ssize_t size = pni_passthru_layer.process_input(transport, layer, decoded.start+processed_size, decoded.size-processed_size);
     if (size==0) break;
     if (size<0) return size;
-    pn_buffer_trim_left(in, size);
+    pn_buffer_advance_read(in, size);
     processed_size += size;
   }
   return available;
@@ -751,13 +751,13 @@ static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned 
     ssize_t size = pni_sasl_impl_encode(transport, pn_bytes(encode_size, bytes+processed), &encoded);
     if (size<0) return size;
     if (size>0) {
-      size = pn_buffer_append(out, encoded.start, encoded.size);
+      size = pn_buffer_write(out, encoded.start, encoded.size);
       if (size) return size;
     }
     processed += encode_size;
   }
 
-  return pn_buffer_pop_left(out, available, bytes);
+  return pn_buffer_read(out, available, bytes);
 }
 
 pn_sasl_t *pn_sasl(pn_transport_t *transport)

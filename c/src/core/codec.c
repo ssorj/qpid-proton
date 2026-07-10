@@ -453,9 +453,9 @@ static int pni_data_grow(pn_data_t *data)
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   size_t offset = pn_buffer_size(data->buf);
-  int err = pn_buffer_append(data->buf, start, size);
+  int err = pn_buffer_write(data->buf, start, size);
   if (err) return err;
-  err = pn_buffer_append(data->buf, "\0", 1);
+  err = pn_buffer_write(data->buf, "\0", 1);
   if (err) return err;
   return offset;
 }
@@ -471,7 +471,7 @@ static pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
   }
 }
 
-static void pni_data_rebase(pn_data_t *data, char *base)
+static void pni_data_rebase(pn_data_t *data, const char *base)
 {
   for (unsigned i = 0; i < data->size; i++) {
     pni_node_t *node = &data->nodes[i];
@@ -498,7 +498,8 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
-  pn_rwbytes_t buf = pn_buffer_memory(data->buf);
+  // pn_rwbytes_t buf = pn_buffer_memory(data->buf);
+  pn_bytes_t buf = pn_buffer_bytes(data->buf);
   bytes->start = buf.start + offset;
 
   if (pn_buffer_capacity(data->buf) != oldcap) {
@@ -1499,7 +1500,7 @@ void pn_data_dump(pn_data_t *data)
     pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
     pni_inspect_atom((pn_atom_t *) &node->atom, &str);
     pn_fixed_string_terminate(&str);
-    printf("Node %u: prev=%" PN_ZU ", next=%" PN_ZU ", parent=%" PN_ZU ", down=%" PN_ZU 
+    printf("Node %u: prev=%" PN_ZU ", next=%" PN_ZU ", parent=%" PN_ZU ", down=%" PN_ZU
            ", children=%" PN_ZU ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
            (size_t) node->next,

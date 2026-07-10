@@ -19,60 +19,11 @@
  *
  */
 
-//define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "./pn_test.hpp"
 
 #include "core/buffer.h"
-
-// #include <vector>
 
 TEST_CASE("buffer") {
   pn_buffer_t *buf = pn_buffer(0);
   pn_buffer_free(buf);
 }
-
-// TEST_CASE("pn_buffer performance benchmarks", "[pn_buffer][benchmark]") {
-//     BENCHMARK_ADVANCED("append and drain (stream throughput)")(Catch::Benchmark::Chronometer meter) {
-//         pn_buffer_t* buf = pn_buffer(1024);
-//         std::vector<char> chunk(512, 'x');
-//         std::vector<char> scratch(512);
-
-//         meter.measure([&] {
-//             for (int i = 0; i < 1000; ++i) {
-//                 pn_buffer_append(buf, chunk.data(), chunk.size());
-//                 pn_buffer_pop_left(buf, scratch.size(), scratch.data());
-//             }
-//         });
-
-//         pn_buffer_free(buf);
-//     };
-
-//     BENCHMARK_ADVANCED("linear growth reallocation triggering")(Catch::Benchmark::Chronometer meter) {
-//         std::vector<char> chunk(64, 'a');
-
-//         meter.measure([&] {
-//             pn_buffer_t* buf = pn_buffer(16);
-//             for (int i = 0; i < 500; ++i) {
-//                 pn_buffer_append(buf, chunk.data(), chunk.size());
-//             }
-//             pn_buffer_free(buf);
-//         });
-//     };
-
-//     BENCHMARK_ADVANCED("buffer_bytes defragmentation cost")(Catch::Benchmark::Chronometer meter) {
-//         pn_buffer_t* buf = pn_buffer(1024);
-//         std::vector<char> chunk(400, 'b');
-//         std::vector<char> scratch(400);
-
-//         pn_buffer_append(buf, chunk.data(), chunk.size());
-//         pn_buffer_append(buf, chunk.data(), chunk.size());
-//         pn_buffer_pop_left(buf, 500, scratch.data());
-//         pn_buffer_append(buf, chunk.data(), chunk.size());
-
-//         meter.measure([&] {
-//             return pn_buffer_bytes(buf);
-//         });
-
-//         pn_buffer_free(buf);
-//     };
-// }

@@ -1435,7 +1435,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   }
 
   if (delivery) {
-    pn_buffer_append(delivery->bytes, payload.start, payload.size);
+    pn_buffer_write(delivery->bytes, payload.start, payload.size);
     if (more) {
       if (!link->more_pending) {
         if (!id_present) {
@@ -2280,7 +2280,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       ssn_state->remote_incoming_window -= count;
 
       int sent = full_size - bytes.size;
-      pn_buffer_trim_left(delivery->bytes, sent);
+      pn_buffer_advance_read(delivery->bytes, sent);
       link->session->outgoing_bytes -= sent;
       if (!pn_buffer_size(delivery->bytes) && delivery->done) {
         state->sent = true;

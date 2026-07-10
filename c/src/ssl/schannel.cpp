@@ -1496,6 +1496,11 @@ static void rewind_sc_inbuf(pni_ssl_t *ssl)
   }
 }
 
+static inline pn_buffer_available(pn_buffer_t *buffer)
+{
+  return pn_buffer_capacity(buffer) - pn_buffer_size(buffer);
+}
+
 static void app_inbytes_add(pn_transport_t *transport)
 {
   pni_ssl_t *ssl = transport->ssl;
@@ -1544,7 +1549,7 @@ static void app_inbytes_progress(pn_transport_t *transport, size_t minimum)
       size_t consumed = ib2.size - ssl->app_inbytes.size;
       if (consumed > 0) {
         memmove((void *)ib2.start, ib2.start + consumed, ssl->app_inbytes.size);
-        pn_buffer_trim(ssl->inbuf2, 0, consumed);
+	pn_buffer_advance_write(ssl->inbuf2, consumed);
       }
       if (!pn_buffer_available(ssl->inbuf2)) {
         if (!grow_inbuf2(transport, minimum))
