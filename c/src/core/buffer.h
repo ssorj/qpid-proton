@@ -25,7 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/types.h>
 
-// include "core/memory.h"
+#include <assert.h>
 #include "core/object_private.h"
 
 #ifdef __cplusplus
@@ -72,6 +72,36 @@ static inline void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;
   buf->size = 0;
+}
+
+PN_EXTERN char *pn_buffer_write_ptr(pn_buffer_t *buf, size_t size);
+
+static inline void pn_buffer_advance_write(pn_buffer_t *buf, size_t size)
+{
+  assert(buf);
+  assert(buf->start + buf->size + size <= buf->capacity);
+
+  buf->size += size;
+}
+
+static inline char *pn_buffer_read_ptr(pn_buffer_t *buf, size_t size)
+{
+  assert(buf);
+
+  if (buf->size < size) return NULL;
+
+  return buf->bytes + buf->start;
+}
+
+static inline void pn_buffer_advance_read(pn_buffer_t *buf, size_t size)
+{
+  assert(buf);
+  assert(size <= buf->size);
+
+  buf->start += size;
+  buf->size -= size;
+
+  if (buf->size == 0) buf->start = 0;
 }
 
 #ifdef __cplusplus

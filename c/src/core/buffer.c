@@ -94,20 +94,33 @@ void pn_buffer_free(pn_buffer_t *buf)
   pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
 }
 
+char *pn_buffer_write_ptr(pn_buffer_t *buf, size_t size)
+{
+  assert(buf);
+
+  if (!size) return buf->bytes + buf->start + buf->size;
+
+  if (buf->start + buf->size + size > buf->capacity) {
+    int err = buffer_grow(buf, size);
+    if (err) return NULL;
+  }
+
+  return buf->bytes + buf->start + buf->size;
+}
+
+// ---
+
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   assert(buf);
 
   if (!size) return 0;
 
-  if (buf->start + buf->size + size > buf->capacity) {
-    int err = buffer_grow(buf, size);
-    if (err) return err;
-  }
+  char *dst = pn_buffer_write_ptr(buf, size);
+  if (!dst) return PN_OUT_OF_MEMORY;
 
-  memcpy(buf->bytes + buf->start + buf->size, bytes, size);
-
-  buf->size += size;
+  memcpy(dst, bytes, size);
+  pn_buffer_advance_write(buf, size);
 
   return 0;
 }
@@ -140,12 +153,8 @@ size_t pn_buffer_pop_left(pn_buffer_t *buf, size_t size, char *dst)
   if (buf->size < size) size = buf->size;
   if (!size) return 0;
 
-  memcpy(dst, buf->bytes + buf->start, size);
-
-  buf->start += size;
-  buf->size -= size;
-
-  if (buf->size == 0) buf->start = 0;
+  memcpy(dst, pn_buffer_read_ptr(buf, size), size);
+  pn_buffer_advance_read(buf, size);
 
   return size;
 }
