@@ -2125,19 +2125,6 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
 {
   if (pni_store_size(messenger->incoming) > 0) return true;
 
-  for (size_t i = 0; i < pn_list_size(messenger->connections); i++)
-  {
-    pn_connection_t *conn = (pn_connection_t *) pn_list_get(messenger->connections, i);
-
-    pn_delivery_t *d = pn_work_head(conn);
-    while (d) {
-      if (pn_delivery_readable(d) && !pn_delivery_partial(d)) {
-        return true;
-      }
-      d = pn_work_next(d);
-    }
-  }
-
   if (!pn_list_size(messenger->connections) && !pn_list_size(messenger->listeners)) {
     return true;
   } else {

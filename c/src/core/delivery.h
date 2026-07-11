@@ -45,8 +45,6 @@ struct pn_delivery_t {
   pn_link_t *link;  // reference counted
   pn_delivery_t *unsettled_next;
   pn_delivery_t *unsettled_prev;
-  pn_delivery_t *work_next;
-  pn_delivery_t *work_prev;
   pn_delivery_t *tpwork_next;
   pn_delivery_t *tpwork_prev;
   pn_delivery_state_t state;
@@ -54,7 +52,6 @@ struct pn_delivery_t {
   pn_record_t *context;
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
-  bool work;
   bool tpwork;
   bool done;
   bool referenced;

@@ -313,37 +313,6 @@ PN_EXTERN void pn_delivery_dump(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_buffered(pn_delivery_t *delivery);
 
 /**
- * Extracts the first delivery on the connection that has pending
- * operations.
- *
- * Retrieves the first delivery on the Connection that has pending
- * operations. A readable delivery indicates message data is waiting
- * to be read. A writable delivery indicates that message data may be
- * sent. An updated delivery indicates that the delivery's disposition
- * has changed. A delivery will never be both readable and writable,
- * but it may be both readable and updated or both writable and
- * updated.
- *
- * @param[in] connection the connection
- * @return the first delivery object that needs to be serviced, else
- * NULL if none
- */
-PN_DEPRECATED("Use the PN_DELIVERY event to track deliveries with pending operations")
-PN_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
-
-/**
- * Get the next delivery on the connection that needs has pending
- * operations.
- *
- * @param[in] delivery the previous delivery retrieved from
- *                     either pn_work_head or pn_work_next
- * @return the next delivery that has pending operations, else
- * NULL if none
- */
-PN_DEPRECATED("Use the PN_DELIVERY event to track deliveries with pending operations")
-PN_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
-
-/**
  * @}
  */
 

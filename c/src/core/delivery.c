@@ -73,9 +73,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->settled = false;
   LL_ADD(link, unsettled, delivery);
   delivery->referenced = true;
-  delivery->work_next = NULL;
-  delivery->work_prev = NULL;
-  delivery->work = false;
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
@@ -94,8 +91,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     link->current = delivery;
 
   link->unsettled_count++;
-
-  pni_connection_update_legacy_work(link->session->connection, delivery);
 
   // XXX: could just remove incref above
   pn_decref(delivery);
@@ -222,11 +217,11 @@ void pn_delivery_dump(pn_delivery_t *d)
   pn_bytes_t bytes = d->tag;
   pn_quote_data(tag, 1024, bytes.start, bytes.size);
   printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%d, "
-         "remote.settled=%d, updated=%d, current=%d, writable=%d, readable=%d, "
-         "work=%d}",
+         "remote.settled=%d, updated=%d, current=%d, writable=%d, readable=%d}",
          tag, pn_disposition_type(&d->local), pn_disposition_type(&d->remote), d->local.settled,
          d->remote.settled, d->updated, pn_delivery_current(d),
-         pn_delivery_writable(d), pn_delivery_readable(d), d->work);
+//         pn_delivery_writable(d), pn_delivery_readable(d), d->work);
+         pn_delivery_writable(d), pn_delivery_readable(d));
 }
 
 void *pn_delivery_get_context(pn_delivery_t *delivery)
@@ -269,7 +264,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     delivery->local.settled = true;
     pn_connection_t *conn = delivery->link->session->connection;
     pni_connection_add_delivery_work(conn, delivery);
-    pni_connection_update_legacy_work(conn, delivery);
+
     pn_incref(delivery);
     pn_decref(delivery);
   }
@@ -318,7 +313,6 @@ bool pn_delivery_updated(pn_delivery_t *delivery)
 void pn_delivery_clear(pn_delivery_t *delivery)
 {
   delivery->updated = false;
-  pni_connection_update_legacy_work(delivery->link->session->connection, delivery);
 }
 
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
@@ -403,20 +397,4 @@ void pn_delivery_abort(pn_delivery_t *delivery) {
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {
   return delivery->aborted;
-}
-
-pn_delivery_t *pn_work_head(pn_connection_t *connection)
-{
-  assert(connection);
-  return connection->work_head;
-}
-
-pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
-{
-  assert(delivery);
-
-  if (delivery->work)
-    return delivery->work_next;
-  else
-    return delivery->link->session->connection->work_head;
 }

@@ -416,9 +416,6 @@ bool pn_link_advance(pn_link_t *link)
     }
 
     pn_delivery_t *next = link->current;
-    pni_connection_update_legacy_work(link->session->connection, prev);
-
-    if (next) pni_connection_update_legacy_work(link->session->connection, next);
 
     return prev != next;
   }

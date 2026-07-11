@@ -1330,7 +1330,6 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
 // free the delivery
 static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
-  assert(!delivery->work);
   pni_connection_remove_delivery_work(delivery->link->session->connection, delivery);
   pn_delivery_map_del(db, delivery);
   pn_incref(delivery);
@@ -1449,7 +1448,6 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     if (settled && !delivery->remote.settled) {
       delivery->remote.settled = settled;
       delivery->updated = true;
-      pni_connection_update_legacy_work(transport->connection, delivery);
     }
 
     if ((delivery->aborted = aborted)) {
@@ -1457,7 +1455,6 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       delivery->done = true;
       delivery->updated = true;
       link->more_pending = false;
-      pni_connection_update_legacy_work(transport->connection, delivery);
     }
     pn_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
   }
@@ -1515,8 +1512,6 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
       link->state.link_credit = receiver_count + link_credit - link->state.delivery_count;
       link->credit += link->state.link_credit - old;
       link->drain = drain;
-      pn_delivery_t *delivery = pn_link_current(link);
-      if (delivery) pni_connection_update_legacy_work(transport->connection, delivery);
     } else {
       pn_sequence_t delta = delivery_count - link->state.delivery_count;
       if (delta > 0) {
@@ -1654,9 +1649,9 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
 
   remote->settled = settled;
   delivery->updated = true;
-  pni_connection_update_legacy_work(transport->connection, delivery);
 
   pn_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
+
   return 0;
 }
 
