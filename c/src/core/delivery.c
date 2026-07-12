@@ -116,9 +116,9 @@ static void pn_delivery_finalize(void *object)
     // delivery->link is nulled out in the first pass and the freeing
     // happens in the second?
 
-    pn_free(delivery->context);
     pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
+    pn_free(delivery->context);
 
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
@@ -137,43 +137,34 @@ static void pn_delivery_finalize(void *object)
     return;
   }
 
-  pn_connection_t *conn = link->session->connection;
-
-  pni_connection_remove_delivery_work(conn, delivery);
-
-  if (pn_link_is_sender(link)) {
-    pn_delivery_map_del(&link->session->state.outgoing, delivery);
-  } else {
-    pn_delivery_map_del(&link->session->state.incoming, delivery);
-  }
-
   delivery->link = NULL;
+  delivery->updated = false;
+  delivery->settled = false;
+  delivery->done = false;
+  delivery->aborted = false;
+  delivery->state = (pn_delivery_state_t) {0};
 
   pn_bytes_free(delivery->tag);
   delivery->tag = (pn_delivery_tag_t) {0};
 
-  LL_REMOVE(link, unsettled, delivery);
-
   pn_buffer_clear(delivery->bytes);
+  pn_record_clear(delivery->context);
+
+  pn_disposition_clear(&delivery->local);
+  pn_disposition_clear(&delivery->remote);
+
+  pn_connection_t *conn = link->session->connection;
+  pni_connection_remove_delivery_work(conn, delivery);
 
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
 
-  delivery->state = (pn_delivery_state_t) {0};
-  delivery->updated = false;
-  delivery->settled = false;
-  delivery->done = false;
-  delivery->aborted = false;
-
-  pn_disposition_clear(&delivery->local);
-  pn_disposition_clear(&delivery->remote);
-
-  pn_record_clear(delivery->context);
+  LL_REMOVE(link, unsettled, delivery);
 
   assert(pn_refcount(delivery) == 0);
 
-  pn_list_t *pool = link->session->connection->delivery_pool;
+  pn_list_t *pool = conn->delivery_pool;
   pn_list_add(pool, delivery);
 
   assert(pn_refcount(delivery) == 1);
