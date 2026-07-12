@@ -172,15 +172,20 @@ static void pn_delivery_finalize(void *object)
   pn_decref(link);
 }
 
-void pn_delivery_inspect(void *obj, pn_fixed_string_t *dst) {
-  pn_delivery_t *d = (pn_delivery_t*)obj;
+void pn_delivery_inspect(void *object, pn_fixed_string_t *dst) {
+  assert(object);
+
+  pn_delivery_t *d = (pn_delivery_t*) object;
+
   const char* dir = pn_link_is_sender(d->link) ? "sending" : "receiving";
   pn_bytes_t bytes = d->tag;
-  pn_fixed_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", obj, dir);
+
+  pn_fixed_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", object, dir);
   pn_fixed_string_quote(dst, bytes.start, bytes.size);
   pn_fixed_string_addf(dst, "\", local=%s, remote=%s}",
                        pn_disposition_type_name(d->local.type),
                        pn_disposition_type_name(d->remote.type));
+
   return;
 }
 
@@ -192,26 +197,27 @@ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
 bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
+
   if (delivery->settled) return false;
+
   if (pn_link_is_sender(delivery->link)) {
     pn_delivery_state_t *state = &delivery->state;
-    if (state->sent) {
-      return false;
-    } else {
-      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
-    }
-  } else {
-    return false;
+
+    return !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0);
   }
+
+  return false;
 }
 
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
 {
-  pn_delivery_t *d = delivery->unsettled_next;
-  while (d && d->local.settled) {
-    d = d->unsettled_next;
+  pn_delivery_t *next = delivery->unsettled_next;
+
+  while (next && next->local.settled) {
+    next = next->unsettled_next;
   }
-  return d;
+
+  return next;
 }
 
 bool pn_delivery_current(pn_delivery_t *delivery)
@@ -224,12 +230,13 @@ void pn_delivery_dump(pn_delivery_t *d)
 {
   char tag[1024];
   pn_bytes_t bytes = d->tag;
+
   pn_quote_data(tag, 1024, bytes.start, bytes.size);
+
   printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%d, "
          "remote.settled=%d, updated=%d, current=%d, writable=%d, readable=%d}",
          tag, pn_disposition_type(&d->local), pn_disposition_type(&d->remote), d->local.settled,
          d->remote.settled, d->updated, pn_delivery_current(d),
-//         pn_delivery_writable(d), pn_delivery_readable(d), d->work);
          pn_delivery_writable(d), pn_delivery_readable(d));
 }
 
@@ -253,24 +260,24 @@ pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery)
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
-  if (delivery) {
-    return delivery->tag;
-  } else {
-    return (pn_delivery_tag_t){0, NULL};
-  }
+  assert(delivery);
+  return delivery->tag;
 }
 
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
   assert(delivery);
+
   if (!delivery->local.settled) {
     pn_link_t *link = delivery->link;
+
     if (pn_delivery_current(delivery)) {
       pn_link_advance(link);
     }
 
     link->unsettled_count--;
     delivery->local.settled = true;
+
     pn_connection_t *conn = delivery->link->session->connection;
     pni_connection_add_delivery_work(conn, delivery);
 
@@ -311,22 +318,26 @@ uint64_t pn_delivery_remote_state(pn_delivery_t *delivery)
 
 bool pn_delivery_settled(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->remote.settled : false;
+  assert(delivery);
+  return delivery->remote.settled;
 }
 
 bool pn_delivery_updated(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->updated : false;
+  assert(delivery);
+  return delivery->updated;
 }
 
 void pn_delivery_clear(pn_delivery_t *delivery)
 {
+  assert(delivery);
   delivery->updated = false;
 }
 
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
 {
-  if (!delivery) return;
+  assert(delivery);
+
   if (delivery->local.type == PN_DISP_CUSTOM) {
     switch (state) {
       case PN_ACCEPTED:
@@ -343,7 +354,9 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
         return;
     }
   }
+
   if (delivery->local.type != state) pn_disposition_clear(&delivery->local);
+
   switch (state) {
     case PN_ACCEPTED:
     case PN_REJECTED:
@@ -359,51 +372,61 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
       delivery->local.u.s_custom.type = state;
       break;
   }
+
   pni_connection_add_delivery_work(delivery->link->session->connection, delivery);
 }
 
 bool pn_delivery_writable(pn_delivery_t *delivery)
 {
-  if (!delivery) return false;
+  assert(delivery);
 
   pn_link_t *link = delivery->link;
+
   return pn_link_is_sender(link) && pn_delivery_current(delivery) && pn_link_credit(link) > 0;
 }
 
 bool pn_delivery_readable(pn_delivery_t *delivery)
 {
-  if (delivery) {
-    pn_link_t *link = delivery->link;
-    return pn_link_is_receiver(link) && pn_delivery_current(delivery);
-  } else {
-    return false;
-  }
+  assert(delivery);
+
+  pn_link_t *link = delivery->link;
+
+  return pn_link_is_receiver(link) && pn_delivery_current(delivery);
 }
 
 size_t pn_delivery_pending(pn_delivery_t *delivery)
 {
-  /* Aborted deliveries: for clients that don't check pn_delivery_aborted(),
-     return 1 rather than 0. This will force them to call pn_link_recv() and get
-     the PN_ABORTED error return code.
-  */
+  assert(delivery);
+
+  // Aborted deliveries: for clients that don't check
+  // pn_delivery_aborted(), return 1 rather than 0. This will force
+  // them to call pn_link_recv() and get the PN_ABORTED error return
+  // code.
   if (delivery->aborted) return 1;
+
   return pn_buffer_size(delivery->bytes);
 }
 
 bool pn_delivery_partial(pn_delivery_t *delivery)
 {
+  assert(delivery);
   return !delivery->done;
 }
 
 void pn_delivery_abort(pn_delivery_t *delivery) {
-  if (!delivery->local.settled) { /* Can't abort a settled delivery */
-    delivery->aborted = true;
-    pn_delivery_settle(delivery);
-    delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
-    pn_buffer_clear(delivery->bytes);
-  }
+  assert(delivery);
+
+  // You can't abort a settled delivery
+  if (delivery->local.settled) return;
+
+  delivery->aborted = true;
+  pn_delivery_settle(delivery);
+
+  delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
+  pn_buffer_clear(delivery->bytes);
 }
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {
+  assert(delivery);
   return delivery->aborted;
 }
