@@ -62,7 +62,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
     *delivery = (pn_delivery_t) {
       .bytes = pn_buffer(0),
-      .context = pn_record(),
     };
 
     pn_disposition_init(&delivery->local);
@@ -118,7 +117,8 @@ static void pn_delivery_finalize(void *object)
 
     pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
-    pn_free(delivery->context);
+
+    if (delivery->context) pn_free(delivery->context);
 
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
@@ -148,7 +148,8 @@ static void pn_delivery_finalize(void *object)
   delivery->tag = (pn_delivery_tag_t) {0};
 
   pn_buffer_clear(delivery->bytes);
-  pn_record_clear(delivery->context);
+
+  if (delivery->context) pn_record_clear(delivery->context);
 
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);
@@ -243,18 +244,21 @@ void pn_delivery_dump(pn_delivery_t *d)
 void *pn_delivery_get_context(pn_delivery_t *delivery)
 {
   assert(delivery);
-  return pn_record_get(delivery->context, PN_LEGCTX);
+  return pn_record_get(pn_delivery_attachments(delivery), PN_LEGCTX);
 }
 
 void pn_delivery_set_context(pn_delivery_t *delivery, void *context)
 {
   assert(delivery);
-  pn_record_set(delivery->context, PN_LEGCTX, context);
+  pn_record_set(pn_delivery_attachments(delivery), PN_LEGCTX, context);
 }
 
 pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery)
 {
   assert(delivery);
+
+  if (!delivery->context) delivery->context = pn_record();
+
   return delivery->context;
 }
 
