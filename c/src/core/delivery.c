@@ -87,6 +87,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
 static void pn_delivery_incref(void *object)
 {
+  assert(object);
+
   pn_delivery_t *delivery = (pn_delivery_t *) object;
 
   if (delivery->link && !delivery->referenced) {
@@ -282,7 +284,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     pn_connection_t *conn = delivery->link->session->connection;
     pni_connection_add_delivery_work(conn, delivery);
 
-    pn_incref(delivery);
+    pn_delivery_incref(delivery);
     pn_decref(delivery);
   }
 }
