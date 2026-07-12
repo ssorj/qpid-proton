@@ -63,9 +63,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     *delivery = (pn_delivery_t) {
       .bytes = pn_buffer(0),
     };
-
-    pn_disposition_init(&delivery->local);
-    pn_disposition_init(&delivery->remote);
   } else {
     assert(!delivery->state.init);
   }
