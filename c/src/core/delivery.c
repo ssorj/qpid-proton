@@ -149,7 +149,7 @@ static void pn_delivery_finalize(void *object)
 
   LL_REMOVE(link, unsettled, delivery);
 
-  if (pn_link_is_sender(link)) {
+  if (link->endpoint.type == SENDER) {
     pn_delivery_map_del(&link->session->state.outgoing, delivery);
   } else {
     pn_delivery_map_del(&link->session->state.incoming, delivery);
@@ -159,7 +159,7 @@ static void pn_delivery_finalize(void *object)
     // Pool the delivery
 
     // Set link to null before adding it to the pool to avoid the
-    // additional incref
+    // additional incref on link (see pn_delivery_incref)
     delivery->link = NULL;
 
     pn_list_t *pool = link->session->connection->delivery_pool;
