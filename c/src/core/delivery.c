@@ -172,8 +172,8 @@ static void pn_delivery_finalize(void *object)
 
     if (delivery->context) pn_record_clear(delivery->context);
 
-    pn_disposition_clear(&delivery->local);
-    pn_disposition_clear(&delivery->remote);
+    pn_disposition_init(&delivery->local);
+    pn_disposition_init(&delivery->remote);
 
     assert(pn_refcount(delivery) == 1);
   } else {
