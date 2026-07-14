@@ -111,7 +111,6 @@ static void pn_delivery_finalize(void *object)
     // delivery->link is nulled out in the first pass and the freeing
     // happens in the second?
 
-    pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
 
     if (delivery->context) pn_free(delivery->context);
@@ -158,7 +157,6 @@ static void pn_delivery_finalize(void *object)
     pn_list_add(pool, delivery);
 
     pn_bytes_free(delivery->tag);
-    delivery->tag = (pn_delivery_tag_t) {0};
 
     delivery->tpwork_next = NULL;
     delivery->tpwork_prev = NULL;
