@@ -70,9 +70,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->link = link;
   delivery->tag = pn_bytes_dup(tag);
 
-  delivery->referenced = true;
-  pn_incref(link);  // keep link until finalized
-
   if (!link->current) {
     link->current = delivery;
   }
@@ -80,6 +77,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   LL_ADD(link, unsettled, delivery);
   link->unsettled_count++;
 
+  pn_delivery_incref(delivery);
   pn_decref(delivery);
 
   return delivery;
@@ -126,8 +124,6 @@ static void pn_delivery_finalize(void *object)
   }
 
   if (pni_link_live(link) && delivery_preserved(delivery) && delivery->referenced) {
-    // What kind of delivery is this?
-
     delivery->referenced = false;
 
     pn_object_incref(delivery);
@@ -136,40 +132,64 @@ static void pn_delivery_finalize(void *object)
     return;
   }
 
-  delivery->link = NULL;
-  delivery->updated = false;
-  delivery->settled = false;
-  delivery->done = false;
-  delivery->aborted = false;
-  delivery->state = (pn_delivery_state_t) {0};
-
-  pn_bytes_free(delivery->tag);
-  delivery->tag = (pn_delivery_tag_t) {0};
-
-  pn_buffer_clear(delivery->bytes);
-
-  if (delivery->context) pn_record_clear(delivery->context);
-
-  pn_disposition_clear(&delivery->local);
-  pn_disposition_clear(&delivery->remote);
-
   pn_connection_t *conn = link->session->connection;
-  pni_connection_remove_delivery_work(conn, delivery);
 
-  delivery->tpwork_next = NULL;
-  delivery->tpwork_prev = NULL;
-  delivery->tpwork = false;
+  pni_connection_remove_delivery_work(conn, delivery);
 
   LL_REMOVE(link, unsettled, delivery);
 
-  assert(pn_refcount(delivery) == 0);
+  if (pn_link_is_sender(link)) {
+    pn_delivery_map_del(&link->session->state.outgoing, delivery);
+  } else {
+    pn_delivery_map_del(&link->session->state.incoming, delivery);
+  }
 
-  pn_list_t *pool = conn->delivery_pool;
-  pn_list_add(pool, delivery);
+  if (pni_connection_live(conn)) {
+    // Pool the delivery
 
-  assert(pn_refcount(delivery) == 1);
+    // Set link to null before adding it to the pool to avoid the
+    // additional incref
+    delivery->link = NULL;
 
-  pn_decref(link);
+    pn_list_t *pool = link->session->connection->delivery_pool;
+    pn_list_add(pool, delivery);
+
+    pn_bytes_free(delivery->tag);
+    delivery->tag = (pn_delivery_tag_t) {0};
+
+    delivery->tpwork_next = NULL;
+    delivery->tpwork_prev = NULL;
+    delivery->tpwork = false;
+
+    delivery->state = (pn_delivery_state_t) {0};
+    delivery->updated = false;
+    delivery->settled = false;
+    delivery->done = false;
+    delivery->aborted = false;
+
+    pn_buffer_clear(delivery->bytes);
+
+    if (delivery->context) pn_record_clear(delivery->context);
+
+    pn_disposition_clear(&delivery->local);
+    pn_disposition_clear(&delivery->remote);
+
+    assert(pn_refcount(delivery) == 1);
+  } else {
+    pn_bytes_free(delivery->tag);
+    pn_buffer_free(delivery->bytes);
+    pn_free(delivery->context);
+
+    pn_disposition_finalize(&delivery->local);
+    pn_disposition_finalize(&delivery->remote);
+
+    assert(pn_refcount(delivery) == 0);
+  }
+
+  if (delivery->referenced) {
+    delivery->referenced = false;
+    pn_decref(link);
+  }
 }
 
 void pn_delivery_inspect(void *object, pn_fixed_string_t *dst) {
