@@ -56,19 +56,32 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
 
-  if (!delivery) {
+  if (delivery) {
+    // It came from the delivery pool
+
+    assert(!delivery->state.init);
+
+    pn_bytes_free(delivery->tag);
+    pn_buffer_clear(delivery->bytes);
+
+    if (delivery->context) pn_record_clear(delivery->context);
+
+    *delivery = (pn_delivery_t) {
+      .link = link,
+      .tag = pn_bytes_dup(tag),
+      .bytes = delivery->bytes,
+      .context = delivery->context,
+    };
+  } else {
     delivery = (pn_delivery_t *) pn_class_new(&PN_CLASSCLASS(pn_delivery), sizeof(pn_delivery_t));
     if (!delivery) return NULL;
 
     *delivery = (pn_delivery_t) {
+      .link = link,
+      .tag = pn_bytes_dup(tag),
       .bytes = pn_buffer(0),
     };
-  } else {
-    assert(!delivery->state.init);
   }
-
-  delivery->link = link;
-  delivery->tag = pn_bytes_dup(tag);
 
   if (!link->current) {
     link->current = delivery;
@@ -107,13 +120,9 @@ static void pn_delivery_finalize(void *object)
   if (!link) {
     // A delivery that was in the pool.
 
-    // Is this why finalizers need to run multiple times?
-    // delivery->link is nulled out in the first pass and the freeing
-    // happens in the second?
-
+    pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
-
-    if (delivery->context) pn_free(delivery->context);
+    pn_free(delivery->context);
 
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
@@ -155,25 +164,6 @@ static void pn_delivery_finalize(void *object)
 
     pn_list_t *pool = link->session->connection->delivery_pool;
     pn_list_add(pool, delivery);
-
-    pn_bytes_free(delivery->tag);
-
-    delivery->tpwork_next = NULL;
-    delivery->tpwork_prev = NULL;
-    delivery->tpwork = false;
-
-    delivery->state = (pn_delivery_state_t) {0};
-    delivery->updated = false;
-    delivery->settled = false;
-    delivery->done = false;
-    delivery->aborted = false;
-
-    pn_buffer_clear(delivery->bytes);
-
-    if (delivery->context) pn_record_clear(delivery->context);
-
-    pn_disposition_init(&delivery->local);
-    pn_disposition_init(&delivery->remote);
 
     assert(pn_refcount(delivery) == 1);
   } else {
