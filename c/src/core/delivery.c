@@ -103,7 +103,6 @@ static void pn_delivery_finalize(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   pn_link_t *link = delivery->link;
-  //  assert(!delivery->state.init);
 
   if (!link) {
     // A delivery that was in the pool.
@@ -120,6 +119,8 @@ static void pn_delivery_finalize(void *object)
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
 
+    assert(pn_refcount(delivery) == 0);
+
     return;
   }
 
@@ -128,6 +129,8 @@ static void pn_delivery_finalize(void *object)
 
     pn_object_incref(delivery);
     pn_decref(link);
+
+    assert(pn_refcount(delivery) == 1);
 
     return;
   }
