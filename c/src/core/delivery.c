@@ -93,7 +93,7 @@ static void pn_delivery_incref(void *object)
     // This delegates the refcount to the container.
 
     delivery->referenced = true;
-    pn_incref(delivery->link);
+    pn_object_incref(delivery->link);
   } else {
     pn_object_incref(object);
   }
