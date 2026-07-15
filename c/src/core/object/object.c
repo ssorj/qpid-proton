@@ -279,24 +279,36 @@ void *pn_incref(void *object)
 int pn_decref(void *object)
 {
   if (object) {
-    const pn_class_t *clazz = pni_head(object)->clazz;
-    pni_class_decref(clazz, object);
-    int rc = pni_class_refcount(clazz, object);
-    if (rc == 0) {
-      if (clazz->finalize) {
-        clazz->finalize(object);
-        // check the refcount again in case the finalizer created a
-        // new reference
-        rc = pni_class_refcount(clazz, object);
-      }
-      if (rc == 0) {
-        pni_class_free(clazz, object);
-        return 0;
-      }
+    pni_head_t *head = pni_head(object);
+    const pn_class_t *clazz = head->clazz;
+    int rc;
+
+    if (clazz->decref) {
+      clazz->decref(object);
+      rc = head->refcount;
     } else {
-      return rc;
+      assert(head->refcount > 0);
+      rc = --head->refcount;
+    }
+
+    if (rc != 0) return rc;
+
+    if (clazz->finalize) {
+      clazz->finalize(object);
+      // check the refcount again in case the finalizer created a
+      // new reference
+      rc = head->refcount;
+
+      if (rc != 0) return rc;
+    }
+
+    if (clazz->free) {
+      clazz->free(object);
+    } else {
+      pni_mem_deallocate(clazz, head);
     }
   }
+
   return 0;
 }
 
