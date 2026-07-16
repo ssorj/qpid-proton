@@ -283,6 +283,8 @@ int pn_decref(void *object)
     const pn_class_t *clazz = head->clazz;
     int rc;
 
+    assert(!clazz->refcount);
+
     if (clazz->decref) {
       clazz->decref(object);
       rc = head->refcount;
