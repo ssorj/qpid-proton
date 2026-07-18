@@ -54,8 +54,11 @@ static void pn_map_finalize(void *object)
 
   for (size_t i = 0; i < map->capacity; i++) {
     if (map->entries[i].state != PNI_ENTRY_FREE) {
-      pn_class_decref(map->key, map->entries[i].key);
-      pn_class_decref(map->value, map->entries[i].value);
+      void *key = map->entries[i].key;
+      void *value = map->entries[i].value;
+
+      if (key) pn_class_decref(map->key, key);
+      if (value) pn_class_decref(map->value, value);
     }
   }
 
@@ -176,8 +179,8 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
     if (entries[i].state != PNI_ENTRY_FREE) {
       void *key = entries[i].key;
       void *value = entries[i].value;
-      pn_class_decref(map->key, key);
-      pn_class_decref(map->value, value);
+      if (key) pn_class_decref(map->key, key);
+      if (value) pn_class_decref(map->value, value);
     }
   }
 
@@ -196,7 +199,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     if (create) {
       entry->state = PNI_ENTRY_TAIL;
       entry->key = key;
-      pn_class_incref(map->key, key);
+      if (key) pn_class_incref(map->key, key);
       map->size++;
       return entry;
     } else {
@@ -251,8 +254,8 @@ int pn_map_put(pn_map_t *map, void *key, void *value)
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
   void *dref_val = entry->value;
   entry->value = value;
-  pn_class_incref(map->value, value);
-  pn_class_decref(map->value, dref_val);
+  if (value) pn_class_incref(map->value, value);
+  if (dref_val) pn_class_decref(map->value, dref_val);
   return 0;
 }
 
@@ -333,8 +336,8 @@ void pn_map_del(pn_map_t *map, void *key)
     }
 
     // do this last as it may trigger further deletions
-    pn_class_decref(map->key, dref_key);
-    pn_class_decref(map->value, dref_value);
+    if (dref_key) pn_class_decref(map->key, dref_key);
+    if (dref_value) pn_class_decref(map->value, dref_value);
   }
 }
 

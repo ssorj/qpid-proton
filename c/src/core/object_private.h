@@ -118,9 +118,9 @@ const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
   NULL, /* _inspect */                              \
 }};                                                 \
 
-PN_EXTERN void *pn_class_incref(const pn_class_t *clazz, void *object);
+PN_EXTERN void pn_class_incref(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_refcount(const pn_class_t *clazz, void *object);
-PN_EXTERN int pn_class_decref(const pn_class_t *clazz, void *object);
+PN_EXTERN void pn_class_decref(const pn_class_t *clazz, void *object);
 
 PN_EXTERN void pn_class_free(const pn_class_t *clazz, void *object);
 

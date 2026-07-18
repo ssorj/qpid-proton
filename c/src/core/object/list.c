@@ -50,7 +50,7 @@ void pn_list_set(pn_list_t *list, int index, void *value)
   void *old = list->elements[index % list->size];
   pn_class_decref(list->clazz, old);
   list->elements[index % list->size] = value;
-  pn_class_incref(list->clazz, value);
+  if (value) pn_class_incref(list->clazz, value);
 }
 
 static void pni_list_ensure(pn_list_t *list, size_t capacity)
@@ -70,7 +70,7 @@ int pn_list_add(pn_list_t *list, void *value)
   assert(list);
   pni_list_ensure(list, list->size + 1);
   list->elements[list->size++] = value;
-  pn_class_incref(list->clazz, value);
+  if (value) pn_class_incref(list->clazz, value);
   return 0;
 }
 
@@ -197,7 +197,8 @@ static void pn_list_finalize(void *object)
   assert(object);
   pn_list_t *list = (pn_list_t *) object;
   for (size_t i = 0; i < list->size; i++) {
-    pn_class_decref(list->clazz, pn_list_get(list, i));
+    void *value = pn_list_get(list, i);
+    if (value) pn_class_decref(list->clazz, value);
   }
   pni_mem_subdeallocate(pn_class(list), list, list->elements);
 }
@@ -264,4 +265,3 @@ pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity)
   list->size = 0;
   return list;
 }
-

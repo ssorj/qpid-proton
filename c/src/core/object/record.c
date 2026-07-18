@@ -51,7 +51,7 @@ static void pn_record_finalize(void *object)
   pn_record_t *record = (pn_record_t *) object;
   for (size_t i = 0; i < record->size; i++) {
     pni_field_t *v = &record->fields[i];
-    pn_class_decref(v->clazz, v->value);
+    if (v->value) pn_class_decref(v->clazz, v->value);
   }
   pni_mem_subdeallocate(pn_class(record), record, record->fields);
 }
@@ -137,7 +137,7 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
     void *old = field->value;
     field->value = value;
     pn_class_incref(field->clazz, value);
-    pn_class_decref(field->clazz, old);
+    if (old) pn_class_decref(field->clazz, old);
   }
 }
 
@@ -146,7 +146,7 @@ void pn_record_clear(pn_record_t *record)
   assert(record);
   for (size_t i = 0; i < record->size; i++) {
     pni_field_t *field = &record->fields[i];
-    pn_class_decref(field->clazz, field->value);
+    if (field->value) pn_class_decref(field->clazz, field->value);
     field->key = 0;
     field->clazz = NULL;
     field->value = NULL;
