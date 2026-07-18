@@ -167,7 +167,7 @@ pn_class_t *pn_class_create(const char *name,
 
   *clazz = (pn_class_t) {
     .name = name,
-    .cid = CID_pn_void,
+    .cid = CID_pn_object,
     .initialize = initialize,
     .finalize = finalize,
     .incref = incref,
