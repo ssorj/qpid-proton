@@ -65,18 +65,6 @@ static inline object_header_t *object_header(void *object)
   return ((object_header_t *) (object)) - 1;
 }
 
-static inline int class_refcount(const pn_class_t *clazz, void *object)
-{
-  assert(clazz);
-  assert(object);
-
-  if (clazz->refcount) {
-    return clazz->refcount(object);
-  } else {
-    return object_header(object)->refcount;
-  }
-}
-
 static inline void class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
@@ -84,9 +72,10 @@ static inline void class_incref(const pn_class_t *clazz, void *object)
 
   if (clazz->incref) {
     clazz->incref(object);
-  } else {
-    object_header(object)->refcount++;
+    return;
   }
+
+  object_header(object)->refcount++;
 }
 
 static inline void class_decref(const pn_class_t *clazz, void *object)
@@ -94,16 +83,16 @@ static inline void class_decref(const pn_class_t *clazz, void *object)
   assert(clazz);
   assert(object);
 
-  object_header_t *header = object_header(object);
-
   if (clazz->decref) {
     clazz->decref(object);
-  } else {
-    assert(header->refcount > 0);
-    header->refcount--;
+    return;
   }
 
-  int rc = class_refcount(clazz, object); // XXX Consider unpacking this
+  object_header_t *header = object_header(object);
+
+  assert(header->refcount > 0);
+
+  int rc = --header->refcount;
 
   if (rc == 0) {
     if (clazz->finalize) {
@@ -111,7 +100,7 @@ static inline void class_decref(const pn_class_t *clazz, void *object)
 
       // Check the refcount again in case the finalizer created a
       // new reference
-      rc = class_refcount(clazz, object);
+      rc = header->refcount;
 
       if (rc != 0) return;
     }
@@ -120,7 +109,7 @@ static inline void class_decref(const pn_class_t *clazz, void *object)
       clazz->free(object);
     } else {
       assert(header->clazz);
-      assert(clazz == PN_WEAKREF || header->clazz == clazz);
+      assert(header->clazz == clazz || clazz == PN_WEAKREF);
 
       pni_mem_deallocate(header->clazz, header);
     }
@@ -133,21 +122,22 @@ static inline void class_free(const pn_class_t *clazz, void *object)
 
   if (!object) return;
 
-  int rc = class_refcount(clazz, object);
-
-  assert(rc == 1 || rc == -1);
-
-  if (rc == 1) {
-    class_decref(clazz, object);
-  } else {
+  if (clazz->free) {
     if (clazz->finalize) {
       // XXX Might be dead code
       clazz->finalize(object);
     }
 
-    if (clazz->free) {
-      clazz->free(object);
-    }
+    clazz->free(object);
+    return;
+  }
+
+  int rc = object_header(object)->refcount;
+
+  assert(rc == 1);
+
+  if (rc == 1) {
+    class_decref(clazz, object);
   }
 }
 
@@ -194,6 +184,7 @@ pn_cid_t pn_class_id(const pn_class_t *clazz)
 void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);
+  assert(!clazz->refcount || clazz->refcount == pn_void_refcount);
 
   void *object = NULL;
 
@@ -219,7 +210,9 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
 
 int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
-  return class_refcount(clazz, object);
+  if (clazz->refcount == pn_void_refcount) return -1;
+
+  return object_header(object)->refcount;
 }
 
 void pn_class_incref(const pn_class_t *clazz, void *object)
@@ -293,16 +286,18 @@ int pn_decref(void *object)
 {
   if (!object) return 0;
 
-  const pn_class_t *clazz = object_header(object)->clazz;
+  object_header_t *header = object_header(object);
+  const pn_class_t *clazz = header->clazz;
 
   class_decref(clazz, object);
 
-  return 0; // class_refcount(clazz, object); XXX
+  return 0;
 }
 
 int pn_refcount(void *object)
 {
-  return class_refcount(object_header(object)->clazz, object);
+  assert(object);
+  return object_header(object)->refcount;
 }
 
 void pn_free(void *object)
@@ -424,7 +419,7 @@ void pn_object_incref(void *object) {
 // ...
 
 //
-// Weak and strong ref types
+// Weakref and strongref types
 //
 
 #define pn_weakref_new NULL
@@ -473,41 +468,9 @@ void pn_strongref_free(void *object)
   }
 }
 
-void pn_strongref_incref(void *object)
-{
-  object_header_t *header = object_header(object);
-  const pn_class_t *clazz = header->clazz;
-
-  if (clazz->incref) {
-    clazz->incref(object);
-  } else {
-    header->refcount++;
-  }
-}
-
-void pn_strongref_decref(void *object)
-{
-  object_header_t *header = object_header(object);
-  const pn_class_t *clazz = header->clazz;
-
-  if (clazz->decref) {
-    clazz->decref(object);
-  } else {
-    header->refcount--;
-  }
-}
-
-int pn_strongref_refcount(void *object)
-{
-  object_header_t *head = object_header(object);
-  const pn_class_t *clazz = head->clazz;
-
-  if (clazz->refcount) {
-    return clazz->refcount(object);
-  } else {
-    return head->refcount;
-  }
-}
+#define pn_strongref_incref NULL
+#define pn_strongref_decref NULL
+#define pn_strongref_refcount NULL
 
 #define pn_strongref_hashcode pn_hashcode
 #define pn_strongref_compare pn_compare
