@@ -84,7 +84,7 @@ const pn_class_t *PN_VOID = &PN_VOID_S;
 #define pn_weakref_compare pn_compare
 #define pn_weakref_inspect pn_finspect
 
-const pn_class_t PN_WEAKREF[] = {PN_METACLASS(pn_weakref)};
+const pn_class_t PN_WEAKREF[] = { PN_METACLASS(pn_weakref) };
 
 #define CID_pn_strongref CID_pn_object
 #define pn_strongref_new NULL
@@ -112,26 +112,34 @@ static const pn_class_t PN_OBJECT_S = PN_METACLASS(pn_strongref);
 const pn_class_t *PN_OBJECT = &PN_OBJECT_S;
 
 //
-// The main implementation functions
+// Common implementation functions
 //
 
 static inline void class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   assert(object);
+  assert(!clazz->free || clazz->free == pn_void_free);
 
   if (clazz->incref) {
     clazz->incref(object);
     return;
   }
 
-  object_header(object)->refcount++;
+  object_header_t *header = object_header(object);
+
+  assert(header->clazz);
+  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
+  assert(!header->clazz->free);
+
+  header->refcount++;
 }
 
 static inline void class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
   assert(object);
+  assert(!clazz->free || clazz->free == pn_void_free);
 
   if (clazz->decref) {
     clazz->decref(object);
@@ -140,55 +148,43 @@ static inline void class_decref(const pn_class_t *clazz, void *object)
 
   object_header_t *header = object_header(object);
 
+  assert(header->clazz);
+  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
+  assert(!header->clazz->free);
   assert(header->refcount > 0);
 
-  int rc = --header->refcount;
+  header->refcount--;
 
-  if (rc == 0) {
+  if (header->refcount == 0) {
     if (clazz->finalize) {
-      assert(!clazz->free);
-
       clazz->finalize(object);
 
       // Check the refcount again in case the finalizer created a
       // new reference
-      rc = header->refcount;
-
-      if (rc != 0) return;
+      if (header->refcount != 0) return;
     }
 
-    if (clazz->free) {
-      assert(!clazz->finalize);
-
-      clazz->free(object);
-    } else {
-      assert(header->clazz);
-      assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
-
-      pni_mem_deallocate(header->clazz, header);
-    }
+    pni_mem_deallocate(header->clazz, header);
   }
 }
 
 static inline void class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-
-  if (!object) return;
+  assert(object);
 
   if (clazz->free) {
-    assert(!clazz->finalize);
-
     clazz->free(object);
-
     return;
   }
 
-  int rc = object_header(object)->refcount;
+  object_header_t *header = object_header(object);
 
-  assert(rc == 1);
+  assert(header->clazz);
+  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
+  assert(header->refcount == 1);
 
-  if (rc == 1) {
+  if (header->refcount == 1) {
     class_decref(clazz, object);
   }
 }
