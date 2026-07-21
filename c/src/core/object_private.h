@@ -275,8 +275,6 @@ static inline int pn_class_refcount(const pn_class_t *clazz, void *object)
 
 static inline void pn_class_incref(const pn_class_t *clazz, void *object)
 {
-  if (!object) return;
-
   class_incref(clazz, object);
 }
 
@@ -287,27 +285,21 @@ static inline void pn_class_decref(const pn_class_t *clazz, void *object)
 
 static inline int pn_object_refcount(void *object)
 {
-  assert(object);
   return object_header(object)->refcount;
 }
 
 static inline void pn_object_incref(void *object)
 {
-  if (!object) return; // XXX
-
   class_incref(object_header(object)->clazz, object);
 }
 
 static inline void pn_object_decref(void *object)
 {
-  if (!object) return; // XXX
-
   class_decref(object_header(object)->clazz, object);
 }
 
 static inline void pn_base_object_incref(void *object)
 {
-  assert(object);
   object_header(object)->refcount++;
 }
 

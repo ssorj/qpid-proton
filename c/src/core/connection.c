@@ -78,7 +78,7 @@ static void pn_connection_finalize(void *object)
 
   pni_endpoint_free_children(connection->sessions, connection->freed);
   pn_free(connection->context);
-  pn_object_decref(connection->collector);
+  if (connection->collector) pn_object_decref(connection->collector);
 
   pn_free(connection->container);
   pn_free(connection->hostname);
@@ -102,8 +102,12 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
 {
   assert(connection);
 
-  pn_object_decref(connection->collector);
+  if (connection->collector) pn_object_decref(connection->collector);
+
   connection->collector = collector;
+
+  if (!connection->collector) return;
+
   pn_object_incref(connection->collector);
 
   pni_endpoint_t *endpoint = connection->endpoint_head;

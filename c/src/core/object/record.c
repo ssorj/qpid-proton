@@ -136,7 +136,7 @@ void pn_record_set(pn_record_t *record, pn_handle_t key, void *value)
   if (field) {
     void *old = field->value;
     field->value = value;
-    pn_class_incref(field->clazz, value);
+    if (value) pn_class_incref(field->clazz, value);
     if (old) pn_class_decref(field->clazz, old);
   }
 }

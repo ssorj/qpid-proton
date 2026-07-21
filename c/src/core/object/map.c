@@ -239,7 +239,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     entry->state = PNI_ENTRY_LINK;
     map->entries[empty].state = PNI_ENTRY_TAIL;
     map->entries[empty].key = key;
-    pn_class_incref(map->key, key);
+    if (key) pn_class_incref(map->key, key);
     if (pprev) *pprev = entry;
     map->size++;
     return &map->entries[empty];

@@ -264,7 +264,7 @@ static void pn_event_finalize(void *object) {
     pn_object_decref(event->attachments);
   }
 
-  pn_object_decref(pool);
+  if (pool) pn_object_decref(pool);
 }
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
