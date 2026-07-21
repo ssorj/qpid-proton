@@ -87,7 +87,7 @@ static void pn_collector_finalize(void *object)
 {
   pn_collector_t *collector = (pn_collector_t *)object;
   pn_collector_drain(collector);
-  pn_decref(collector->pool);
+  pn_object_decref(collector->pool);
 }
 
 static void pn_collector_inspect(void *object, pn_fixed_string_t *dst)
@@ -124,7 +124,7 @@ void pn_collector_free(pn_collector_t *collector)
 {
   assert(collector);
   pn_collector_release(collector);
-  pn_decref(collector);
+  pn_object_decref(collector);
 }
 
 void pn_collector_release(pn_collector_t *collector)
@@ -165,7 +165,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   }
 
   event->pool = collector->pool;
-  pn_incref(event->pool);
+  pn_object_incref(event->pool);
 
   if (tail) {
     tail->next = event;
@@ -209,14 +209,14 @@ static pn_event_t *pop_internal(pn_collector_t *collector) {
 bool pn_collector_pop(pn_collector_t *collector) {
   pn_event_t *event = pop_internal(collector);
   if (event) {
-    pn_decref(event);
+    pn_object_decref(event);
   }
   return event;
 }
 
 pn_event_t *pn_collector_next(pn_collector_t *collector) {
   if (collector->prev) {
-    pn_decref(collector->prev);
+    pn_object_decref(collector->prev);
   }
   collector->prev = pop_internal(collector);
   return collector->prev;
@@ -252,7 +252,7 @@ static void pn_event_finalize(void *object) {
 
   pn_list_t *pool = event->pool;
 
-  if (pool && pn_refcount(pool) > 1) {
+  if (pool && pn_object_refcount(pool) > 1) {
     event->pool = NULL;
     event->type = PN_EVENT_NONE;
     event->clazz = NULL;
@@ -261,10 +261,10 @@ static void pn_event_finalize(void *object) {
     pn_record_clear(event->attachments);
     pn_list_add(pool, event);
   } else {
-    pn_decref(event->attachments);
+    pn_object_decref(event->attachments);
   }
 
-  pn_decref(pool);
+  pn_object_decref(pool);
 }
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)

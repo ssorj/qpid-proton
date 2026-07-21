@@ -72,13 +72,13 @@ static void pn_connection_finalize(void *object)
   }
 
   // freeing the transport could post events
-  if (pn_refcount(connection) > 0) {
+  if (pn_object_refcount(connection) > 0) {
     return;
   }
 
   pni_endpoint_free_children(connection->sessions, connection->freed);
   pn_free(connection->context);
-  pn_decref(connection->collector);
+  pn_object_decref(connection->collector);
 
   pn_free(connection->container);
   pn_free(connection->hostname);
@@ -102,9 +102,9 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
 {
   assert(connection);
 
-  pn_decref(connection->collector);
+  pn_object_decref(connection->collector);
   connection->collector = collector;
-  pn_incref(connection->collector);
+  pn_object_incref(connection->collector);
 
   pni_endpoint_t *endpoint = connection->endpoint_head;
 
@@ -299,7 +299,7 @@ void pn_connection_release(pn_connection_t *connection)
 
 void pn_connection_free(pn_connection_t *connection) {
   pn_connection_release(connection);
-  pn_decref(connection);
+  pn_object_decref(connection);
 }
 
 void pni_connection_bound(pn_connection_t *connection)
@@ -380,7 +380,7 @@ void pni_connection_add_session(pn_connection_t *connection, pn_session_t *sessi
 
   pn_list_add(connection->sessions, session);
   session->connection = connection;
-  pn_incref(connection); // Keep around until finalized
+  pn_object_incref(connection); // Keep around until finalized
   pni_endpoint_incref(&connection->endpoint);
 }
 

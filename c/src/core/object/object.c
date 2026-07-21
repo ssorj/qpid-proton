@@ -29,17 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct {
-  const pn_class_t *clazz;
-  int refcount;
-} object_header_t;
-
-static inline object_header_t *object_header(void *object)
-{
-  assert(object);
-  return ((object_header_t *) (object)) - 1;
-}
-
 #define CID_pn_default CID_pn_object
 #define pn_default_initialize NULL
 #define pn_default_finalize NULL
@@ -56,7 +45,7 @@ void *pn_void_new(const pn_class_t *clazz, size_t size) {
 #define pn_void_initialize NULL
 #define pn_void_finalize NULL
 
-static void pn_void_free(void *object) {
+void pn_void_free(void *object) {
   pni_mem_deallocate(PN_VOID, object);
 }
 
@@ -115,57 +104,9 @@ const pn_class_t *PN_OBJECT = &PN_OBJECT_S;
 // Common implementation functions
 //
 
-static inline void class_incref(const pn_class_t *clazz, void *object)
+void pn_object_deallocate(object_header_t *header)
 {
-  assert(clazz);
-  assert(object);
-  assert(!clazz->free || clazz->free == pn_void_free);
-
-  if (clazz->incref) {
-    clazz->incref(object);
-    return;
-  }
-
-  object_header_t *header = object_header(object);
-
-  assert(header->clazz);
-  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
-  assert(!header->clazz->free);
-
-  header->refcount++;
-}
-
-static inline void class_decref(const pn_class_t *clazz, void *object)
-{
-  assert(clazz);
-  assert(object);
-  assert(!clazz->free || clazz->free == pn_void_free);
-
-  if (clazz->decref) {
-    clazz->decref(object);
-    return;
-  }
-
-  object_header_t *header = object_header(object);
-
-  assert(header->clazz);
-  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
-  assert(!header->clazz->free);
-  assert(header->refcount > 0);
-
-  header->refcount--;
-
-  if (header->refcount == 0) {
-    if (clazz->finalize) {
-      clazz->finalize(object);
-
-      // Check the refcount again in case the finalizer created a
-      // new reference
-      if (header->refcount != 0) return;
-    }
-
-    pni_mem_deallocate(header->clazz, header);
-  }
+  pni_mem_deallocate(header->clazz, header);
 }
 
 static inline void class_free(const pn_class_t *clazz, void *object)
@@ -259,25 +200,6 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-int pn_class_refcount(const pn_class_t *clazz, void *object)
-{
-  if (clazz->refcount == pn_void_refcount) return -1;
-
-  return object_header(object)->refcount;
-}
-
-void pn_class_incref(const pn_class_t *clazz, void *object)
-{
-  if (!object) return;
-
-  class_incref(clazz, object);
-}
-
-void pn_class_decref(const pn_class_t *clazz, void *object)
-{
-  class_decref(clazz, object);
-}
-
 void pn_class_free(const pn_class_t *clazz, void *object)
 {
   class_free(clazz, object);
@@ -337,10 +259,7 @@ int pn_decref(void *object)
 {
   if (!object) return 0;
 
-  object_header_t *header = object_header(object);
-  const pn_class_t *clazz = header->clazz;
-
-  class_decref(clazz, object);
+  class_decref(object_header(object)->clazz, object);
 
   return 0;
 }
@@ -452,13 +371,4 @@ char *pn_tostring(void *object)
   char *r = malloc(l);
   strncpy(r, buf, l);
   return r;
-}
-
-//
-// New internal API XXX
-//
-
-void pn_object_incref(void *object) {
-  assert(object);
-  object_header(object)->refcount++;
 }

@@ -80,7 +80,7 @@ void pni_link_unbound(pn_link_t* link);
 
 static inline bool pni_link_live(pn_link_t *link) {
   assert(link);
-  return pni_session_live(link->session) || pn_refcount(link) > 1;
+  return pni_session_live(link->session) || pn_object_refcount(link) > 1;
 }
 
 #endif /* link.h */

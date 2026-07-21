@@ -91,7 +91,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   link->unsettled_count++;
 
   pn_delivery_incref(delivery);
-  pn_decref(delivery);
+  pn_object_decref(delivery);
 
   return delivery;
 }
@@ -106,9 +106,9 @@ static void pn_delivery_incref(void *object)
     // This delegates the refcount to the container.
 
     delivery->referenced = true;
-    pn_object_incref(delivery->link);
+    pn_base_object_incref(delivery->link);
   } else {
-    pn_object_incref(object);
+    pn_base_object_incref(object);
   }
 }
 
@@ -127,7 +127,7 @@ static void pn_delivery_finalize(void *object)
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
 
-    assert(pn_refcount(delivery) == 0);
+    assert(pn_object_refcount(delivery) == 0);
 
     return;
   }
@@ -135,10 +135,10 @@ static void pn_delivery_finalize(void *object)
   if (pni_link_live(link) && delivery_preserved(delivery) && delivery->referenced) {
     delivery->referenced = false;
 
-    pn_object_incref(delivery);
-    pn_decref(link);
+    pn_base_object_incref(delivery);
+    pn_object_decref(link);
 
-    assert(pn_refcount(delivery) == 1);
+    assert(pn_object_refcount(delivery) == 1);
 
     return;
   }
@@ -165,7 +165,7 @@ static void pn_delivery_finalize(void *object)
     pn_list_t *pool = link->session->connection->delivery_pool;
     pn_list_add(pool, delivery);
 
-    assert(pn_refcount(delivery) == 1);
+    assert(pn_object_refcount(delivery) == 1);
   } else {
     pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
@@ -174,12 +174,12 @@ static void pn_delivery_finalize(void *object)
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
 
-    assert(pn_refcount(delivery) == 0);
+    assert(pn_object_refcount(delivery) == 0);
   }
 
   if (delivery->referenced) {
     delivery->referenced = false;
-    pn_decref(link);
+    pn_object_decref(link);
   }
 }
 
@@ -296,7 +296,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     pni_connection_add_delivery_work(conn, delivery);
 
     pn_delivery_incref(delivery);
-    pn_decref(delivery);
+    pn_object_decref(delivery);
   }
 }
 

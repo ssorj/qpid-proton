@@ -243,9 +243,9 @@ bool pni_endpoint_preserve_child(pni_endpoint_t *endpoint)
   pni_endpoint_t *parent = endpoint_parent(endpoint);
 
   if (endpoint_live(parent) && (!endpoint->freed || (endpoint_bound(endpoint))) && endpoint->referenced) {
-    pn_object_incref(endpoint);
+    pn_base_object_incref(endpoint);
     endpoint->referenced = false;
-    pn_decref(parent);
+    pn_object_decref(parent);
     return true;
   } else {
     LL_REMOVE(conn, transport, endpoint);

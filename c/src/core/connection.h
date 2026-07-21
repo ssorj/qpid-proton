@@ -77,7 +77,7 @@ void pni_connection_dump(pn_connection_t *connection);
 
 static inline bool pni_connection_live(pn_connection_t *connection) {
   assert(connection);
-  return pn_refcount(connection) > 1;
+  return pn_object_refcount(connection) > 1;
 }
 
 static inline void pni_connection_add_endpoint_work(pn_connection_t *connection, pni_endpoint_t *endpoint, bool emit)
@@ -130,9 +130,9 @@ static inline void pni_connection_remove_delivery_work(pn_connection_t *connecti
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
 
-    if (pn_refcount(delivery) > 0) {
-      pn_incref(delivery);
-      pn_decref(delivery);
+    if (pn_object_refcount(delivery) > 0) {
+      pn_object_incref(delivery);
+      pn_object_decref(delivery);
     }
   }
 }

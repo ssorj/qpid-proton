@@ -60,8 +60,8 @@ void pn_session_free(pn_session_t *session)
 
   // the finalize logic depends on endpoint.freed, so we incref/decref
   // to give it a chance to rerun
-  pn_incref(session);
-  pn_decref(session);
+  pn_object_incref(session);
+  pn_object_decref(session);
 }
 
 pn_record_t *pn_session_attachments(pn_session_t *session)
@@ -123,9 +123,9 @@ static void pn_session_incref(void *object)
 
   if (!session->endpoint.referenced) {
     session->endpoint.referenced = true;
-    pn_incref(session->connection);
+    pn_object_incref(session->connection);
   } else {
-    pn_object_incref(object);
+    pn_base_object_incref(object);
   }
 }
 
@@ -157,7 +157,7 @@ static void pn_session_finalize(void *object)
   }
 
   if (endpoint->referenced) {
-    pn_decref(session->connection);
+    pn_object_decref(session->connection);
   }
 }
 
@@ -209,7 +209,7 @@ pn_session_t *pn_session(pn_connection_t *connection)
     pni_session_bound(session);
   }
 
-  pn_decref(session);
+  pn_object_decref(session);
 
   return session;
 }

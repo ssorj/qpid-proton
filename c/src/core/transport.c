@@ -527,12 +527,12 @@ static void pn_transport_incref(void *object)
   if (!transport->referenced) {
     transport->referenced = true;
     if (transport->connection) {
-      pn_incref(transport->connection);
+      pn_object_incref(transport->connection);
     } else {
-      pn_object_incref(object);
+      pn_base_object_incref(object);
     }
   } else {
-    pn_object_incref(object);
+    pn_base_object_incref(object);
   }
 }
 
@@ -627,17 +627,17 @@ void pn_transport_free(pn_transport_t *transport)
   if (!transport) return;
   assert(!transport->freed);
   transport->freed = true;
-  pn_decref(transport);
+  pn_object_decref(transport);
 }
 
 static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
 
-  if (transport->referenced && transport->connection && pn_refcount(transport->connection) > 1) {
-    pn_object_incref(transport);
+  if (transport->referenced && transport->connection && pn_object_refcount(transport->connection) > 1) {
+    pn_base_object_incref(transport);
     transport->referenced = false;
-    pn_decref(transport->connection);
+    pn_object_decref(transport->connection);
     return;
   }
 
@@ -645,7 +645,7 @@ static void pn_transport_finalize(void *object)
   // processing can be done to the connection:
   pn_transport_unbind(transport);
   // we may have posted events, so stay alive until they are processed
-  if (pn_refcount(transport) > 0) return;
+  if (pn_object_refcount(transport) > 0) return;
 
   pn_ssl_free(transport);
   pn_sasl_free(transport);
@@ -691,7 +691,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   transport->connection = connection;
   connection->transport = transport;
 
-  pn_incref(connection);
+  pn_object_incref(connection);
 
   pni_connection_bound(connection);
 
@@ -790,7 +790,7 @@ int pn_transport_unbind(pn_transport_t *transport)
 
   pni_connection_unbound(conn);
   if (was_referenced) {
-    pn_decref(conn);
+    pn_object_decref(conn);
   }
   return 0;
 }
@@ -1332,8 +1332,8 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   pni_connection_remove_delivery_work(delivery->link->session->connection, delivery);
   pn_delivery_map_del(db, delivery);
-  pn_incref(delivery);
-  pn_decref(delivery);
+  pn_object_incref(delivery);
+  pn_object_decref(delivery);
 }
 
 static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp);

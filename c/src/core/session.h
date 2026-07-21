@@ -91,7 +91,7 @@ static inline bool pni_connection_live(pn_connection_t *connection);
 
 static inline bool pni_session_live(pn_session_t *session) {
   assert(session);
-  return pni_connection_live(session->connection) || pn_refcount(session) > 1;
+  return pni_connection_live(session->connection) || pn_object_refcount(session) > 1;
 }
 
 void pni_session_add_link(pn_session_t *session, pn_link_t *link);

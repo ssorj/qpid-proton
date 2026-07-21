@@ -35,9 +35,9 @@ static void pn_link_incref(void *object)
 
   if (!link->endpoint.referenced) {
     link->endpoint.referenced = true;
-    pn_incref(link->session);
+    pn_object_incref(link->session);
   } else {
-    pn_object_incref(object);
+    pn_base_object_incref(object);
   }
 }
 
@@ -70,7 +70,7 @@ static void pn_link_finalize(void *object)
   pn_list_remove(link->session->freed, link);
 
   if (endpoint->referenced) {
-    pn_decref(link->session);
+    pn_object_decref(link->session);
   }
 
   pn_free(link->properties);
@@ -127,7 +127,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
 
   pni_endpoint_init(&link->endpoint, type, session->connection);
   pni_session_add_link(session, link);
-  pn_incref(session);  // keep session until link finalized
+  pn_object_incref(session);  // keep session until link finalized
 
   pni_terminus_init(&link->source, PN_SOURCE);
   pni_terminus_init(&link->target, PN_TARGET);
@@ -140,7 +140,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
     pni_link_bound(link);
   }
 
-  pn_decref(link);
+  pn_object_decref(link);
 
   return link;
 }
@@ -190,8 +190,8 @@ void pn_link_free(pn_link_t *link)
 
   // The finalize logic depends on endpoint.freed (modified above), so
   // we incref/decref to give it a chance to rerun
-  pn_incref(link);
-  pn_decref(link);
+  pn_object_incref(link);
+  pn_object_decref(link);
 }
 
 void *pn_link_get_context(pn_link_t *link)

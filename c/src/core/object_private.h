@@ -22,14 +22,16 @@
  *
  */
 
-#include "proton/object.h"
+#include <proton/object.h>
 
 #include <proton/annotations.h>
-#include <proton/types.h>
-#include <stdarg.h>
-#include <proton/type_compat.h>
-#include <stddef.h>
 #include <proton/import_export.h>
+#include <proton/type_compat.h>
+#include <proton/types.h>
+
+#include <assert.h>
+#include <stdarg.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,19 +120,14 @@ const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
   NULL, /* _inspect */                              \
 }};                                                 \
 
-PN_EXTERN void pn_class_incref(const pn_class_t *clazz, void *object);
-PN_EXTERN int pn_class_refcount(const pn_class_t *clazz, void *object);
-PN_EXTERN void pn_class_decref(const pn_class_t *clazz, void *object);
-
 PN_EXTERN void pn_class_free(const pn_class_t *clazz, void *object);
 
 PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN void pn_class_inspect(const pn_class_t *clazz, void *object, struct pn_fixed_string_t *dst);
 
-PN_EXTERN void pn_object_incref(void *object);
-
 PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
+PN_EXTERN void pn_void_free(void *object);
 PN_EXTERN void pn_void_incref(void *object);
 PN_EXTERN void pn_void_decref(void *object);
 PN_EXTERN int pn_void_refcount(void *object);
@@ -201,6 +198,118 @@ PN_EXTERN pn_iterator_t *pn_iterator(void);
 PN_EXTERN void *pn_iterator_start(pn_iterator_t *iterator,
                         pn_iterator_next_t next, size_t size);
 PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
+
+typedef struct {
+  const pn_class_t *clazz;
+  int refcount;
+} object_header_t;
+
+static inline object_header_t *object_header(void *object)
+{
+  assert(object);
+  return ((object_header_t *) (object)) - 1;
+}
+
+static inline void class_incref(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  assert(object);
+  assert(!clazz->free || clazz->free == pn_void_free);
+
+  if (clazz->incref) {
+    clazz->incref(object);
+    return;
+  }
+
+  object_header_t *header = object_header(object);
+
+  assert(header->clazz);
+  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
+  assert(!header->clazz->free);
+
+  header->refcount++;
+}
+
+// XXX Why do I need extern here?
+PN_EXTERN void pn_object_deallocate(object_header_t *header);
+
+static inline void class_decref(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  assert(object);
+  assert(!clazz->free || clazz->free == pn_void_free);
+
+  if (clazz->decref) {
+    clazz->decref(object);
+    return;
+  }
+
+  object_header_t *header = object_header(object);
+
+  assert(header->clazz);
+  assert(header->clazz == clazz || clazz == PN_WEAKREF || clazz == PN_OBJECT);
+  assert(!header->clazz->free);
+  assert(header->refcount > 0);
+
+  header->refcount--;
+
+  if (header->refcount == 0) {
+    if (clazz->finalize) {
+      clazz->finalize(object);
+
+      // Check the refcount again in case the finalizer created a
+      // new reference
+      if (header->refcount != 0) return;
+    }
+
+    pn_object_deallocate(header);
+  }
+}
+
+static inline int pn_class_refcount(const pn_class_t *clazz, void *object)
+{
+  if (clazz->refcount == pn_void_refcount) return -1;
+
+  return object_header(object)->refcount;
+}
+
+static inline void pn_class_incref(const pn_class_t *clazz, void *object)
+{
+  if (!object) return;
+
+  class_incref(clazz, object);
+}
+
+static inline void pn_class_decref(const pn_class_t *clazz, void *object)
+{
+  class_decref(clazz, object);
+}
+
+static inline int pn_object_refcount(void *object)
+{
+  assert(object);
+  return object_header(object)->refcount;
+}
+
+static inline void pn_object_incref(void *object)
+{
+  if (!object) return; // XXX
+
+  class_incref(object_header(object)->clazz, object);
+}
+
+static inline void pn_object_decref(void *object)
+{
+  if (!object) return; // XXX
+
+  class_decref(object_header(object)->clazz, object);
+}
+
+static inline void pn_base_object_incref(void *object)
+{
+  assert(object);
+  object_header(object)->refcount++;
+}
 
 /**
  * @endcond
