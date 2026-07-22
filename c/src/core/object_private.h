@@ -33,6 +33,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+#include "core/object/string.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -44,7 +46,6 @@ extern "C" {
 typedef intptr_t pn_shandle_t;
 
 typedef struct pn_list_t pn_list_t;
-typedef struct pn_string_t pn_string_t;
 typedef struct pn_map_t pn_map_t;
 typedef struct pn_hash_t pn_hash_t;
 typedef void *(*pn_iterator_next_t)(void *state);
@@ -172,27 +173,6 @@ PN_EXTERN pn_handle_t pn_hash_head(pn_hash_t *hash);
 PN_EXTERN pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry);
 PN_EXTERN uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry);
 PN_EXTERN void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry);
-
-PN_EXTERN pn_string_t *pn_string(const char *bytes);
-PN_EXTERN const char *pn_string_get(pn_string_t *string);
-pn_bytes_t pn_string_bytes(pn_string_t *string);
-PN_EXTERN pn_string_t *pn_stringn(const char *bytes, size_t n);
-PN_EXTERN size_t pn_string_size(pn_string_t *string);
-PN_EXTERN int pn_string_set(pn_string_t *string, const char *bytes);
-PN_EXTERN int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
-ssize_t pn_string_put(pn_string_t *string, char *dst);
-void pn_string_clear(pn_string_t *string);
-PN_EXTERN int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
-        PN_PRINTF_FORMAT_ATTR(2, 3);
-int pn_string_vformat(pn_string_t *string, const char *format, va_list ap);
-PN_EXTERN int pn_string_addf(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
-        PN_PRINTF_FORMAT_ATTR(2, 3);
-int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap);
-int pn_string_grow(pn_string_t *string, size_t capacity);
-char *pn_string_buffer(pn_string_t *string);
-size_t pn_string_capacity(pn_string_t *string);
-int pn_string_resize(pn_string_t *string, size_t size);
-int pn_string_copy(pn_string_t *string, pn_string_t *src);
 
 PN_EXTERN pn_iterator_t *pn_iterator(void);
 PN_EXTERN void *pn_iterator_start(pn_iterator_t *iterator,

@@ -18,13 +18,13 @@
  * under the License.
  *
  */
-#include "platform/platform.h"
 
 #include <proton/error.h>
 #include <proton/object.h>
 
 #include "core/fixed_string.h"
 #include "core/memory.h"
+#include "platform/platform.h"
 
 #include <stdio.h>
 #include <stddef.h>
@@ -32,13 +32,7 @@
 #include <assert.h>
 #include <ctype.h>
 
-#define PNI_NULL_SIZE (-1)
-
-struct pn_string_t {
-  char *bytes;
-  int32_t size;       // PNI_NULL_SIZE (-1) means null
-  uint32_t capacity;
-};
+#define pn_string_initialize NULL
 
 static void pn_string_finalize(void *object)
 {
@@ -49,14 +43,16 @@ static void pn_string_finalize(void *object)
 static uintptr_t pn_string_hashcode(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
-  if (string->size == PNI_NULL_SIZE) {
-    return 0;
-  }
+
+  if (!string->size) return 0;
+  if (!string->is_set) return 0;
 
   uintptr_t hashcode = 1;
-  for (ssize_t i = 0; i < string->size; i++) {
+
+  for (size_t i = 0; i < string->size; i++) {
     hashcode = hashcode * 31 + string->bytes[i];
   }
+
   return hashcode;
 }
 
@@ -64,29 +60,31 @@ static intptr_t pn_string_compare(void *oa, void *ob)
 {
   pn_string_t *a = (pn_string_t *) oa;
   pn_string_t *b = (pn_string_t *) ob;
+
   if (a->size != b->size) {
     return b->size - a->size;
   }
 
-  if (a->size == PNI_NULL_SIZE) {
-    return 0;
-  } else {
-    return memcmp(a->bytes, b->bytes, a->size);
-  }
+  if (!a->size) return 0;
+  if (!a->is_set) return 0;
+
+  return memcmp(a->bytes, b->bytes, a->size);
 }
 
 static void pn_string_inspect(void *obj, pn_fixed_string_t *dst)
 {
   pn_string_t *str = (pn_string_t *) obj;
-  if (str->size == PNI_NULL_SIZE) {
+
+  if (!str->is_set) {
     pn_fixed_string_addf(dst, "null");
     return;
   }
 
   pn_fixed_string_addf(dst, "\"");
 
-  for (int i = 0; i < str->size; i++) {
+  for (size_t i = 0; i < str->size; i++) {
     uint8_t c = str->bytes[i];
+
     if (isprint(c)) {
       pn_fixed_string_addf(dst, "%c", c);
     } else {
@@ -95,188 +93,209 @@ static void pn_string_inspect(void *obj, pn_fixed_string_t *dst)
   }
 
   pn_fixed_string_addf(dst, "\"");
-  return;
 }
 
-pn_string_t *pn_string(const char *bytes)
+static int string_grow(pn_string_t *string, size_t required)
 {
-  return pn_stringn(bytes, bytes ? strlen(bytes) : 0);
+  assert(string);
+  assert(required > string->capacity);
+
+  // Compute next power of two greater than or equal to required
+
+  size_t new_capacity = required - 1;
+
+  new_capacity |= (new_capacity >> 1);
+  new_capacity |= (new_capacity >> 2);
+  new_capacity |= (new_capacity >> 4);
+  new_capacity |= (new_capacity >> 8);
+  new_capacity |= (new_capacity >> 16);
+
+  #if UINTPTR_MAX == 0xffffffffffffffffULL
+  new_capacity |= (new_capacity >> 32);
+  #endif
+
+  new_capacity++;
+
+  // Handle overflow
+  if (new_capacity == 0) {
+    new_capacity = required;
+  }
+
+  char *new_bytes = (char *) pni_mem_subreallocate(pn_class(string), string, string->bytes, new_capacity);
+  if (!new_bytes) return PN_OUT_OF_MEMORY;
+
+  string->bytes = new_bytes;
+  string->capacity = new_capacity;
+
+  return 0;
 }
 
-#define pn_string_initialize NULL
-
-
-pn_string_t *pn_stringn(const char *bytes, size_t n)
+static inline int string_init(pn_string_t *string, const char *bytes, size_t size)
 {
+  assert(string);
+  assert(bytes);
+
+  if (size + 1 > string->capacity) {
+    int err = string_grow(string, size + 1);
+    if (err) return err;
+  }
+
+  if (size > 0) {
+    memcpy(string->bytes, bytes, size);
+  }
+
+  string->bytes[size] = '\0';
+  string->size = size;
+  string->is_set = true;
+
+  return 0;
+}
+
+pn_string_t *pn_stringn(const char *bytes, size_t size)
+{
+  assert(bytes || (!bytes && !size));
+
   static const pn_class_t clazz = PN_CLASS(pn_string);
+
   pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
-  string->capacity = n ? n * sizeof(char) : 16;
-  string->bytes = (char *) pni_mem_suballocate(&clazz, string, string->capacity);
-  pn_string_setn(string, bytes, n);
+  if (!string) return NULL;
+
+  if (!bytes) {
+    return string;
+  }
+
+  int err = string_init(string, bytes, size);
+
+  if (err) {
+    pni_mem_deallocate(&clazz, string);
+    return NULL;
+  }
+
+  string->size = size;
+  string->is_set = true;
+
   return string;
 }
 
-const char *pn_string_get(pn_string_t *string)
+int pn_string_setn(pn_string_t *string, const char *bytes, size_t size)
 {
-  if (!string || string->size == PNI_NULL_SIZE) {
-    return NULL;
-  } else {
-    return string->bytes;
-  }
-}
+  assert(string);
+  assert(bytes || (!bytes && !size));
 
-size_t pn_string_size(pn_string_t *string)
-{
-  if (!string || string->size == PNI_NULL_SIZE) {
+  if (!bytes) {
+    pn_string_clear(string);
     return 0;
-  } else {
-    return string->size;
-  }
-}
-
-pn_bytes_t pn_string_bytes(pn_string_t *string)
-{
-  if (!string || string->size == PNI_NULL_SIZE) {
-    return (pn_bytes_t){0, NULL};
-  } else {
-    return (pn_bytes_t){string->size, string->bytes};
-  }
-}
-
-int pn_string_set(pn_string_t *string, const char *bytes)
-{
-  return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
-}
-
-int pn_string_grow(pn_string_t *string, size_t capacity)
-{
-  if (!string) return PN_ARG_ERR;
-
-  bool grow = false;
-  while (string->capacity < (capacity*sizeof(char) + 1)) {
-    string->capacity *= 2;
-    grow = true;
   }
 
-  if (grow) {
-    char *growed = (char *) pni_mem_subreallocate(pn_class(string), string, string->bytes, string->capacity);
-    if (growed) {
-      string->bytes = growed;
-    } else {
-      return PN_ERR;
-    }
-  }
-
-  return 0;
-}
-
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
-{
-  int err = pn_string_grow(string, n);
+  int err = string_init(string, bytes, size);
   if (err) return err;
 
-  if (bytes) {
-    memcpy(string->bytes, bytes, n*sizeof(char));
-    string->bytes[n] = '\0';
-    string->size = n;
-  } else {
-    string->size = PNI_NULL_SIZE;
-  }
-
   return 0;
 }
 
-ssize_t pn_string_put(pn_string_t *string, char *dst)
+// XXX Get rid of this?
+char *pn_string_buffer(pn_string_t *string) {
+  assert(string);
+  return string->bytes;
+}
+
+// XXX Only messenger uses this
+int pn_string_resize(pn_string_t *string, size_t size)
 {
-  if (!string) return PNI_NULL_SIZE;
+  assert(string);
 
-  assert(dst);
-
-  if (string->size != PNI_NULL_SIZE) {
-    memcpy(dst, string->bytes, string->size + 1);
+  if (size + 1 > string->capacity) {
+    int err = string_grow(string, size + 1);
+    if (err) return err;
   }
 
-  return string->size;
-}
+  if (size > string->size) memset(string->bytes + string->size, 0, size - string->size);
 
-void pn_string_clear(pn_string_t *string)
-{
-  pn_string_set(string, NULL);
-}
+  string->bytes[size] = '\0';
+  string->size = size;
+  string->is_set = (size);
 
-int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
-{
-  va_list ap;
-
-  va_start(ap, format);
-  int err = pn_string_vformat(string, format, ap);
-  va_end(ap);
-  return err;
+  return 0;
 }
 
 int pn_string_vformat(pn_string_t *string, const char *format, va_list ap)
 {
-  pn_string_set(string, "");
-  return pn_string_vaddf(string, format, ap);
+  assert(string);
+
+  va_list ap_copy;
+  va_copy(ap_copy, ap);
+
+  int len = vsnprintf(NULL, 0, format, ap_copy);
+
+  va_end(ap_copy);
+
+  if (len < 0) return PN_ERR;
+
+  if ((size_t) len + 1 > string->capacity) {
+    int err = string_grow(string, len + 1);
+    if (err) return err;
+  }
+
+  vsnprintf(string->bytes, string->capacity, format, ap);
+
+  string->size = len;
+
+
+  return 0;
 }
 
-int pn_string_addf(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
+// XXX Only messenger uses this
+int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
 {
-  va_list ap;
+  assert(string);
 
+  va_list ap;
   va_start(ap, format);
-  int err = pn_string_vaddf(string, format, ap);
+
+  int err = pn_string_vformat(string, format, ap);
+
   va_end(ap);
+
   return err;
 }
 
 int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 {
-  va_list copy;
+  assert(string);
 
-  if (string->size == PNI_NULL_SIZE) {
-    return PN_ERR;
+  va_list ap_copy;
+  va_copy(ap_copy, ap);
+
+  int len = vsnprintf(NULL, 0, format, ap_copy);
+
+  va_end(ap_copy);
+
+  if (len < 0) return PN_ERR;
+
+  if (string->size + len + 1 > string->capacity) {
+    int err = string_grow(string, string->size + len + 1);
+    if (err) return err;
   }
 
-  while (true) {
-    va_copy(copy, ap);
-    int err = vsnprintf(string->bytes + string->size, string->capacity - string->size, format, copy);
-    va_end(copy);
-    if (err < 0) {
-      return err;
-    } else if ((size_t) err >= string->capacity - string->size) {
-      pn_string_grow(string, string->size + err);
-    } else {
-      string->size += err;
-      return 0;
-    }
-  }
-}
+  vsnprintf(string->bytes + string->size, string->capacity - string->size, format, ap);
 
-char *pn_string_buffer(pn_string_t *string)
-{
-  if (!string) return NULL;
+  string->size += len;
+  string->is_set = true;
 
-  return string->bytes;
-}
-
-size_t pn_string_capacity(pn_string_t *string)
-{
-  if (!string) return 0;
-
-  return string->capacity - 1;
-}
-
-int pn_string_resize(pn_string_t *string, size_t size)
-{
-  int err = pn_string_grow(string, size);
-  if (err) return err;
-  string->size = size;
-  string->bytes[size] = '\0';
   return 0;
 }
 
-int pn_string_copy(pn_string_t *string, pn_string_t *src)
+// XXX Only messenger, url, and sasl use this
+int pn_string_addf(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
 {
-  return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
+  assert(string);
+
+  va_list ap;
+  va_start(ap, format);
+
+  int err = pn_string_vaddf(string, format, ap);
+
+  va_end(ap);
+
+  return err;
 }

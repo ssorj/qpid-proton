@@ -39,8 +39,6 @@ extern "C" {
 #endif
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
-struct pn_string_t;
-int pn_quote(struct pn_string_t *dst, const char *src, size_t size);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 

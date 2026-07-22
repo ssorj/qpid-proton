@@ -65,24 +65,6 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
   return idx;
 }
 
-int pn_quote(pn_string_t *dst, const char *src, size_t size)
-{
-  while (true) {
-    size_t str_size = pn_string_size(dst);
-    char *str = pn_string_buffer(dst) + str_size;
-    size_t capacity = pn_string_capacity(dst) - str_size;
-    ssize_t ssize = pn_quote_data(str, capacity, src, size);
-    if (ssize == PN_OVERFLOW) {
-      int err = pn_string_grow(dst, (str_size + capacity) ? 2*(str_size + capacity) : 16);
-      if (err) return err;
-    } else if (ssize >= 0) {
-      return pn_string_resize(dst, str_size + ssize);
-    } else {
-      return ssize;
-    }
-  }
-}
-
 int pn_strcasecmp(const char *a, const char *b)
 {
   int diff;

@@ -495,7 +495,10 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     switch (desired_state) {
     case SASL_POSTED_INIT: {
       /* GENERATE_CODEC_CODE: "DL[szS]" */
-      pn_bytes_t buf = pn_amqp_encode_sasl_init(&transport->scratch_space, AMQP_DESC_SASL_INIT, pn_string_bytes(sasl->selected_mechanism), out.size, out.start, pn_string_bytes(sasl->local_fqdn));
+      pn_bytes_t buf = pn_amqp_encode_sasl_init(&transport->scratch_space, AMQP_DESC_SASL_INIT,
+						pn_string_bytes(sasl->selected_mechanism),
+						out.size, out.start,
+						sasl->local_fqdn ? pn_string_bytes(sasl->local_fqdn) : pn_bytes_null);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
