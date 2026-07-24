@@ -36,18 +36,14 @@
 
 PN_STRUCT_CLASSDEF(pn_buffer)
 
-int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
+int pn_buffer_ensure(pn_buffer_t *buffer, size_t size)
 {
-  size_t required = buf->size + size;
+  size_t required = buffer->size + size;
 
-  assert(required >= buf->size);
-
-  if (buf->start > 0 && (buf->start + required > buf->capacity)) {
-    memmove(buf->bytes, buf->bytes + buf->start, buf->size);
-    buf->start = 0;
+  if (buffer->start > 0 && (buffer->start + required > buffer->capacity)) {
+    memmove(buffer->bytes, buffer->bytes + buffer->start, buffer->size);
+    buffer->start = 0;
   }
-
-  if (required <= buf->capacity) return 0;
 
   // Compute next power of two greater than or equal to required
 
@@ -65,41 +61,41 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 
   new_capacity++;
 
-  // Handle overflow (if required - 1 smeared wraps to 0 after increment)
+  // Handle overflow
   if (new_capacity == 0) {
     new_capacity = required;
   }
 
-  char *new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity);
+  char *new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buffer, buffer->bytes, new_capacity);
   if (!new_bytes) return PN_OUT_OF_MEMORY;
 
-  buf->bytes = new_bytes;
-  buf->capacity = new_capacity;
+  buffer->bytes = new_bytes;
+  buffer->capacity = new_capacity;
 
   return 0;
 }
 
 pn_buffer_t *pn_buffer(size_t capacity)
 {
-  pn_buffer_t *buf = (pn_buffer_t *) pni_mem_zallocate(PN_CLASSCLASS(pn_buffer), sizeof(pn_buffer_t));
-  if (!buf) return NULL;
+  pn_buffer_t *buffer = (pn_buffer_t *) pni_mem_zallocate(PN_CLASSCLASS(pn_buffer), sizeof(pn_buffer_t));
+  if (!buffer) return NULL;
 
   if (capacity > 0) {
-    int err = pn_buffer_ensure(buf, capacity);
+    int err = pn_buffer_ensure(buffer, capacity);
 
     if (err) {
-      pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
+      pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buffer);
       return NULL;
     }
   }
 
-  return buf;
+  return buffer;
 }
 
-void pn_buffer_free(pn_buffer_t *buf)
+void pn_buffer_free(pn_buffer_t *buffer)
 {
-  if (!buf) return;
+  if (!buffer) return;
 
-  pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes);
-  pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
+  pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer), buffer, buffer->bytes);
+  pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buffer);
 }
