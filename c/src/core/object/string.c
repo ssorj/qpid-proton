@@ -130,7 +130,7 @@ static int string_grow(pn_string_t *string, size_t required)
   return 0;
 }
 
-static inline int string_init(pn_string_t *string, const char *bytes, size_t size)
+static inline int string_set(pn_string_t *string, const char *bytes, size_t size)
 {
   assert(string);
   assert(bytes);
@@ -162,7 +162,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t size)
 
   if (!bytes) return string;
 
-  int err = string_init(string, bytes, size);
+  int err = string_set(string, bytes, size);
 
   if (err) {
     pni_mem_deallocate(&clazz, string);
@@ -185,7 +185,7 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t size)
     return 0;
   }
 
-  int err = string_init(string, bytes, size);
+  int err = string_set(string, bytes, size);
   if (err) return err;
 
   return 0;
