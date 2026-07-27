@@ -1,5 +1,5 @@
-#ifndef STRING_H
-#define STRING_H
+#ifndef PROTON_STRING_H
+#define PROTON_STRING_H
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -23,11 +23,11 @@
 #include "platform/platform.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -61,17 +61,17 @@ static inline pn_string_t *pn_string(const char *bytes)
 
 static inline const char *pn_string_get(pn_string_t *string) {
     assert(string);
-
-    if (!string->is_set) return NULL;
-
-    return string->bytes;
+    return string->is_set ? string->bytes : NULL;
 }
 
 static inline pn_bytes_t pn_string_bytes(pn_string_t *string)
 {
   assert(string);
 
-  if (!string->is_set) return pn_bytes_null;
+  if (!string->is_set) {
+    pn_bytes_t bytes = { 0, NULL };
+    return bytes;
+  }
 
   pn_bytes_t bytes = { string->size, string->bytes };
 
@@ -93,7 +93,7 @@ static inline void pn_string_clear(pn_string_t *string) {
     assert(string);
 
     if (string->capacity > 0) {
-        string->bytes[0] = '\0';
+      string->bytes[0] = '\0';
     }
 
     string->size = 0;
@@ -111,4 +111,4 @@ static inline int pn_string_copy(pn_string_t *string, pn_string_t *src) {
 }
 #endif
 
-#endif /* STRING_H */
+#endif /* PROTON_STRING_H */
