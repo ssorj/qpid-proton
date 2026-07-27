@@ -38,15 +38,16 @@ PN_STRUCT_CLASSDEF(pn_buffer)
 
 int pn_buffer_ensure(pn_buffer_t *buffer, size_t size)
 {
-  size_t required = buffer->size + size;
+  assert(buffer);
 
-  if (buffer->start > 0 && (buffer->start + required > buffer->capacity)) {
-    memmove(buffer->bytes, buffer->bytes + buffer->start, buffer->size);
+  if (buffer->start > 0) {
+    memmove(buffer->bytes, &buffer->bytes[buffer->start], buffer->size);
     buffer->start = 0;
   }
 
   // Compute next power of two greater than or equal to required
 
+  size_t required = buffer->size + size;
   size_t new_capacity = required - 1;
 
   new_capacity |= (new_capacity >> 1);

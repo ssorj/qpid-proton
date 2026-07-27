@@ -50,16 +50,20 @@ PN_EXTERN int pn_buffer_ensure(pn_buffer_t *buffer, size_t size);
 
 static inline size_t pn_buffer_size(pn_buffer_t *buffer)
 {
+  assert(buffer);
   return buffer->size;
 }
 
 static inline size_t pn_buffer_capacity(pn_buffer_t *buffer)
 {
+  assert(buffer);
   return buffer->capacity;
 }
 
 static inline void pn_buffer_clear(pn_buffer_t *buffer)
 {
+  assert(buffer);
+
   buffer->start = 0;
   buffer->size = 0;
 }
@@ -75,7 +79,7 @@ static inline char *pn_buffer_write_ptr(pn_buffer_t *buffer, size_t size)
     if (err) return NULL;
   }
 
-  return buffer->bytes + buffer->start + buffer->size;
+  return &buffer->bytes[buffer->start + buffer->size];
 }
 
 static inline void pn_buffer_advance_write(pn_buffer_t *buffer, size_t size)
@@ -102,8 +106,7 @@ static inline int pn_buffer_write(pn_buffer_t *buffer, const char *bytes, size_t
 static inline char *pn_buffer_read_ptr(pn_buffer_t *buffer)
 {
   assert(buffer);
-
-  return buffer->bytes + buffer->start;
+  return &buffer->bytes[buffer->start];
 }
 
 static inline void pn_buffer_advance_read(pn_buffer_t *buffer, size_t size)
@@ -123,12 +126,10 @@ static inline size_t pn_buffer_read(pn_buffer_t *buffer, size_t size, char *dst)
 {
   assert(buffer);
 
+  if (!size) return 0;
+
   if (buffer->size < size) {
     size = buffer->size;
-  }
-
-  if (!size) {
-    return 0;
   }
 
   memcpy(dst, pn_buffer_read_ptr(buffer), size);
@@ -141,10 +142,7 @@ static inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buffer)
 {
   assert(buffer);
 
-  pn_bytes_t bytes;
-
-  bytes.start = buffer->bytes + buffer->start;
-  bytes.size = buffer->size;
+  pn_bytes_t bytes = { buffer->size, &buffer->bytes[buffer->start] };
 
   return bytes;
 }
