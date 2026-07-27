@@ -36,8 +36,8 @@ extern "C" {
 
 typedef struct pn_string_t {
   char *bytes;
-  size_t size;
   size_t capacity;
+  size_t size;
   bool is_set;
 } pn_string_t;
 
@@ -91,10 +91,6 @@ static inline int pn_string_set(pn_string_t *string, const char *bytes) {
 
 static inline void pn_string_clear(pn_string_t *string) {
     assert(string);
-
-    if (string->capacity > 0) {
-      string->bytes[0] = '\0';
-    }
 
     string->size = 0;
     string->is_set = false;
