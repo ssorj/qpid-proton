@@ -45,6 +45,7 @@ PN_EXTERN pn_string_t *pn_stringn(const char *bytes, size_t n);
 PN_EXTERN int pn_string_setn(pn_string_t *string, const char *bytes, size_t size);
 PN_EXTERN int pn_string_resize(pn_string_t *string, size_t size);
 PN_EXTERN char *pn_string_buffer(pn_string_t *string);
+PN_EXTERN size_t pn_string_capacity(pn_string_t *string);
 
 PN_EXTERN int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
         PN_PRINTF_FORMAT_ATTR(2, 3);
@@ -81,11 +82,6 @@ static inline size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
   return string->size;
-}
-
-static inline size_t pn_string_capacity(pn_string_t *string) {
-  assert(string);
-  return string->capacity;
 }
 
 static inline int pn_string_set(pn_string_t *string, const char *bytes) {

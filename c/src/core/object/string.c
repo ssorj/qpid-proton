@@ -160,9 +160,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t size)
   pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
   if (!string) return NULL;
 
-  if (!bytes) {
-    return string;
-  }
+  if (!bytes) return string;
 
   int err = string_init(string, bytes, size);
 
@@ -193,10 +191,17 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t size)
   return 0;
 }
 
-// XXX Get rid of this?
+// XXX Get rid of this.  Only messenger and sasl.c use it.  The sasl.c
+// instance can be changed.
 char *pn_string_buffer(pn_string_t *string) {
   assert(string);
   return string->bytes;
+}
+
+// XXX Only messenger uses this
+size_t pn_string_capacity(pn_string_t *string) {
+  assert(string);
+  return string->capacity;
 }
 
 // XXX Only messenger uses this
@@ -209,7 +214,9 @@ int pn_string_resize(pn_string_t *string, size_t size)
     if (err) return err;
   }
 
-  if (size > string->size) memset(string->bytes + string->size, 0, size - string->size);
+  if (size > string->size) {
+    memset(string->bytes + string->size, 0, size - string->size);
+  }
 
   string->bytes[size] = '\0';
   string->size = size;
