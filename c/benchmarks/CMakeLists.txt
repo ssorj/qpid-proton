@@ -28,11 +28,13 @@ get_source_file_property(COMPILE_FLAGS benchmarks_main.cpp current_compile_flags
 set_source_files_properties(benchmarks_main.cpp PROPERTIES COMPILE_FLAGS "${current_compile_flags} -Wno-pedantic")
 
 add_executable(c-benchmarks benchmarks_main.cpp
+        buffer.cpp
         connection-driver.cpp
         message-encoding.cpp
         message-encoding_list.cpp
         message-encoding_map.cpp
 )
+target_include_directories(c-benchmarks PRIVATE ${CMAKE_SOURCE_DIR}/c/src)
 target_link_libraries(c-benchmarks benchmark pthread qpid-proton)
 
 add_test(NAME c-benchmarks COMMAND c-benchmarks)
