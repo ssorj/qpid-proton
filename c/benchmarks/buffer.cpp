@@ -20,14 +20,16 @@
  */
 
 #include "core/buffer.h"
+
 #include <benchmark/benchmark.h>
+
 #include <algorithm>
 #include <cstdlib>
 
 static void BM_ReadWriteBuffer(benchmark::State &state)
 {
   const size_t total_size = state.range(0);
-  const size_t chunk_size = 4096;
+  const size_t chunk_size = state.range(1);
 
   char *src = static_cast<char *>(malloc(chunk_size));
   char *dst = static_cast<char *>(malloc(chunk_size));
@@ -35,7 +37,7 @@ static void BM_ReadWriteBuffer(benchmark::State &state)
   std::fill_n(src, chunk_size, 0x5A);
 
   for (auto _ : state) {
-    pn_buffer_t *buffer = pn_buffer(chunk_size * 2);
+    pn_buffer_t *buffer = pn_buffer(0);
 
     size_t written = 0;
     size_t read = 0;
@@ -50,7 +52,7 @@ static void BM_ReadWriteBuffer(benchmark::State &state)
         written += to_write;
       }
 
-      // Fill a bit over
+      // Fill a bit over, triggering an allocation
       if (written < total_size) {
         to_write = std::min((size_t) 2, total_size - written);
         pn_buffer_write(buffer, src, to_write);
@@ -83,8 +85,11 @@ static void BM_ReadWriteBuffer(benchmark::State &state)
   free(dst);
 }
 
+// Generate power-of-two ranges for total size and chunk size
 BENCHMARK(BM_ReadWriteBuffer)
-  ->RangeMultiplier(4)
-  ->Range(64 * 1024, 64 * 1024 * 1024)
-  ->ArgName("total_bytes")
+  ->ArgsProduct({
+      benchmark::CreateRange(64 * 1024, 4 * 1024 * 1024, 4),
+      benchmark::CreateRange(64, 16 * 1024, 4)
+  })
+  ->ArgNames({"total_bytes", "chunk_size"})
   ->Unit(benchmark::kMillisecond);
