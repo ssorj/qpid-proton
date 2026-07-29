@@ -35,6 +35,42 @@
 extern "C" {
 #endif
 
+// This is a buffer optimized for streaming data through the engine.
+//
+// +---------+------------------------+---------+
+// |    A    |            B           |    C    |
+// +---------+------------------------+---------+
+// ^         ^                        ^         ^
+// |         |                        |         |
+// bytes     start                    size      capacity
+// pointer   offset                   offset    offset
+//           |                        |
+//           read                     write
+//           pointer                  pointer
+//           (bytes + start)          (bytes + start + size)
+//
+// A - This is discarded when the size goes to 0 (everything has been
+//     read) or the underlying buffer is reallocated to a larger
+//     capacity (a requested write doesn't fit in spare capacity).
+//
+// B - This is the buffer data.
+//
+// C - This is spare capacity for writes.
+//
+// Consuming from the left side (reading) is cheap because you need
+// only shift the start offset.  You don't need to reallocate.
+//
+// Producing to the right side (writing) is cheap, if you have spare
+// capacity, since you need only shift the size offset.
+//
+// Whenever all the data (B) is read (the size offset == 0), the start
+// offset is also reset to 0, which frees up capacity.
+//
+// If the existing capacity cannot hold the buffered data (data
+// written and not yet read - B), the whole buffer is reallocated to a
+// higher capacity.  That capacity is always a power of two greater
+// than the size needed.
+
 struct pn_buffer_t {
   char *bytes;
   size_t capacity;
@@ -72,9 +108,9 @@ static inline char *pn_buffer_get_write_ptr(pn_buffer_t *buffer, size_t size)
 {
   assert(buffer);
 
-  size_t required = buffer->size + size;
+  size_t new_size = buffer->size + size;
 
-  if (buffer->start + required > buffer->capacity) {
+  if (buffer->start + new_size > buffer->capacity) {
     int err = pn_buffer_ensure(buffer, size);
     if (err) return NULL;
   }
@@ -142,7 +178,10 @@ static inline pn_bytes_t pn_buffer_bytes(pn_buffer_t *buffer)
 {
   assert(buffer);
 
-  pn_bytes_t bytes = { buffer->size, &buffer->bytes[buffer->start] };
+  pn_bytes_t bytes = {
+    pn_buffer_size(buffer),
+    pn_buffer_get_read_ptr(buffer)
+  };
 
   return bytes;
 }

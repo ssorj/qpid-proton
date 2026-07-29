@@ -45,10 +45,10 @@ int pn_buffer_ensure(pn_buffer_t *buffer, size_t size)
     buffer->start = 0;
   }
 
-  // Compute next power of two greater than or equal to required
+  size_t new_size = buffer->size + size;
+  size_t new_capacity = new_size - 1;
 
-  size_t required = buffer->size + size;
-  size_t new_capacity = required - 1;
+  // Compute the next power of two greater than or equal to new_size
 
   new_capacity |= (new_capacity >> 1);
   new_capacity |= (new_capacity >> 2);
@@ -64,7 +64,7 @@ int pn_buffer_ensure(pn_buffer_t *buffer, size_t size)
 
   // Handle overflow
   if (new_capacity == 0) {
-    new_capacity = required;
+    new_capacity = new_size;
   }
 
   char *new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buffer, buffer->bytes, new_capacity);
