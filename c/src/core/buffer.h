@@ -68,7 +68,7 @@ static inline void pn_buffer_clear(pn_buffer_t *buffer)
   buffer->size = 0;
 }
 
-static inline char *pn_buffer_write_ptr(pn_buffer_t *buffer, size_t size)
+static inline char *pn_buffer_get_write_ptr(pn_buffer_t *buffer, size_t size)
 {
   assert(buffer);
 
@@ -82,7 +82,7 @@ static inline char *pn_buffer_write_ptr(pn_buffer_t *buffer, size_t size)
   return &buffer->bytes[buffer->start + buffer->size];
 }
 
-static inline void pn_buffer_advance_write(pn_buffer_t *buffer, size_t size)
+static inline void pn_buffer_advance_write_ptr(pn_buffer_t *buffer, size_t size)
 {
   assert(buffer);
   assert(buffer->start + buffer->size + size <= buffer->capacity);
@@ -94,22 +94,22 @@ static inline int pn_buffer_write(pn_buffer_t *buffer, const char *bytes, size_t
 {
   assert(buffer);
 
-  char *dst = pn_buffer_write_ptr(buffer, size);
+  char *dst = pn_buffer_get_write_ptr(buffer, size);
   if (!dst) return PN_OUT_OF_MEMORY;
 
   memcpy(dst, bytes, size);
-  pn_buffer_advance_write(buffer, size);
+  pn_buffer_advance_write_ptr(buffer, size);
 
   return 0;
 }
 
-static inline char *pn_buffer_read_ptr(pn_buffer_t *buffer)
+static inline char *pn_buffer_get_read_ptr(pn_buffer_t *buffer)
 {
   assert(buffer);
   return &buffer->bytes[buffer->start];
 }
 
-static inline void pn_buffer_advance_read(pn_buffer_t *buffer, size_t size)
+static inline void pn_buffer_advance_read_ptr(pn_buffer_t *buffer, size_t size)
 {
   assert(buffer);
   assert(size <= buffer->size);
@@ -132,8 +132,8 @@ static inline size_t pn_buffer_read(pn_buffer_t *buffer, size_t size, char *dst)
     size = buffer->size;
   }
 
-  memcpy(dst, pn_buffer_read_ptr(buffer), size);
-  pn_buffer_advance_read(buffer, size);
+  memcpy(dst, pn_buffer_get_read_ptr(buffer), size);
+  pn_buffer_advance_read_ptr(buffer, size);
 
   return size;
 }

@@ -88,7 +88,7 @@ static size_t write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *lo
 {
   size_t size = AMQP_HEADER_SIZE + frame.extended.size + frame.frame_payload0.size + frame.frame_payload1.size;
 
-  char *bytes = pn_buffer_write_ptr(buffer, size);
+  char *bytes = pn_buffer_get_write_ptr(buffer, size);
   if (!bytes) return 0;
 
   // Frame size (4 bytes)
@@ -129,7 +129,7 @@ static size_t write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *lo
 
   assert(offset == size);
 
-  pn_buffer_advance_write(buffer, size);
+  pn_buffer_advance_write_ptr(buffer, size);
 
   return size;
 }
