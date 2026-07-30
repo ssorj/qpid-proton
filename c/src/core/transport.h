@@ -101,9 +101,7 @@ struct pn_transport_t {
 
   /* output buffered for send */
 #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (8*1024)
-  size_t output_size;
-  size_t output_pending;
-  char *output_buf;
+  pn_buffer_t *output_buf;
 
   /* input from peer */
   size_t input_size;

@@ -409,7 +409,6 @@ static void pn_transport_initialize(void *object)
   pn_transport_t *transport = (pn_transport_t *)object;
   transport->freed = false;
   transport->output_buf = NULL;
-  transport->output_size = PN_TRANSPORT_INITIAL_BUFFER_SIZE;
   transport->input_buf = NULL;
   transport->input_size =  PN_TRANSPORT_INITIAL_BUFFER_SIZE;
   pni_logger_default_init(&transport->logger);
@@ -480,7 +479,6 @@ static void pn_transport_initialize(void *object)
   transport->bytes_output = 0;
 
   transport->input_pending = 0;
-  transport->output_pending = 0;
 
   transport->done_processing = false;
 
@@ -558,7 +556,7 @@ pn_transport_t *pn_transport(void)
     (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
 
-  transport->output_buf = (char *) pni_mem_suballocate(&clazz, transport, transport->output_size);
+  transport->output_buf = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   if (!transport->output_buf) {
     pn_transport_free(transport);
     return NULL;
@@ -665,7 +663,7 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
-  pni_mem_subdeallocate(pn_class(transport), transport, transport->output_buf);
+  pn_buffer_free(transport->output_buf);
   pn_rwbytes_free(transport->scratch_space);
   pn_free(transport->context);
   pn_buffer_free(transport->output_buffer);
@@ -2735,45 +2733,39 @@ static ssize_t transport_produce(pn_transport_t *transport)
 {
   if (transport->head_closed) return PN_EOS;
 
-  ssize_t space = transport->output_size - transport->output_pending;
+  size_t capacity = pn_buffer_capacity(transport->output_buf);
+  size_t pending = pn_buffer_size(transport->output_buf);
+  size_t space = capacity - pending;
 
-  if (space <= 0) {     // can we expand the buffer?
-    int more = 0;
-    if (!transport->remote_max_frame)   // no limit, so double it
-      more = transport->output_size;
-    else if (transport->remote_max_frame > transport->output_size)
-      more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
-    if (more) {
-      char *newbuf = (char *)pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf, transport->output_size + more );
-      if (newbuf) {
-        transport->output_buf = newbuf;
-        transport->output_size += more;
-        space += more;
-      }
+  if (!space) {
+    if (transport->remote_max_frame) {
+      space = pn_min(capacity, transport->remote_max_frame);
+    } else {
+      // No limit, so double it
+      space = capacity;
     }
   }
 
   while (space > 0) {
-    ssize_t n;
-    n = transport->io_layers[0]->
-      process_output( transport, 0,
-                      &transport->output_buf[transport->output_pending],
-                      space );
+    char *write_ptr = pn_buffer_get_write_ptr(transport->output_buf, space);
+    ssize_t n = transport->io_layers[0]->process_output(transport, 0, write_ptr, space);
+
     if (n > 0) {
       space -= n;
-      transport->output_pending += n;
+      pn_buffer_advance_write_ptr(transport->output_buf, n);
     } else if (n == 0) {
       break;
     } else {
-      if (transport->output_pending)
-        break;   // return what is available
+      if (pn_buffer_size(transport->output_buf)) break;
+
       PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP | PN_SUBSYSTEM_IO, PN_LEVEL_FRAME | PN_LEVEL_RAW, "  -> EOS");
       pni_close_head(transport);
+
       return n;
     }
   }
 
-  return transport->output_pending;
+  return pn_buffer_size(transport->output_buf);
 }
 
 // deprecated
@@ -3056,8 +3048,8 @@ ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 
 const char *pn_transport_head(pn_transport_t *transport)
 {
-  if (transport && transport->output_pending) {
-    return transport->output_buf;
+  if (transport && pn_buffer_size(transport->output_buf)) {
+    return pn_buffer_get_read_ptr(transport->output_buf);
   }
   return NULL;
 }
@@ -3085,15 +3077,12 @@ ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
   if (transport) {
-    assert( transport->output_pending >= size );
-    transport->output_pending -= size;
+    assert(pn_buffer_size(transport->output_buf) >= size);
+
+    pn_buffer_advance_read_ptr(transport->output_buf, size);
     transport->bytes_output += size;
-    if (transport->output_pending) {
-      // TODO: This could be potentially inefficient if we often pop the output without emptying it
-      // TODO: as we rotate the buffer here if we have any bytes left to write.
-      memmove( transport->output_buf,  &transport->output_buf[size],
-               transport->output_pending );
-    } else {
+
+    if (!pn_buffer_size(transport->output_buf)) {
       // If we emptied the output buffer then see if there's more output pending
       pn_transport_pending(transport);
     }
