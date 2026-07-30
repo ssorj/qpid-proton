@@ -410,7 +410,6 @@ static void pn_transport_initialize(void *object)
   transport->freed = false;
   transport->output_buf = NULL;
   transport->input_buf = NULL;
-  transport->input_size =  PN_TRANSPORT_INITIAL_BUFFER_SIZE;
   pni_logger_default_init(&transport->logger);
   transport->tracer = NULL;
   transport->sasl = NULL;
@@ -477,8 +476,6 @@ static void pn_transport_initialize(void *object)
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
-
-  transport->input_pending = 0;
 
   transport->done_processing = false;
 
@@ -556,13 +553,13 @@ pn_transport_t *pn_transport(void)
     (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
 
-  transport->output_buf = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
+  transport->output_buf = pn_buffer(PN_TRANSPORT_INITIAL_BUFFER_SIZE);
   if (!transport->output_buf) {
     pn_transport_free(transport);
     return NULL;
   }
 
-  transport->input_buf = (char *) pni_mem_suballocate(&clazz, transport, transport->input_size);
+  transport->input_buf = pn_buffer(PN_TRANSPORT_INITIAL_BUFFER_SIZE);
   if (!transport->input_buf) {
     pn_transport_free(transport);
     return NULL;
@@ -662,7 +659,7 @@ static void pn_transport_finalize(void *object)
   pn_error_free(transport->error);
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
-  pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
+  pn_buffer_free(transport->input_buf);
   pn_buffer_free(transport->output_buf);
   pn_rwbytes_free(transport->scratch_space);
   pn_free(transport->context);
@@ -1833,27 +1830,29 @@ static ssize_t transport_consume(pn_transport_t *transport)
 
   size_t consumed = 0;
 
-  while (transport->input_pending || transport->tail_closed) {
-    ssize_t n;
-    n = transport->io_layers[0]->
-      process_input( transport, 0,
-                     transport->input_buf + consumed,
-                     transport->input_pending );
+  while (pn_buffer_size(transport->input_buf) || transport->tail_closed) {
+    char *read_ptr = pn_buffer_get_read_ptr(transport->input_buf);
+    size_t size = pn_buffer_size(transport->input_buf);
+    ssize_t n = transport->io_layers[0]->process_input(transport, 0, read_ptr, size);
+
     if (n > 0) {
+      pn_buffer_advance_read_ptr(transport->input_buf, n);
       consumed += n;
-      transport->input_pending -= n;
     } else if (n == 0) {
       break;
     } else {
       assert(n == PN_EOS);
+
       PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP | PN_SUBSYSTEM_IO, PN_LEVEL_FRAME | PN_LEVEL_RAW, "  <- EOS");
-      transport->input_pending = 0;  // XXX ???
+
+      // pn_buffer_clear(transport->input_buf);
+      //
+      // If I don't simply zero the size (as below), I get failures in
+      // c-proactor-test.  I do not yet know why.
+      transport->input_buf->size = 0;
+
       return n;
     }
-  }
-
-  if (transport->input_pending && consumed) {
-    memmove( transport->input_buf,  &transport->input_buf[consumed], transport->input_pending );
   }
 
   return consumed;
@@ -2954,39 +2953,42 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
 }
 
 ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n) {
-  // can we expand the size of the input buffer?
-  size_t size = pn_max(n, transport->input_size);
-  if (transport->local_max_frame) {  // there is a limit to buffer size
+  size_t size = pn_max(n, pn_buffer_capacity(transport->input_buf));
+
+  if (transport->local_max_frame) {
     size = pn_min(size, transport->local_max_frame);
   }
-  if (size > transport->input_size) {
-    char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, size );
-    if (newbuf) {
-      transport->input_buf = newbuf;
-      transport->input_size = size;
-    }
+
+  if (size > pn_buffer_capacity(transport->input_buf)) {
+    int err = pn_buffer_ensure(transport->input_buf, size - pn_buffer_size(transport->input_buf)); // XXX
+    if (err) return err;
   }
-  return transport->input_size-transport->input_pending;
+
+  return pn_buffer_capacity(transport->input_buf) - pn_buffer_size(transport->input_buf);
 }
 
 // input
 ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
   if (transport->tail_closed) return PN_EOS;
+
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
 
-  ssize_t capacity = transport->input_size - transport->input_pending;
-  if ( capacity<=0 ) {
-    capacity = pni_transport_grow_capacity(transport, 2*transport->input_size);
+  size_t space = pn_buffer_capacity(transport->input_buf) - pn_buffer_size(transport->input_buf);
+
+  if (!space) {
+    space = pni_transport_grow_capacity(transport, 2 * pn_buffer_capacity(transport->input_buf));
   }
-  return capacity;
+
+  return space;
 }
 
 
 char *pn_transport_tail(pn_transport_t *transport)
 {
-  if (transport && transport->input_pending < transport->input_size) {
-    return &transport->input_buf[transport->input_pending];
+  if (transport && pn_buffer_size(transport->input_buf) < pn_buffer_capacity(transport->input_buf)) {
+    size_t space = pn_buffer_capacity(transport->input_buf) - pn_buffer_size(transport->input_buf);
+    return pn_buffer_get_write_ptr(transport->input_buf, space);
   }
   return NULL;
 }
@@ -3017,16 +3019,20 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
 int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
-  size = pn_min( size, (transport->input_size - transport->input_pending) );
-  transport->input_pending += size;
+  size_t space = pn_buffer_capacity(transport->input_buf) - pn_buffer_size(transport->input_buf);
+  size = pn_min(size, space);
+
+  pn_buffer_advance_write_ptr(transport->input_buf, size);
   transport->bytes_input += size;
 
-  ssize_t n = transport_consume( transport );
+  ssize_t n = transport_consume(transport);
+
   if (n == PN_EOS) {
     pni_close_tail(transport);
   }
 
   if (n < 0 && n != PN_EOS) return n;
+
   return 0;
 }
 

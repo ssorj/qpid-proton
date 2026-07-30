@@ -104,9 +104,7 @@ struct pn_transport_t {
   pn_buffer_t *output_buf;
 
   /* input from peer */
-  size_t input_size;
-  size_t input_pending;
-  char *input_buf;
+  pn_buffer_t *input_buf;
 
   pn_record_t *context;
 
