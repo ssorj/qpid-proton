@@ -139,7 +139,7 @@ static inline int pn_buffer_write(pn_buffer_t *buffer, const char *bytes, size_t
   return 0;
 }
 
-static inline char *pn_buffer_get_read_ptr(pn_buffer_t *buffer)
+static inline const char *pn_buffer_get_read_ptr(pn_buffer_t *buffer)
 {
   assert(buffer);
   return &buffer->bytes[buffer->start];

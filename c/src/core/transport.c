@@ -1831,7 +1831,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
   size_t consumed = 0;
 
   while (pn_buffer_size(transport->input_buf) || transport->tail_closed) {
-    char *read_ptr = pn_buffer_get_read_ptr(transport->input_buf);
+    const char *read_ptr = pn_buffer_get_read_ptr(transport->input_buf);
     size_t size = pn_buffer_size(transport->input_buf);
     ssize_t n = transport->io_layers[0]->process_input(transport, 0, read_ptr, size);
 
