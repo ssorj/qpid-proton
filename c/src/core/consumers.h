@@ -39,7 +39,7 @@ typedef struct pni_consumer_t {
   size_t position;
 } pni_consumer_t;
 
-static inline pni_consumer_t make_consumer_from_bytes(pn_bytes_t output_bytes) {
+__attribute__((always_inline)) static inline pni_consumer_t make_consumer_from_bytes(pn_bytes_t output_bytes) {
   return (pni_consumer_t){
     .output_start = (const uint8_t*) output_bytes.start,
     .size = output_bytes.size,
@@ -47,74 +47,97 @@ static inline pni_consumer_t make_consumer_from_bytes(pn_bytes_t output_bytes) {
   };
 }
 
-static inline bool pni_consumer_readf8(pni_consumer_t *consumer, uint8_t* result)
+__attribute__((always_inline)) static inline bool pni_consumer_readf8(pni_consumer_t *consumer, uint8_t *result)
 {
-  if (consumer->position+1 > consumer->size) {
-    consumer->position = consumer->size;
-    return false;
-  }
-  uint8_t r = consumer->output_start[consumer->position+0];
-  consumer->position++;
-  *result = r;
+  size_t pos = consumer->position;
+
+  // This one actually happens pretty often.  Suggests we should grow
+  // the buffer faster.
+  // if (__builtin_expect(pos >= consumer->size, 0)) return false;
+  if (pos >= consumer->size) return false;
+
+  *result = consumer->output_start[pos];
+
+  consumer->position = pos + 1;
+
   return true;
 }
 
-static inline bool pni_consumer_readf16(pni_consumer_t *consumer, uint16_t* result)
+__attribute__((always_inline)) static inline bool pni_consumer_readf16(pni_consumer_t *consumer, uint16_t* result)
 {
-  if (consumer->position+2 > consumer->size) {
-    consumer->position = consumer->size;
-    return false;
-  }
-  uint16_t a = consumer->output_start[consumer->position+0];
-  uint16_t b = consumer->output_start[consumer->position+1];
-  uint16_t r = a << 8
-  | b;
-  consumer->position += 2;
-  *result = r;
+  size_t pos = consumer->position;
+
+  if (__builtin_expect(pos + 2 > consumer->size, 0)) return false;
+
+  const uint8_t *bytes = &consumer->output_start[pos];
+
+  uint16_t a = bytes[0];
+  uint16_t b = bytes[1];
+  *result = a << 8 | b;
+
+  consumer->position = pos + 2;
+
   return true;
 }
 
-static inline bool pni_consumer_readf32(pni_consumer_t *consumer, uint32_t* result)
+__attribute__((always_inline)) static inline bool pni_consumer_readf32(pni_consumer_t *consumer, uint32_t* result)
 {
-  if (consumer->position+4 > consumer->size) {
-    consumer->position = consumer->size;
-    return false;
-  }
-  uint32_t a = consumer->output_start[consumer->position+0];
-  uint32_t b = consumer->output_start[consumer->position+1];
-  uint32_t c = consumer->output_start[consumer->position+2];
-  uint32_t d = consumer->output_start[consumer->position+3];
-  uint32_t r = a << 24
-  | b << 16
-  | c <<  8
-  | d;
-  consumer->position += 4;
-  *result = r;
+  size_t pos = consumer->position;
+
+  if (__builtin_expect(pos + 4 > consumer->size, 0)) return false;
+
+  const uint8_t *bytes = &consumer->output_start[pos];
+
+  uint32_t a = bytes[0];
+  uint32_t b = bytes[1];
+  uint32_t c = bytes[2];
+  uint32_t d = bytes[3];
+  *result = a << 24 | b << 16 | c <<  8 | d;
+
+  consumer->position = pos + 4;
+
   return true;
 }
 
-static inline bool pni_consumer_readf64(pni_consumer_t *consumer, uint64_t* result)
+__attribute__((always_inline)) static inline bool pni_consumer_readf64(pni_consumer_t *consumer, uint64_t* result)
 {
-  uint32_t a;
-  if (!pni_consumer_readf32(consumer, &a)) return false;
-  uint32_t b;
-  if (!pni_consumer_readf32(consumer, &b)) return false;
-  *result = (uint64_t)a << 32 | (uint64_t)b;
+  size_t pos = consumer->position;
+
+  if (__builtin_expect(pos + 8 > consumer->size, 0)) return false;
+
+  const uint8_t *bytes = &consumer->output_start[pos];
+
+  uint64_t a = bytes[0];
+  uint64_t b = bytes[1];
+  uint64_t c = bytes[2];
+  uint64_t d = bytes[3];
+  uint64_t e = bytes[4];
+  uint64_t f = bytes[5];
+  uint64_t g = bytes[6];
+  uint64_t h = bytes[7];
+  *result = a << 56 | b << 48 | c << 40 | d << 32 | e << 24 | f << 16 | g <<  8 | h;
+
+  consumer->position = pos + 8;
+
   return true;
 }
 
-static inline bool pni_consumer_readf128(pni_consumer_t *consumer, void *dst)
+__attribute__((always_inline)) static inline bool pni_consumer_readf128(pni_consumer_t *consumer, void *dst)
 {
-  if (consumer->position+16 > consumer->size) {
-    consumer->position = consumer->size;
-    return false;
-  }
-  memcpy(dst, &consumer->output_start[consumer->position], 16);
-  consumer->position += 16;
+  size_t pos = consumer->position;
+
+  if (__builtin_expect(pos + 16 > consumer->size, 0)) return false;
+
+  const uint8_t *bytes = &consumer->output_start[pos];
+
+  memcpy(dst, bytes, 16);
+
+  consumer->position = pos + 16;
+
   return true;
 }
 
-static inline bool pni_consumer_readv8(pni_consumer_t *consumer, pn_bytes_t* bytes){
+__attribute__((always_inline)) static inline bool pni_consumer_readv8(pni_consumer_t *consumer, pn_bytes_t* bytes){
   uint8_t size;
   if (!pni_consumer_readf8(consumer, &size)) return false;
   if (consumer->position+size > consumer->size) {
@@ -126,7 +149,7 @@ static inline bool pni_consumer_readv8(pni_consumer_t *consumer, pn_bytes_t* byt
   return true;
 }
 
-static inline bool pni_consumer_readv32(pni_consumer_t *consumer, pn_bytes_t* bytes){
+__attribute__((always_inline)) static inline bool pni_consumer_readv32(pni_consumer_t *consumer, pn_bytes_t* bytes){
   uint32_t size;
   if (!pni_consumer_readf32(consumer, &size)) return false;
   if (consumer->position+size > consumer->size) {
@@ -138,7 +161,7 @@ static inline bool pni_consumer_readv32(pni_consumer_t *consumer, pn_bytes_t* by
   return true;
 }
 
-static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consumer, uint8_t type, pn_bytes_t *value) {
+__attribute__((always_inline)) static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consumer, uint8_t type, pn_bytes_t *value) {
   uint8_t subcategory = type >> 4;
   switch (subcategory) {
     // Fixed width types:
@@ -206,12 +229,12 @@ static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consume
   return false;
 }
 
-static inline bool pni_consumer_skip_value_not_described(pni_consumer_t* consumer, uint8_t type) {
+__attribute__((always_inline)) static inline bool pni_consumer_skip_value_not_described(pni_consumer_t* consumer, uint8_t type) {
   pn_bytes_t value;
   return pni_consumer_read_value_not_described(consumer, type, &value);
 }
 
-static inline bool pni_consumer_skip_value(pni_consumer_t* consumer, uint8_t type) {
+__attribute__((always_inline)) static inline bool pni_consumer_skip_value(pni_consumer_t* consumer, uint8_t type) {
   // Check for described type
   if (type==PNE_DESCRIPTOR) {
     // Skip descriptor
@@ -223,7 +246,7 @@ static inline bool pni_consumer_skip_value(pni_consumer_t* consumer, uint8_t typ
   return pni_consumer_skip_value_not_described(consumer, type);
 }
 
-static inline bool pni_islist(pni_consumer_t* consumer) {
+__attribute__((always_inline)) static inline bool pni_islist(pni_consumer_t* consumer) {
   uint8_t t;
   if (!pni_consumer_readf8(consumer, &t)) return false;
   switch (t) {
@@ -238,7 +261,7 @@ static inline bool pni_islist(pni_consumer_t* consumer) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline bool consume_single_value_not_described(pni_consumer_t* consumer, uint8_t* type) {
+__attribute__((always_inline)) static inline bool consume_single_value_not_described(pni_consumer_t* consumer, uint8_t* type) {
   uint8_t t;
   if (!pni_consumer_readf8(consumer, &t)) return false;
   if (!pni_consumer_skip_value_not_described(consumer, t)) return false;
@@ -247,7 +270,7 @@ static inline bool consume_single_value_not_described(pni_consumer_t* consumer, 
   return true;
 }
 
-static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type) {
+__attribute__((always_inline)) static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type) {
   uint8_t t;
   if (!pni_consumer_readf8(consumer, &t)) return false;
   *type = t;
@@ -263,7 +286,7 @@ static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type)
   }
 }
 
-static inline bool consume_raw(pni_consumer_t* consumer, pn_bytes_t* raw) {
+__attribute__((always_inline)) static inline bool consume_raw(pni_consumer_t* consumer, pn_bytes_t* raw) {
   size_t start = consumer->position;
   uint8_t type;
   bool succeed = consume_single_value(consumer, &type);
@@ -275,12 +298,12 @@ static inline bool consume_raw(pni_consumer_t* consumer, pn_bytes_t* raw) {
   return succeed;
 }
 
-static inline bool consume_anything(pni_consumer_t* consumer) {
+__attribute__((always_inline)) static inline bool consume_anything(pni_consumer_t* consumer) {
   uint8_t dummy;
   return consume_single_value(consumer, &dummy);
 }
 
-static inline bool consume_ulong(pni_consumer_t* consumer, uint64_t *ulong) {
+__attribute__((always_inline)) static inline bool consume_ulong(pni_consumer_t* consumer, uint64_t *ulong) {
   *ulong = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -307,11 +330,15 @@ static inline bool consume_ulong(pni_consumer_t* consumer, uint64_t *ulong) {
   }
 }
 
-static inline bool consume_uint(pni_consumer_t* consumer, uint32_t *uint) {
+__attribute__((always_inline)) static inline bool consume_uint(pni_consumer_t* consumer, uint32_t *uint) {
   *uint = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
   switch (type) {
+    case PNE_UINT0: {
+      *uint = 0;
+      return true;
+    }
     case PNE_SMALLUINT: {
       uint8_t ui;
       if (!pni_consumer_readf8(consumer, &ui)) return false;
@@ -324,17 +351,13 @@ static inline bool consume_uint(pni_consumer_t* consumer, uint32_t *uint) {
       *uint = ui;
       return true;
     }
-    case PNE_UINT0: {
-      *uint = 0;
-      return true;
-    }
     default:
       pni_consumer_skip_value(consumer, type);
       return false;
   }
 }
 
-static inline bool consume_ushort(pni_consumer_t* consumer, uint16_t *ushort) {
+__attribute__((always_inline)) static inline bool consume_ushort(pni_consumer_t* consumer, uint16_t *ushort) {
   *ushort = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -351,7 +374,7 @@ static inline bool consume_ushort(pni_consumer_t* consumer, uint16_t *ushort) {
   }
 }
 
-static inline bool consume_ubyte(pni_consumer_t* consumer, uint8_t *ubyte) {
+__attribute__((always_inline)) static inline bool consume_ubyte(pni_consumer_t* consumer, uint8_t *ubyte) {
   *ubyte = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -368,7 +391,7 @@ static inline bool consume_ubyte(pni_consumer_t* consumer, uint8_t *ubyte) {
   }
 }
 
-static inline bool consume_bool(pni_consumer_t* consumer, bool *b) {
+__attribute__((always_inline)) static inline bool consume_bool(pni_consumer_t* consumer, bool *b) {
   *b = false;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -391,7 +414,7 @@ static inline bool consume_bool(pni_consumer_t* consumer, bool *b) {
   }
 }
 
-static inline bool consume_timestamp(pni_consumer_t* consumer, pn_timestamp_t *timestamp) {
+__attribute__((always_inline)) static inline bool consume_timestamp(pni_consumer_t* consumer, pn_timestamp_t *timestamp) {
   *timestamp = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -404,7 +427,7 @@ static inline bool consume_timestamp(pni_consumer_t* consumer, pn_timestamp_t *t
   }
 }
 
-static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
+__attribute__((always_inline)) static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
   uint8_t type;
   if (pni_consumer_readf8(consumer, &type)) {
     switch (type) {
@@ -545,7 +568,7 @@ static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
 
 // XXX: assuming numeric -
 // if we get a symbol we should map it to the numeric value and dispatch on that
-static inline bool consume_described_ulong_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {
+__attribute__((always_inline)) static inline bool consume_described_ulong_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {
   *descriptor = 0;
   *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   uint8_t type;
@@ -569,8 +592,8 @@ static inline bool consume_described_ulong_descriptor(pni_consumer_t* consumer, 
   }
 }
 
-static inline bool consume_described(pni_consumer_t* consumer, pni_consumer_t *subconsumer) {
-  *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
+__attribute__((always_inline)) static inline bool consume_described(pni_consumer_t* consumer, pni_consumer_t *subconsumer) {
+  *subconsumer = (pni_consumer_t){0};
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
   switch (type) {
@@ -592,7 +615,7 @@ static inline bool consume_described(pni_consumer_t* consumer, pni_consumer_t *s
   }
 }
 
-static inline bool consume_list(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count) {
+__attribute__((always_inline)) static inline bool consume_list(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count) {
   *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   *count = 0;
   uint8_t type;
@@ -626,11 +649,11 @@ static inline bool consume_list(pni_consumer_t* consumer, pni_consumer_t *subcon
 }
 
 // TODO: This is currently a placeholder - maybe not actually needed
-static inline bool consume_end_list(pni_consumer_t *consumer) {
+__attribute__((always_inline)) static inline bool consume_end_list(pni_consumer_t *consumer) {
   return true;
 }
 
-static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count, uint8_t *element_type) {
+__attribute__((always_inline)) static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count, uint8_t *element_type) {
   *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   *count = 0;
   *element_type = 0;
@@ -663,42 +686,42 @@ static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subco
   }
 }
 
-static inline bool consume_described_anything(pni_consumer_t* consumer) {
+__attribute__((always_inline)) static inline bool consume_described_anything(pni_consumer_t* consumer) {
   uint8_t type;
   bool tq = consume_single_value(consumer, &type);
   return tq && type==PNE_DESCRIPTOR;
 }
 
-static inline bool consume_described_type_anything(pni_consumer_t* consumer, uint64_t *type) {
+__attribute__((always_inline)) static inline bool consume_described_type_anything(pni_consumer_t* consumer, uint64_t *type) {
   pni_consumer_t subconsumer;
   return consume_described_ulong_descriptor(consumer, &subconsumer, type);
 }
 
-static inline bool consume_described_maybe_type_anything(pni_consumer_t* consumer, bool *qtype, uint64_t *type) {
+__attribute__((always_inline)) static inline bool consume_described_maybe_type_anything(pni_consumer_t* consumer, bool *qtype, uint64_t *type) {
   pni_consumer_t subconsumer;
   *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   return *qtype;
 }
 
-static inline bool consume_described_maybe_type_raw(pni_consumer_t *consumer, bool *qtype, uint64_t *type, pn_bytes_t *raw) {
+__attribute__((always_inline)) static inline bool consume_described_maybe_type_raw(pni_consumer_t *consumer, bool *qtype, uint64_t *type, pn_bytes_t *raw) {
   pni_consumer_t subconsumer;
   *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   return *qtype && consume_raw(&subconsumer, raw);
 }
 
-static inline bool consume_described_maybe_type_maybe_anything(pni_consumer_t *consumer, bool *qtype, uint64_t *type, bool *qanything) {
+__attribute__((always_inline)) static inline bool consume_described_maybe_type_maybe_anything(pni_consumer_t *consumer, bool *qtype, uint64_t *type, bool *qanything) {
   pni_consumer_t subconsumer;
   *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   *qanything = consume_anything(&subconsumer);
   return *qtype && *qanything;
 }
 
-static inline bool consume_described_raw(pni_consumer_t *consumer, pn_bytes_t *raw) {
+__attribute__((always_inline)) static inline bool consume_described_raw(pni_consumer_t *consumer, pn_bytes_t *raw) {
   pni_consumer_t subconsumer;
   return consume_described(consumer, &subconsumer) && consume_raw(&subconsumer, raw);
 }
 
-static inline bool consume_string(pni_consumer_t *consumer, pn_bytes_t *string) {
+__attribute__((always_inline)) static inline bool consume_string(pni_consumer_t *consumer, pn_bytes_t *string) {
   uint8_t type;
   *string = (pn_bytes_t){.size=0, .start=0};
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -715,7 +738,7 @@ static inline bool consume_string(pni_consumer_t *consumer, pn_bytes_t *string) 
   }
 }
 
-static inline bool consume_symbol(pni_consumer_t *consumer, pn_bytes_t *symbol) {
+__attribute__((always_inline)) static inline bool consume_symbol(pni_consumer_t *consumer, pn_bytes_t *symbol) {
   uint8_t type;
   *symbol = (pn_bytes_t){.size=0, .start=0};
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -732,7 +755,7 @@ static inline bool consume_symbol(pni_consumer_t *consumer, pn_bytes_t *symbol) 
   }
 }
 
-static inline bool consume_binaryornull(pni_consumer_t *consumer, pn_bytes_t *binary) {
+__attribute__((always_inline)) static inline bool consume_binaryornull(pni_consumer_t *consumer, pn_bytes_t *binary) {
   uint8_t type;
   *binary  = (pn_bytes_t){.size=0, .start=0};
   if (!pni_consumer_readf8(consumer, &type)) return false;

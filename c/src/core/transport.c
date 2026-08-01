@@ -2540,7 +2540,7 @@ static int pni_process(pn_transport_t *transport)
   // on the first pass and create space for more work to be done on the
   // second pass
   if ((err = pni_phase(transport, pni_process_tpwork))) return err;
-  if ((err = pni_phase(transport, pni_process_tpwork))) return err;
+  // if ((err = pni_phase(transport, pni_process_tpwork))) return err;
 
   if ((err = pni_phase(transport, pni_process_flush_disp))) return err;
 
