@@ -234,13 +234,9 @@ bool pn_collector_more(pn_collector_t *collector)
 
 static void pn_event_initialize(void *object)
 {
-  pn_event_t *event = (pn_event_t *)object;
-  event->pool = NULL;
-  event->type = PN_EVENT_NONE;
-  event->clazz = NULL;
-  event->context = NULL;
-  event->next = NULL;
-  event->attachments = pn_record();
+  // pn_event_t *event = (pn_event_t *) object;
+
+  // *event = (pn_event_t) { 0 };
 }
 
 static void pn_event_finalize(void *object) {
@@ -252,19 +248,21 @@ static void pn_event_finalize(void *object) {
 
   pn_list_t *pool = event->pool;
 
-  if (pool && pn_object_refcount(pool) > 1) {
-    event->pool = NULL;
-    event->type = PN_EVENT_NONE;
-    event->clazz = NULL;
-    event->context = NULL;
-    event->next = NULL;
-    pn_record_clear(event->attachments);
-    pn_list_add(pool, event);
-  } else {
-    pn_object_decref(event->attachments);
-  }
+  if (pool) {
+    if (pn_object_refcount(pool) > 1) {
+      *event = (pn_event_t) {
+        .attachments = event->attachments,
+      };
 
-  if (pool) pn_object_decref(pool);
+      if (event->attachments) pn_record_clear(event->attachments);
+
+      pn_list_add(pool, event);
+    }
+
+    pn_object_decref(pool);
+  } else {
+    if (event->attachments) pn_object_decref(event->attachments);
+  }
 }
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
@@ -312,6 +310,7 @@ void *pn_event_context(pn_event_t *event)
 pn_record_t *pn_event_attachments(pn_event_t *event)
 {
   assert(event);
+  if (!event->attachments) event->attachments = pn_record();
   return event->attachments;
 }
 

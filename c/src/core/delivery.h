@@ -41,7 +41,7 @@ typedef struct {
 struct pn_delivery_t {
   pn_disposition_t local;
   pn_disposition_t remote;
-  pn_delivery_tag_t tag;
+  pn_list_t *pool;
   pn_link_t *link;  // reference counted
   pn_delivery_t *unsettled_next;
   pn_delivery_t *unsettled_prev;
@@ -54,8 +54,9 @@ struct pn_delivery_t {
   bool settled; // tracks whether we're in the unsettled list or not
   bool tpwork;
   bool done;
-  bool referenced;
   bool aborted;
+  uint8_t tag_size;
+  char tag_bytes[32];
 };
 
 #endif /* delivery.h */

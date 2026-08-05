@@ -52,10 +52,19 @@ static void pn_link_finalize(void *object)
     return;
   }
 
-  while (link->unsettled_head) {
-    assert(!link->unsettled_head->referenced);
-    pn_free(link->unsettled_head);
+  pn_delivery_t *delivery = link->unsettled_head;
+
+  while (delivery) {
+    pn_delivery_t *next = delivery->unsettled_next;
+
+    LL_REMOVE(link, unsettled, delivery);
+    pn_object_decref(delivery);
+
+    delivery = next;
   }
+
+  assert(!link->unsettled_head);
+  assert(!link->unsettled_tail);
 
   pn_free(link->context);
   pni_terminus_free(&link->source);
@@ -176,14 +185,6 @@ void pn_link_free(pn_link_t *link)
 
   pni_session_remove_link(link->session, link);
   pn_list_add(link->session->freed, link);
-
-  pn_delivery_t *delivery = link->unsettled_head;
-
-  while (delivery) {
-    pn_delivery_t *next = delivery->unsettled_next;
-    pn_delivery_settle(delivery);
-    delivery = next;
-  }
 
   link->endpoint.freed = true;
   pni_endpoint_decref(&link->endpoint);

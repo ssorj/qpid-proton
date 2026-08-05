@@ -30,7 +30,7 @@
 #include "core/link.h"
 #include "core/session.h"
 
-static void pn_delivery_incref(void *object);
+#define pn_delivery_incref NULL
 static void pn_delivery_finalize(void *object);
 #define pn_delivery_new NULL
 #define pn_delivery_refcount NULL
@@ -52,6 +52,7 @@ static inline bool delivery_preserved(pn_delivery_t *delivery)
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
+  assert(tag.size <= 32);
 
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
@@ -59,115 +60,65 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   if (delivery) {
     // It came from the delivery pool
 
+    assert(delivery->pool);
     assert(!delivery->state.init);
 
-    pn_bytes_free(delivery->tag);
-    pn_buffer_clear(delivery->bytes);
-
-    if (delivery->context) pn_record_clear(delivery->context);
+    // JEEBUS.  pn_list_pop doesn't decref!
+    // pn_object_incref(delivery);
+    assert(pn_object_refcount(delivery) == 1);
 
     *delivery = (pn_delivery_t) {
+      .pool = pool,
       .link = link,
-      .tag = pn_bytes_dup(tag),
       .bytes = delivery->bytes,
       .context = delivery->context,
+      .tag_size = tag.size,
     };
+
   } else {
     delivery = (pn_delivery_t *) pn_class_new(&PN_CLASSCLASS(pn_delivery), sizeof(pn_delivery_t));
     if (!delivery) return NULL;
 
     *delivery = (pn_delivery_t) {
+      .pool = pool,
       .link = link,
-      .tag = pn_bytes_dup(tag),
       .bytes = pn_buffer(0),
+      .tag_size = tag.size,
     };
   }
+
+  memcpy(delivery->tag_bytes, tag.start, tag.size);
 
   if (!link->current) {
     link->current = delivery;
   }
 
+  // Note that the unsettled list is used to later produce the decref
+  // that matches the incref from pn_class_new
   LL_ADD(link, unsettled, delivery);
   link->unsettled_count++;
 
-  pn_delivery_incref(delivery);
-  pn_object_decref(delivery);
+  assert(pn_object_refcount(delivery) == 1);
 
   return delivery;
-}
-
-static void pn_delivery_incref(void *object)
-{
-  assert(object);
-
-  pn_delivery_t *delivery = (pn_delivery_t *) object;
-
-  if (delivery->link && !delivery->referenced) {
-    // This delegates the refcount to the container.
-
-    delivery->referenced = true;
-    pn_base_object_incref(delivery->link);
-  } else {
-    pn_base_object_incref(object);
-  }
 }
 
 static void pn_delivery_finalize(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
-  pn_link_t *link = delivery->link;
+  pn_list_t *pool = delivery->pool;
 
-  if (!link) {
-    // A delivery that was in the pool.
+  assert(pn_object_refcount(delivery) == 0);
 
-    pn_bytes_free(delivery->tag);
-    pn_buffer_free(delivery->bytes);
-    pn_free(delivery->context);
+  if (pool && pn_object_refcount(pool)) {
+    pn_buffer_clear(delivery->bytes);
 
-    pn_disposition_finalize(&delivery->local);
-    pn_disposition_finalize(&delivery->remote);
+    if (delivery->context) pn_record_clear(delivery->context);
 
-    assert(pn_object_refcount(delivery) == 0);
-
-    return;
-  }
-
-  if (pni_link_live(link) && delivery_preserved(delivery) && delivery->referenced) {
-    delivery->referenced = false;
-
-    pn_base_object_incref(delivery);
-    pn_object_decref(link);
-
-    assert(pn_object_refcount(delivery) == 1);
-
-    return;
-  }
-
-  pn_connection_t *conn = link->session->connection;
-
-  pni_connection_remove_delivery_work(conn, delivery);
-
-  LL_REMOVE(link, unsettled, delivery);
-
-  if (link->endpoint.type == SENDER) {
-    pn_delivery_map_del(&link->session->state.outgoing, delivery);
-  } else {
-    pn_delivery_map_del(&link->session->state.incoming, delivery);
-  }
-
-  if (pni_connection_live(conn)) {
-    // Pool the delivery
-
-    // Set link to null before adding it to the pool to avoid the
-    // additional incref on link (see pn_delivery_incref)
-    delivery->link = NULL;
-
-    pn_list_t *pool = link->session->connection->delivery_pool;
     pn_list_add(pool, delivery);
 
     assert(pn_object_refcount(delivery) == 1);
   } else {
-    pn_bytes_free(delivery->tag);
     pn_buffer_free(delivery->bytes);
     pn_free(delivery->context);
 
@@ -175,11 +126,6 @@ static void pn_delivery_finalize(void *object)
     pn_disposition_finalize(&delivery->remote);
 
     assert(pn_object_refcount(delivery) == 0);
-  }
-
-  if (delivery->referenced) {
-    delivery->referenced = false;
-    pn_object_decref(link);
   }
 }
 
@@ -189,7 +135,7 @@ void pn_delivery_inspect(void *object, pn_fixed_string_t *dst) {
   pn_delivery_t *d = (pn_delivery_t*) object;
 
   const char* dir = pn_link_is_sender(d->link) ? "sending" : "receiving";
-  pn_bytes_t bytes = d->tag;
+  pn_bytes_t bytes = pn_delivery_tag(d);
 
   pn_fixed_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", object, dir);
   pn_fixed_string_quote(dst, bytes.start, bytes.size);
@@ -240,7 +186,7 @@ bool pn_delivery_current(pn_delivery_t *delivery)
 void pn_delivery_dump(pn_delivery_t *d)
 {
   char tag[1024];
-  pn_bytes_t bytes = d->tag;
+  pn_bytes_t bytes = pn_delivery_tag(d);
 
   pn_quote_data(tag, 1024, bytes.start, bytes.size);
 
@@ -275,28 +221,28 @@ pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery)
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   assert(delivery);
-  return delivery->tag;
+  return pn_bytes(delivery->tag_size, delivery->tag_bytes);
 }
 
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
   assert(delivery);
 
-  if (!delivery->local.settled) {
-    pn_link_t *link = delivery->link;
+  if (delivery->local.settled) return;
 
-    if (pn_delivery_current(delivery)) {
-      pn_link_advance(link);
-    }
+  pn_link_t *link = delivery->link;
 
+  if (pn_delivery_current(delivery)) {
+    pn_link_advance(link); // This already adds work
+
+    link->unsettled_count--;
+    delivery->local.settled = true;
+  } else {
     link->unsettled_count--;
     delivery->local.settled = true;
 
     pn_connection_t *conn = delivery->link->session->connection;
     pni_connection_add_delivery_work(conn, delivery);
-
-    pn_delivery_incref(delivery);
-    pn_object_decref(delivery);
   }
 }
 

@@ -332,6 +332,7 @@ void pni_connection_unbound(pn_connection_t *connection)
       pni_connection_remove_endpoint_work(connection, connection->transport_head);
     }
 
+    // XXX
     while (connection->tpwork_head) {
       pni_connection_remove_delivery_work(connection, connection->tpwork_head);
     }

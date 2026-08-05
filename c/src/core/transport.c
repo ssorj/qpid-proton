@@ -1332,7 +1332,8 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   pni_connection_remove_delivery_work(delivery->link->session->connection, delivery);
   pn_delivery_map_del(db, delivery);
-  pn_object_incref(delivery);
+
+  LL_REMOVE(delivery->link, unsettled, delivery);
   pn_object_decref(delivery);
 }
 
@@ -1894,7 +1895,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pni_endpoint_t *end
   return 0;
 }
 
-static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * valid)
+static inline uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * valid)
 {
   for (uint32_t i = 0; i <= max_index; i++) {
     if (!pn_hash_get(aliases, i)) {
@@ -1907,7 +1908,7 @@ static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * val
   return 0;
 }
 
-static size_t pni_session_outgoing_window(pn_session_t *ssn)
+static inline size_t pni_session_outgoing_window(pn_session_t *ssn)
 {
   return ssn->outgoing_window;
 }
@@ -1944,7 +1945,7 @@ static pn_frame_count_t pni_session_incoming_window(pn_session_t *ssn)
   }
 }
 
-static int pni_map_local_channel(pn_session_t *ssn)
+static inline int pni_map_local_channel(pn_session_t *ssn)
 {
   pn_transport_t *transport = ssn->connection->transport;
   pn_session_state_t *state = &ssn->state;
@@ -2257,7 +2258,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       int count = pni_post_amqp_transfer_frame(transport,
                                                ssn_state->local_channel,
                                                link_state->local_handle,
-                                               state->id, &bytes, delivery->tag,
+                                               state->id, &bytes, pn_delivery_tag(delivery),
                                                0, // message-format
                                                delivery->local.settled,
                                                !delivery->done,
@@ -2523,7 +2524,7 @@ static int pni_process_conn_teardown(pn_transport_t *transport, pni_endpoint_t *
   return 0;
 }
 
-static int pni_phase(pn_transport_t *transport, int (*phase)(pn_transport_t *, pni_endpoint_t *))
+static inline int pni_phase(pn_transport_t *transport, int (*phase)(pn_transport_t *, pni_endpoint_t *))
 {
   pn_connection_t *conn = transport->connection;
   pni_endpoint_t *endpoint = conn->transport_head;

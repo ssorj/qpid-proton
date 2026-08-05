@@ -116,6 +116,7 @@ static inline void pni_connection_add_delivery_work(pn_connection_t *connection,
   if (!delivery->tpwork) {
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
+    pn_object_incref(delivery);
   }
 
   pni_connection_add_endpoint_work(connection, &connection->endpoint, true);
@@ -129,11 +130,7 @@ static inline void pni_connection_remove_delivery_work(pn_connection_t *connecti
   if (delivery->tpwork) {
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
-
-    if (pn_object_refcount(delivery) > 0) {
-      pn_object_incref(delivery);
-      pn_object_decref(delivery);
-    }
+    pn_object_decref(delivery);
   }
 }
 
