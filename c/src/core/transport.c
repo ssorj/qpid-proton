@@ -3024,8 +3024,6 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
 int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
-  size_t space = pn_buffer_capacity(transport->input_buf) - pn_buffer_size(transport->input_buf);
-  size = pn_min(size, space);
 
   pn_buffer_advance_write_ptr(transport->input_buf, size);
   transport->bytes_input += size;
@@ -3036,9 +3034,24 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
     pni_close_tail(transport);
   }
 
-  if (n < 0 && n != PN_EOS) return n;
-
   return 0;
+}
+
+void pn_transport_consume_input(pn_transport_t *transport)
+{
+  assert(transport);
+
+  ssize_t n = transport_consume(transport);
+
+  if (n == PN_EOS) {
+    pni_close_tail(transport);
+  }
+}
+
+void pn_transport_produce_output(pn_transport_t *transport)
+{
+  assert(transport);
+  transport_produce(transport);
 }
 
 // input stream has closed

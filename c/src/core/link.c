@@ -213,7 +213,7 @@ pn_record_t *pn_link_attachments(pn_link_t *link)
   return link->context;
 }
 
-static bool link_matches(pni_endpoint_t *endpoint, uint8_t state)
+static inline bool link_matches(pni_endpoint_t *endpoint, uint8_t state)
 {
   assert(endpoint);
 
@@ -221,13 +221,11 @@ static bool link_matches(pni_endpoint_t *endpoint, uint8_t state)
 
   if (!state) return true;
 
-  int st = endpoint->state;
-
   if ((state & PN_REMOTE_MASK) == 0 || (state & PN_LOCAL_MASK) == 0) {
-    return st & state;
+    return endpoint->state & state;
   }
 
-  return st == state;
+  return endpoint->state == state;
 }
 
 pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state)

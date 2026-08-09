@@ -31,39 +31,23 @@
 
 #include <string.h>
 
-static pn_event_t *batch_next(pn_connection_driver_t *d) {
-  if (!d->collector) return NULL;
-  pn_event_t *handled = pn_collector_prev(d->collector);
-  if (handled) {
-    switch (pn_event_type(handled)) {
-     case PN_CONNECTION_INIT:   /* Auto-bind after the INIT event is handled */
-      pn_transport_bind(d->transport, d->connection);
-      break;
-     case PN_TRANSPORT_CLOSED:  /* No more events after TRANSPORT_CLOSED  */
-      pn_collector_release(d->collector);
-      break;
-     default:
-      break;
-    }
-  }
-  /* Log the next event that will be processed */
-  pn_event_t *next = pn_collector_next(d->collector);
-  if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
-    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "%s", "");
-  }
-  return next;
-}
+void pn_transport_consume_input(pn_transport_t *transport);
+void pn_transport_produce_output(pn_transport_t *transport);
 
 int pn_connection_driver_init(pn_connection_driver_t* d, pn_connection_t *c, pn_transport_t *t) {
   memset(d, 0, sizeof(*d));
+
   d->connection = c ? c : pn_connection();
   d->transport = t ? t : pn_transport();
   d->collector = pn_collector();
+
   if (!d->connection || !d->transport || !d->collector) {
     pn_connection_driver_destroy(d);
     return PN_OUT_OF_MEMORY;
   }
+
   pn_connection_collect(d->connection, d->collector);
+
   return 0;
 }
 
@@ -72,16 +56,20 @@ int pn_connection_driver_bind(pn_connection_driver_t *d) {
 }
 
 pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d) {
-  if (d->transport) {           /* Make sure transport is closed and unbound */
+  // Make sure transport is closed and unbound
+  if (d->transport) {
     pn_connection_driver_close(d);
     pn_transport_unbind(d->transport);
   }
+
   pn_connection_t *c = d->connection;
+
   if (c) {
     d->connection = NULL;
     pn_connection_reset(c);
-    pn_connection_collect(c, NULL); /* Disconnect from the collector */
+    pn_connection_collect(c, NULL); // Disconnect from the collector
   }
+
   return c;
 }
 
@@ -94,21 +82,28 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
 }
 
 pn_rwbytes_t pn_connection_driver_read_buffer_sized(pn_connection_driver_t *d, size_t n) {
-  ssize_t cap = pni_transport_grow_capacity(d->transport, n);
-  return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
+  assert(d);
+  return pn_rwbytes(n, pn_buffer_get_write_ptr(d->transport->input_buf, n));
 }
 
+#define PN_DEFAULT_READ_BUFFER_SIZE 32768
+
 pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
-  ssize_t cap = pn_transport_capacity(d->transport);
-  return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
+  assert(d);
+  return pn_rwbytes(PN_DEFAULT_READ_BUFFER_SIZE,
+		    pn_buffer_get_write_ptr(d->transport->input_buf, PN_DEFAULT_READ_BUFFER_SIZE));
 }
 
 void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
-  if (n > 0) pn_transport_process(d->transport, n);
+  pn_buffer_advance_write_ptr(d->transport->input_buf, n);
+  d->transport->bytes_input += n;
+
+  pn_transport_consume_input(d->transport);
 }
 
 bool pn_connection_driver_read_closed(pn_connection_driver_t *d) {
-  return pn_transport_tail_closed(d->transport);
+  assert(d);
+  return d->transport->tail_closed;
 }
 
 void pn_connection_driver_read_close(pn_connection_driver_t *d) {
@@ -118,20 +113,29 @@ void pn_connection_driver_read_close(pn_connection_driver_t *d) {
 }
 
 pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
-  ssize_t pending = pn_transport_pending(d->transport);
-  return (pending > 0) ?
-    pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
+  assert(d);
+
+  pn_transport_produce_output(d->transport);
+
+  return pn_buffer_bytes(d->transport->output_buf);
 }
 
-pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
-  pn_transport_pop(d->transport, n);
-  ssize_t pending = pn_buffer_size(d->transport->output_buf);
-  return (pending > 0) ?
-    pn_bytes(pending, pn_transport_head(d->transport)) : pn_bytes_null;
+pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *d, size_t size) {
+  assert(d);
+
+  pn_buffer_advance_read_ptr(d->transport->output_buf, size);
+  d->transport->bytes_output += size;
+
+  if (!pn_buffer_size(d->transport->output_buf)) {
+    // We read it all.  Try to produce more.
+    pn_transport_produce_output(d->transport);
+  }
+
+  return pn_bytes_null; // XXX Compat with undesirable API
 }
 
 bool pn_connection_driver_write_closed(pn_connection_driver_t *d) {
-  return pn_transport_head_closed(d->transport);
+  return d->transport->head_closed;
 }
 
 void pn_connection_driver_write_close(pn_connection_driver_t *d) {
@@ -146,7 +150,31 @@ void pn_connection_driver_close(pn_connection_driver_t *d) {
 }
 
 pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
-  return batch_next(d);
+  if (!d->collector) return NULL;
+
+  pn_event_t *handled = pn_collector_prev(d->collector);
+
+  if (handled) {
+    switch (pn_event_type(handled)) {
+    case PN_CONNECTION_INIT: // Auto-bind after the INIT event is handled
+      pn_transport_bind(d->transport, d->connection);
+      break;
+    case PN_TRANSPORT_CLOSED: // No more events after TRANSPORT_CLOSED
+      pn_collector_release(d->collector);
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Log the next event that will be processed
+  pn_event_t *next = pn_collector_next(d->collector);
+
+  if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
+    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "%s", "");
+  }
+
+  return next;
 }
 
 bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
