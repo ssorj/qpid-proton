@@ -567,7 +567,8 @@ void pn_link_flow(pn_link_t *receiver, int credit)
   assert(pn_link_is_receiver(receiver));
 
   receiver->credit += credit;
-  pni_connection_add_endpoint_work(receiver->session->connection, &receiver->endpoint, true);
+  // pni_connection_add_endpoint_work(receiver->session->connection, &receiver->endpoint, true);
+  pni_connection_add_endpoint_work(receiver->session->connection, &receiver->endpoint, false);
 
   if (!receiver->drain_flag_mode) {
     pn_link_set_drain(receiver, false);

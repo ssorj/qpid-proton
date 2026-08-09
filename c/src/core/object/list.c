@@ -53,22 +53,24 @@ void pn_list_set(pn_list_t *list, int index, void *value)
   if (value) pn_class_incref(list->clazz, value);
 }
 
-static void pni_list_ensure(pn_list_t *list, size_t capacity)
+__attribute__((noinline)) static void list_grow(pn_list_t *list, size_t capacity)
 {
   assert(list);
-  if (list->capacity < capacity) {
-    size_t newcap = list->capacity;
-    while (newcap < capacity) { newcap *= 2; }
-    list->elements = (void **) pni_mem_subreallocate(pn_class(list), list, list->elements, newcap * sizeof(void *));
-    assert(list->elements);
-    list->capacity = newcap;
-  }
+  assert(list->capacity >= capacity);
+
+  size_t newcap = list->capacity;
+  while (newcap < capacity) { newcap *= 2; }
+  list->elements = (void **) pni_mem_subreallocate(pn_class(list), list, list->elements, newcap * sizeof(void *));
+  assert(list->elements);
+  list->capacity = newcap;
 }
 
 int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
-  pni_list_ensure(list, list->size + 1);
+  if (list->capacity < list->size + 1) {
+    list_grow(list, list->size + 1);
+  }
   list->elements[list->size++] = value;
   if (value) pn_class_incref(list->clazz, value);
   return 0;

@@ -3096,6 +3096,7 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
     if (!pn_buffer_size(transport->output_buf)) {
       // If we emptied the output buffer then see if there's more output pending
       pn_transport_pending(transport);
+      // pn_transport_pending(transport); // XXX This helps
     }
   }
 }

@@ -88,11 +88,15 @@ static inline void pni_connection_add_endpoint_work(pn_connection_t *connection,
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
     endpoint->modified = true;
+
+    if (emit && connection->transport) {
+      pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
+    }
   }
 
-  if (emit && connection->transport) {
-    pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
-  }
+  // if (emit && connection->transport) {
+  //   pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
+  // }
 }
 
 static inline void pni_connection_remove_endpoint_work(pn_connection_t *connection, pni_endpoint_t *endpoint)
@@ -119,7 +123,8 @@ static inline void pni_connection_add_delivery_work(pn_connection_t *connection,
     pn_object_incref(delivery);
   }
 
-  pni_connection_add_endpoint_work(connection, &connection->endpoint, true);
+  // pni_connection_add_endpoint_work(connection, &connection->endpoint, true);
+  pni_connection_add_endpoint_work(connection, &connection->endpoint, false);
 }
 
 static inline void pni_connection_remove_delivery_work(pn_connection_t *connection, pn_delivery_t *delivery)

@@ -139,21 +139,16 @@ void pn_collector_release(pn_collector_t *collector)
 
 pn_event_t *pn_event(void);
 
-pn_event_t *pn_collector_put(pn_collector_t *collector,
-                             const pn_class_t *clazz, void *context,
-                             pn_event_type_t type)
+static inline pn_event_t *collector_put(pn_collector_t *collector, const pn_class_t *clazz, void *context,
+					pn_event_type_t type)
 {
-  if (!collector) {
-    return NULL;
-  }
-
   assert(context);
 
-  if (collector->freed) {
-    return NULL;
-  }
+  if (!collector) return NULL;
+  if (collector->freed) return NULL;
 
   pn_event_t *tail = collector->tail;
+
   if (tail && tail->type == type && tail->context == context) {
     return NULL;
   }
@@ -165,10 +160,11 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   }
 
   event->pool = collector->pool;
+
   pn_object_incref(event->pool);
 
-  if (tail) {
-    tail->next = event;
+  if (collector->tail) {
+    collector->tail->next = event;
     collector->tail = event;
   } else {
     collector->tail = event;
@@ -178,15 +174,20 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   event->clazz = clazz;
   event->context = context;
   event->type = type;
+
   pn_class_incref(clazz, event->context);
 
   return event;
 }
 
+pn_event_t *pn_collector_put(pn_collector_t *collector, const pn_class_t *clazz, void *context, pn_event_type_t type)
+{
+  return collector_put(collector, clazz, context, type);
+}
+
 pn_event_t *pn_collector_put_object(pn_collector_t *collector, void *object, pn_event_type_t type)
 {
-  const pn_class_t *clazz = pn_class(object);
-  return pn_collector_put(collector, clazz, object, type);
+  return collector_put(collector, pn_class(object), object, type);
 }
 
 pn_event_t *pn_collector_peek(pn_collector_t *collector)
