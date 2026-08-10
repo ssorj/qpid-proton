@@ -21,8 +21,10 @@
 
 #include "core/event-internal.h"
 
+#include "core/connection.h"
 #include "core/fixed_string.h"
 #include "core/object_private.h"
+#include "core/session.h"
 #include "core/transport.h"
 
 #include <proton/connection.h>
@@ -335,34 +337,30 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 {
   if (event->clazz->cid == CID_pn_connection) return (pn_connection_t *) event->context;
 
-  if (event->clazz->cid == CID_pn_session) {
-    pn_session_t *session = pn_event_session(event);
-    if (session) return pn_session_connection(session);
+  switch (event->clazz->cid) {
+  case CID_pn_session:   return ((pn_session_t *) event->context)->connection;
+  case CID_pn_link:      return ((pn_link_t *) event->context)->session->connection;
+  case CID_pn_delivery:  return ((pn_delivery_t *) event->context)->link->session->connection;
+  case CID_pn_transport: return ((pn_transport_t *) event->context)->connection;
+  default:               return NULL;
   }
-
-  pn_transport_t *transport = pn_event_transport(event);
-  if (transport) return transport->connection;
-
-  return NULL;
 }
 
 pn_session_t *pn_event_session(pn_event_t *event)
 {
   if (event->clazz->cid == CID_pn_session) return (pn_session_t *) event->context;
 
-  pn_link_t *link = pn_event_link(event);
-  if (link) return pn_link_session(link);
-
-  return NULL;
+  switch (event->clazz->cid) {
+  case CID_pn_link:      return ((pn_link_t *) event->context)->session;
+  case CID_pn_delivery:  return ((pn_delivery_t *) event->context)->link->session;
+  default:               return NULL;
+  }
 }
 
 pn_link_t *pn_event_link(pn_event_t *event)
 {
   if (event->clazz->cid == CID_pn_link) return (pn_link_t *) event->context;
-
-  pn_delivery_t *delivery = pn_event_delivery(event);
-  if (delivery) return pn_delivery_link(delivery);
-
+  if (event->clazz->cid == CID_pn_delivery) return ((pn_delivery_t *) event->context)->link;
   return NULL;
 }
 
@@ -375,10 +373,7 @@ pn_delivery_t *pn_event_delivery(pn_event_t *event)
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
   if (event->clazz->cid == CID_pn_transport) return (pn_transport_t *) event->context;
-
-  pn_connection_t *conn = pn_event_connection(event);
-  if (conn) return pn_connection_transport(conn);
-
+  if (event->clazz->cid == CID_pn_connection) return ((pn_connection_t *) event->context)->transport;
   return NULL;
 }
 

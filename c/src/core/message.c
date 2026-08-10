@@ -728,9 +728,21 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
+static size_t decode_calls = 0;
+static size_t encode_calls = 0;
+
+__attribute__((destructor))
+static void print_metrics(void)
+{
+    fprintf(stderr, "Decode calls:              %lu\n", decode_calls);
+    fprintf(stderr, "Encode calls:              %lu\n", encode_calls);
+}
+
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg);
+
+  decode_calls++;
 
   if (!bytes || !size) {
     return pn_error_format(msg->error, PN_ARG_ERR, "invalid message bytes");
@@ -843,6 +855,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 {
+  encode_calls++;
+
   pn_rwbytes_t scratch = (pn_rwbytes_t){.size=*isize, .start=bytes};
   if (!pni_switch_to_raw_bytes(scratch, &msg->instructions_deprecated, &msg->instructions_raw)) {
     return PN_OVERFLOW;
