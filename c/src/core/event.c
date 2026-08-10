@@ -336,7 +336,7 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
   pn_session_t *ssn;
   pn_transport_t *transport;
 
-  switch (pn_class_id(event->clazz)) {
+  switch (event->clazz->cid) {
   case CID_pn_connection:
     return (pn_connection_t *) event->context;
   case CID_pn_transport:
@@ -355,7 +355,7 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 pn_session_t *pn_event_session(pn_event_t *event)
 {
   pn_link_t *link;
-  switch (pn_class_id(event->clazz)) {
+  switch (event->clazz->cid) {
   case CID_pn_session:
     return (pn_session_t *) event->context;
   default:
@@ -369,7 +369,7 @@ pn_session_t *pn_event_session(pn_event_t *event)
 pn_link_t *pn_event_link(pn_event_t *event)
 {
   pn_delivery_t *dlv;
-  switch (pn_class_id(event->clazz)) {
+  switch (event->clazz->cid) {
   case CID_pn_link:
     return (pn_link_t *) event->context;
   default:
@@ -382,7 +382,7 @@ pn_link_t *pn_event_link(pn_event_t *event)
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (pn_class_id(event->clazz)) {
+  switch (event->clazz->cid) {
   case CID_pn_delivery:
     return (pn_delivery_t *) event->context;
   default:
@@ -392,7 +392,7 @@ pn_delivery_t *pn_event_delivery(pn_event_t *event)
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  switch (pn_class_id(event->clazz)) {
+  switch (event->clazz->cid) {
   case CID_pn_transport:
     return (pn_transport_t *) event->context;
   default:
