@@ -49,7 +49,7 @@ struct pn_event_t {
   pn_event_type_t type;
 };
 
-pn_event_t *pn_event(void);
+pn_event_t *pn_event(pn_list_t *pool);
 
 static inline pn_event_t *collector_put(pn_collector_t *collector, const pn_class_t *clazz, void *context,
 					pn_event_type_t type)
@@ -68,10 +68,8 @@ static inline pn_event_t *collector_put(pn_collector_t *collector, const pn_clas
   pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
 
   if (!event) {
-    event = pn_event();
+    event = pn_event(collector->pool);
   }
-
-  event->pool = collector->pool;
 
   pn_object_incref(event->pool);
 
@@ -93,7 +91,7 @@ static inline pn_event_t *collector_put(pn_collector_t *collector, const pn_clas
 }
 
 // Advance the head pointer for pop or next and return the old head
-static inline pn_event_t *collector_pop(pn_collector_t *collector) {
+static inline pn_event_t *collector_get(pn_collector_t *collector) {
   assert(collector);
 
   pn_event_t *event = collector->head;
@@ -111,7 +109,12 @@ static inline pn_event_t *collector_pop(pn_collector_t *collector) {
 
 static inline pn_event_t *pni_collector_put_object(pn_collector_t *collector, void *object, pn_event_type_t type)
 {
-  assert(collector);
+  // assert(collector);
+
+  // XXX Fix this by always binding the collector at a much earlier
+  // point
+  if (!collector) return NULL;
+
   return collector_put(collector, pn_class(object), object, type);
 }
 
@@ -123,7 +126,7 @@ static inline pn_event_t *pni_collector_next(pn_collector_t *collector)
     pn_object_decref(collector->prev);
   }
 
-  collector->prev = collector_pop(collector);
+  collector->prev = collector_get(collector);
 
   return collector->prev;
 }

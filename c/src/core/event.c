@@ -142,7 +142,7 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
 bool pn_collector_pop(pn_collector_t *collector) {
   assert(collector);
 
-  pn_event_t *event = collector_pop(collector);
+  pn_event_t *event = collector_get(collector);
 
   if (event) {
     pn_object_decref(event);
@@ -158,7 +158,7 @@ pn_event_t *pn_collector_next(pn_collector_t *collector) {
     pn_object_decref(collector->prev);
   }
 
-  collector->prev = collector_pop(collector);
+  collector->prev = collector_get(collector);
 
   return collector->prev;
 }
@@ -185,21 +185,20 @@ static void pn_event_finalize(void *object) {
 
   pn_list_t *pool = event->pool;
 
-  if (pool) {
-    if (pn_object_refcount(pool) > 1) {
-      *event = (pn_event_t) {
-        .attachments = event->attachments,
-      };
+  if (pn_object_refcount(pool) > 1) {
+    *event = (pn_event_t) {
+      .pool = pool,
+      .attachments = event->attachments,
+    };
 
-      if (event->attachments) pn_record_clear(event->attachments);
+    if (event->attachments) pn_record_clear(event->attachments);
 
-      pn_list_add(pool, event);
-    }
-
-    pn_object_decref(pool);
+    pn_list_add(pool, event);
   } else {
     if (event->attachments) pn_object_decref(event->attachments);
   }
+
+  pn_object_decref(pool);
 }
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
@@ -225,9 +224,15 @@ static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
   pn_fixed_string_addf(dst, ")");
 }
 
-pn_event_t *pn_event(void)
+pn_event_t *pn_event(pn_list_t *pool)
 {
-  return pn_class_new(&PN_CLASSCLASS(pn_event), sizeof(pn_event_t));
+  assert(pool);
+
+  pn_event_t *event = (pn_event_t *) pn_class_new(&PN_CLASSCLASS(pn_event), sizeof(pn_event_t));
+
+  event->pool = pool;
+
+  return event;
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
