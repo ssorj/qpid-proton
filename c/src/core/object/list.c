@@ -56,7 +56,7 @@ void pn_list_set(pn_list_t *list, int index, void *value)
 __attribute__((noinline)) static void list_grow(pn_list_t *list, size_t capacity)
 {
   assert(list);
-  assert(list->capacity >= capacity);
+  assert(list->capacity < capacity);
 
   size_t newcap = list->capacity;
   while (newcap < capacity) { newcap *= 2; }

@@ -196,9 +196,9 @@ static void pn_event_finalize(void *object) {
     pn_list_add(pool, event);
   } else {
     if (event->attachments) pn_object_decref(event->attachments);
+    pn_object_decref(pool);
   }
 
-  pn_object_decref(pool);
 }
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
@@ -335,13 +335,13 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 {
   if (event->clazz->cid == CID_pn_connection) return (pn_connection_t *) event->context;
 
-  if (event->clazz->cid == CID_pn_transport) {
-    pn_transport_t *transport = pn_event_transport(event);
-    if (transport) return transport->connection;
+  if (event->clazz->cid == CID_pn_session) {
+    pn_session_t *session = pn_event_session(event);
+    if (session) return pn_session_connection(session);
   }
 
-  pn_session_t *session = pn_event_session(event);
-  if (session) return pn_session_connection(session);
+  pn_transport_t *transport = pn_event_transport(event);
+  if (transport) return transport->connection;
 
   return NULL;
 }
