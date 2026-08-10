@@ -333,106 +333,81 @@ const char *pn_event_type_name(pn_event_type_t type)
 
 pn_connection_t *pn_event_connection(pn_event_t *event)
 {
-  pn_session_t *ssn;
-  pn_transport_t *transport;
+  if (event->clazz->cid == CID_pn_connection) return (pn_connection_t *) event->context;
 
-  switch (event->clazz->cid) {
-  case CID_pn_connection:
-    return (pn_connection_t *) event->context;
-  case CID_pn_transport:
-    transport = pn_event_transport(event);
-    if (transport)
-      return transport->connection;
-    return NULL;
-  default:
-    ssn = pn_event_session(event);
-    if (ssn)
-     return pn_session_connection(ssn);
+  if (event->clazz->cid == CID_pn_transport) {
+    pn_transport_t *transport = pn_event_transport(event);
+    if (transport) return transport->connection;
   }
+
+  pn_session_t *session = pn_event_session(event);
+  if (session) return pn_session_connection(session);
+
   return NULL;
 }
 
 pn_session_t *pn_event_session(pn_event_t *event)
 {
-  pn_link_t *link;
-  switch (event->clazz->cid) {
-  case CID_pn_session:
-    return (pn_session_t *) event->context;
-  default:
-    link = pn_event_link(event);
-    if (link)
-      return pn_link_session(link);
-  }
+  if (event->clazz->cid == CID_pn_session) return (pn_session_t *) event->context;
+
+  pn_link_t *link = pn_event_link(event);
+  if (link) return pn_link_session(link);
+
   return NULL;
 }
 
 pn_link_t *pn_event_link(pn_event_t *event)
 {
-  pn_delivery_t *dlv;
-  switch (event->clazz->cid) {
-  case CID_pn_link:
-    return (pn_link_t *) event->context;
-  default:
-    dlv = pn_event_delivery(event);
-    if (dlv)
-      return pn_delivery_link(dlv);
-  }
+  if (event->clazz->cid == CID_pn_link) return (pn_link_t *) event->context;
+
+  pn_delivery_t *delivery = pn_event_delivery(event);
+  if (delivery) return pn_delivery_link(delivery);
+
   return NULL;
 }
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (event->clazz->cid) {
-  case CID_pn_delivery:
-    return (pn_delivery_t *) event->context;
-  default:
-    return NULL;
-  }
+  if (event->clazz->cid == CID_pn_delivery) return (pn_delivery_t *) event->context;
+  return NULL;
 }
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  switch (event->clazz->cid) {
-  case CID_pn_transport:
-    return (pn_transport_t *) event->context;
-  default:
-    {
-      pn_connection_t *conn = pn_event_connection(event);
-      if (conn)
-        return pn_connection_transport(conn);
-      return NULL;
-    }
-  }
+  if (event->clazz->cid == CID_pn_transport) return (pn_transport_t *) event->context;
+
+  pn_connection_t *conn = pn_event_connection(event);
+  if (conn) return pn_connection_transport(conn);
+
+  return NULL;
 }
 
-static pn_condition_t *cond_set(pn_condition_t *cond) {
+static inline pn_condition_t *cond_set(pn_condition_t *cond) {
   return cond && pn_condition_is_set(cond) ? cond : NULL;
 }
 
-static pn_condition_t *cond2_set(pn_condition_t *cond1, pn_condition_t *cond2) {
+static inline pn_condition_t *cond2_set(pn_condition_t *cond1, pn_condition_t *cond2) {
   pn_condition_t *cond = cond_set(cond1);
   if (!cond) cond = cond_set(cond2);
   return cond;
 }
 
-pn_condition_t *pn_event_condition(pn_event_t *e) {
-  void *ctx = pn_event_context(e);
-  switch (pn_class_id(pn_event_class(e))) {
+pn_condition_t *pn_event_condition(pn_event_t *event) {
+  switch (event->clazz->cid) {
    case CID_pn_connection: {
-     pn_connection_t *c = (pn_connection_t*)ctx;
+     pn_connection_t *c = (pn_connection_t*) event->context;
      return cond2_set(pn_connection_remote_condition(c), pn_connection_condition(c));
    }
    case CID_pn_session: {
-     pn_session_t *s = (pn_session_t*)ctx;
+     pn_session_t *s = (pn_session_t*) event->context;
      return cond2_set(pn_session_remote_condition(s), pn_session_condition(s));
    }
    case CID_pn_link: {
-     pn_link_t *l = (pn_link_t*)ctx;
+     pn_link_t *l = (pn_link_t*) event->context;
      return cond2_set(pn_link_remote_condition(l), pn_link_condition(l));
    }
    case CID_pn_transport:
-    return cond_set(pn_transport_condition((pn_transport_t*)ctx));
-
+    return cond_set(pn_transport_condition((pn_transport_t*) event->context));
    default:
     return NULL;
   }
