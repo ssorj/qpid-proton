@@ -203,7 +203,7 @@ pn_session_t *pn_session(pn_connection_t *connection)
   pni_endpoint_init(&session->endpoint, SESSION, connection);
   pni_connection_add_session(connection, session);
 
-  pn_collector_put_object(connection->collector, session, PN_SESSION_INIT);
+  pni_collector_put_object(connection->collector, session, PN_SESSION_INIT);
 
   if (connection->transport) {
     pni_session_bound(session);

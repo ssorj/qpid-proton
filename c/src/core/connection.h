@@ -30,6 +30,7 @@
 
 #include "core/delivery.h"
 #include "core/endpoint.h"
+#include "core/event-internal.h"
 #include "core/link.h"
 #include "core/object_private.h"
 #include "core/session.h"
@@ -90,12 +91,12 @@ static inline void pni_connection_add_endpoint_work(pn_connection_t *connection,
     endpoint->modified = true;
 
     if (emit && connection->transport) {
-      pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
+      pni_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
     }
   }
 
   // if (emit && connection->transport) {
-  //   pn_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
+  //   pni_collector_put_object(connection->collector, connection->transport, PN_TRANSPORT);
   // }
 }
 

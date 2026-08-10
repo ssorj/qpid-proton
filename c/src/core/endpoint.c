@@ -26,6 +26,7 @@
 #include "proton/event.h"
 
 #include "core/connection.h"
+#include "core/event-internal.h"
 #include "core/link.h"
 #include "core/session.h"
 
@@ -84,7 +85,7 @@ void pni_endpoint_open(pni_endpoint_t *endpoint)
   if (!(endpoint->state & PN_LOCAL_ACTIVE)) {
     endpoint_set_local_state(endpoint, PN_LOCAL_ACTIVE);
     pn_connection_t *conn = endpoint_connection(endpoint);
-    pn_collector_put_object(conn->collector, endpoint, endpoint_event((pni_endpoint_type_t) endpoint->type, true));
+    pni_collector_put_object(conn->collector, endpoint, endpoint_event((pni_endpoint_type_t) endpoint->type, true));
     pni_connection_add_endpoint_work(conn, endpoint, true);
   }
 }
@@ -94,7 +95,7 @@ void pni_endpoint_close(pni_endpoint_t *endpoint)
   if (!(endpoint->state & PN_LOCAL_CLOSED)) {
     endpoint_set_local_state(endpoint, PN_LOCAL_CLOSED);
     pn_connection_t *conn = endpoint_connection(endpoint);
-    pn_collector_put_object(conn->collector, endpoint, endpoint_event((pni_endpoint_type_t) endpoint->type, false));
+    pni_collector_put_object(conn->collector, endpoint, endpoint_event((pni_endpoint_type_t) endpoint->type, false));
     pni_connection_add_endpoint_work(conn, endpoint, true);
   }
 }
@@ -129,7 +130,7 @@ void pni_endpoint_decref(pni_endpoint_t *endpoint)
   endpoint->refcount--;
   if (endpoint->refcount == 0) {
     pn_connection_t *conn = endpoint_connection(endpoint);
-    pn_collector_put_object(conn->collector, endpoint, endpoint_final_type((pni_endpoint_type_t) endpoint->type));
+    pni_collector_put_object(conn->collector, endpoint, endpoint_final_type((pni_endpoint_type_t) endpoint->type));
   }
 }
 

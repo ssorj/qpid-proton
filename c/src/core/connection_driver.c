@@ -25,11 +25,14 @@
 #include <proton/types.h>
 
 #include "core/connection.h"
+#include "core/event-internal.h"
 #include "core/logger_private.h"
 #include "core/object_private.h"
 #include "core/transport.h"
 
 #include <string.h>
+
+#define PN_DEFAULT_READ_BUFFER_SIZE 32768
 
 void pn_transport_consume_input(pn_transport_t *transport);
 void pn_transport_produce_output(pn_transport_t *transport);
@@ -74,10 +77,14 @@ pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t 
 }
 
 void pn_connection_driver_destroy(pn_connection_driver_t *d) {
+  assert(d);
+
   pn_connection_t *c = pn_connection_driver_release_connection(d);
+
   if (c) pn_connection_free(c);
   if (d->transport) pn_transport_free(d->transport);
   if (d->collector) pn_collector_free(d->collector);
+
   memset(d, 0, sizeof(*d));
 }
 
@@ -86,8 +93,6 @@ pn_rwbytes_t pn_connection_driver_read_buffer_sized(pn_connection_driver_t *d, s
   return pn_rwbytes(n, pn_buffer_get_write_ptr(d->transport->input_buf, n));
 }
 
-#define PN_DEFAULT_READ_BUFFER_SIZE 32768
-
 pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
   assert(d);
   return pn_rwbytes(PN_DEFAULT_READ_BUFFER_SIZE,
@@ -95,6 +100,8 @@ pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
 }
 
 void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
+  assert(d);
+
   pn_buffer_advance_write_ptr(d->transport->input_buf, n);
   d->transport->bytes_input += n;
 
@@ -152,10 +159,11 @@ void pn_connection_driver_close(pn_connection_driver_t *d) {
 pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
   if (!d->collector) return NULL;
 
-  pn_event_t *handled = pn_collector_prev(d->collector);
+  pn_event_t *handled = pni_collector_prev(d->collector);
 
+  // XXX This is highly regrettable
   if (handled) {
-    switch (pn_event_type(handled)) {
+    switch (pni_event_type(handled)) {
     case PN_CONNECTION_INIT: // Auto-bind after the INIT event is handled
       pn_transport_bind(d->transport, d->connection);
       break;
@@ -168,7 +176,7 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
   }
 
   // Log the next event that will be processed
-  pn_event_t *next = pn_collector_next(d->collector);
+  pn_event_t *next = pni_collector_next(d->collector);
 
   if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
     pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "%s", "");
@@ -178,7 +186,7 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
 }
 
 bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
-  return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
+  return d->connection && pni_collector_peek(pn_connection_collector(d->connection));
 }
 
 bool pn_connection_driver_finished(pn_connection_driver_t *d) {

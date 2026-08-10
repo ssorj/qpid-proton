@@ -27,6 +27,7 @@
 
 #include "core/delivery.h"
 #include "core/endpoint.h"
+#include "core/event-internal.h"
 #include "core/session.h"
 #include "core/util.h"
 
@@ -113,7 +114,7 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
   pni_endpoint_t *endpoint = connection->endpoint_head;
 
   while (endpoint) {
-    pn_collector_put_object(connection->collector, endpoint, endpoint_init_event_map[endpoint->type]);
+    pni_collector_put_object(connection->collector, endpoint, endpoint_init_event_map[endpoint->type]);
     endpoint = endpoint->endpoint_next;
   }
 }
@@ -308,7 +309,7 @@ void pn_connection_free(pn_connection_t *connection) {
 
 void pni_connection_bound(pn_connection_t *connection)
 {
-  pn_collector_put_object(connection->collector, connection, PN_CONNECTION_BOUND);
+  pni_collector_put_object(connection->collector, connection, PN_CONNECTION_BOUND);
   pni_endpoint_incref(&connection->endpoint);
 
   size_t nsessions = pn_list_size(connection->sessions);

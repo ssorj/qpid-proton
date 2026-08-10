@@ -19,38 +19,21 @@
  *
  */
 
-#include <proton/event.h>
-
-#include <assert.h>
-#include <stdio.h>
-
-#include "proton/connection.h"
-#include "proton/delivery.h"
-#include "proton/link.h"
-#include "proton/session.h"
+#include "core/event-internal.h"
 
 #include "core/fixed_string.h"
 #include "core/object_private.h"
 #include "core/transport.h"
 
-struct pn_collector_t {
-  pn_list_t *pool;
-  pn_event_t *head;
-  pn_event_t *tail;
-  pn_event_t *prev;         /* event returned by previous call to pn_collector_next() */
-  bool freed;
-};
+#include <proton/connection.h>
+#include <proton/delivery.h>
+#include <proton/link.h>
+#include <proton/session.h>
 
-struct pn_event_t {
-  pn_list_t *pool;
-  const pn_class_t *clazz;
-  void *context;    // depends on clazz
-  pn_record_t *attachments;
-  pn_event_t *next;
-  pn_event_type_t type;
-};
+#include <assert.h>
+#include <stdio.h>
 
-static void pn_event_initialize(void *object);
+#define pn_event_initialize NULL
 static void pn_event_finalize(void *object);
 static void pn_event_inspect(void *object, pn_fixed_string_t *string);
 #define pn_event_hashcode NULL
@@ -68,21 +51,6 @@ static void pn_collector_initialize(void* object)
   collector->freed = false;
 }
 
-void pn_collector_drain(pn_collector_t *collector)
-{
-  assert(collector);
-  while (pn_collector_next(collector))
-    ;
-  assert(!collector->head);
-  assert(!collector->tail);
-}
-
-static void pn_collector_shrink(pn_collector_t *collector)
-{
-  assert(collector);
-  pn_list_clear(collector->pool);
-}
-
 static void pn_collector_finalize(void *object)
 {
   pn_collector_t *collector = (pn_collector_t *)object;
@@ -92,11 +60,15 @@ static void pn_collector_finalize(void *object)
 
 static void pn_collector_inspect(void *object, pn_fixed_string_t *dst)
 {
-  pn_collector_t *collector = (pn_collector_t *)object;
-  assert(collector);
+  assert(object);
+
+  pn_collector_t *collector = (pn_collector_t *) object;
+
   pn_fixed_string_addf(dst, "EVENTS[");
+
   pn_event_t *event = collector->head;
   bool first = true;
+
   while (event) {
     if (first) {
       first = false;
@@ -104,10 +76,12 @@ static void pn_collector_inspect(void *object, pn_fixed_string_t *dst)
       pn_fixed_string_addf(dst, ", ");
     }
 
-      pn_finspect(event, dst);
+    pn_finspect(event, dst);
     event = event->next;
   }
+
   pn_fixed_string_addf(dst, "]");
+
   return;
 }
 
@@ -130,54 +104,24 @@ void pn_collector_free(pn_collector_t *collector)
 void pn_collector_release(pn_collector_t *collector)
 {
   assert(collector);
+
   if (!collector->freed) {
     collector->freed = true;
+
     pn_collector_drain(collector);
-    pn_collector_shrink(collector);
+    pn_list_clear(collector->pool);
   }
 }
 
-pn_event_t *pn_event(void);
-
-static inline pn_event_t *collector_put(pn_collector_t *collector, const pn_class_t *clazz, void *context,
-					pn_event_type_t type)
+void pn_collector_drain(pn_collector_t *collector)
 {
-  assert(context);
+  assert(collector);
 
-  if (!collector) return NULL;
-  if (collector->freed) return NULL;
+  while (pn_collector_next(collector))
+    ;
 
-  pn_event_t *tail = collector->tail;
-
-  if (tail && tail->type == type && tail->context == context) {
-    return NULL;
-  }
-
-  pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
-
-  if (!event) {
-    event = pn_event();
-  }
-
-  event->pool = collector->pool;
-
-  pn_object_incref(event->pool);
-
-  if (collector->tail) {
-    collector->tail->next = event;
-    collector->tail = event;
-  } else {
-    collector->tail = event;
-    collector->head = event;
-  }
-
-  event->clazz = clazz;
-  event->context = context;
-  event->type = type;
-
-  pn_class_incref(clazz, event->context);
-
-  return event;
+  assert(!collector->head);
+  assert(!collector->tail);
 }
 
 pn_event_t *pn_collector_put(pn_collector_t *collector, const pn_class_t *clazz, void *context, pn_event_type_t type)
@@ -195,54 +139,46 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
   return collector->head;
 }
 
-// Advance head pointer for pop or next, return the old head.
-static pn_event_t *pop_internal(pn_collector_t *collector) {
-  pn_event_t *event = collector->head;
-  if (event) {
-    collector->head = event->next;
-    if (!collector->head) {
-      collector->tail = NULL;
-    }
-  }
-  return event;
-}
-
 bool pn_collector_pop(pn_collector_t *collector) {
-  pn_event_t *event = pop_internal(collector);
+  assert(collector);
+
+  pn_event_t *event = collector_pop(collector);
+
   if (event) {
     pn_object_decref(event);
   }
+
   return event;
 }
 
 pn_event_t *pn_collector_next(pn_collector_t *collector) {
+  assert(collector);
+
   if (collector->prev) {
     pn_object_decref(collector->prev);
   }
-  collector->prev = pop_internal(collector);
+
+  collector->prev = collector_pop(collector);
+
   return collector->prev;
 }
 
 pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+  assert(collector);
   return collector->prev;
 }
 
+// XXX Only reactor uses this
 bool pn_collector_more(pn_collector_t *collector)
 {
   assert(collector);
   return collector->head && collector->head->next;
 }
 
-static void pn_event_initialize(void *object)
-{
-  // pn_event_t *event = (pn_event_t *) object;
-
-  // *event = (pn_event_t) { 0 };
-}
-
 static void pn_event_finalize(void *object) {
-  pn_event_t *event = (pn_event_t *)object;
-  // decref before adding to the free list
+  pn_event_t *event = (pn_event_t *) object;
+
+  // Decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);
   }
@@ -268,22 +204,25 @@ static void pn_event_finalize(void *object) {
 
 static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
 {
-  pn_event_t *event = (pn_event_t *)object;
-  assert(event);
+  assert(object);
   assert(dst);
+
+  pn_event_t *event = (pn_event_t *) object;
+
   const char *name = pn_event_type_name(event->type);
+
   if (name) {
     pn_fixed_string_addf(dst, "(%s", pn_event_type_name(event->type));
   } else {
     pn_fixed_string_addf(dst, "(<%u>", (unsigned int) event->type);
   }
+
   if (event->context) {
     pn_fixed_string_addf(dst, ", ");
     pn_class_inspect(event->clazz, event->context, dst);
   }
 
   pn_fixed_string_addf(dst, ")");
-  return;
 }
 
 pn_event_t *pn_event(void)
@@ -314,7 +253,6 @@ pn_record_t *pn_event_attachments(pn_event_t *event)
   if (!event->attachments) event->attachments = pn_record();
   return event->attachments;
 }
-
 
 const char *pn_event_type_name(pn_event_type_t type)
 {
@@ -393,9 +331,9 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
   pn_session_t *ssn;
   pn_transport_t *transport;
 
-  switch (pn_class_id(pn_event_class(event))) {
+  switch (pn_class_id(event->clazz)) {
   case CID_pn_connection:
-    return (pn_connection_t *) pn_event_context(event);
+    return (pn_connection_t *) event->context;
   case CID_pn_transport:
     transport = pn_event_transport(event);
     if (transport)
@@ -412,9 +350,9 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 pn_session_t *pn_event_session(pn_event_t *event)
 {
   pn_link_t *link;
-  switch (pn_class_id(pn_event_class(event))) {
+  switch (pn_class_id(event->clazz)) {
   case CID_pn_session:
-    return (pn_session_t *) pn_event_context(event);
+    return (pn_session_t *) event->context;
   default:
     link = pn_event_link(event);
     if (link)
@@ -426,9 +364,9 @@ pn_session_t *pn_event_session(pn_event_t *event)
 pn_link_t *pn_event_link(pn_event_t *event)
 {
   pn_delivery_t *dlv;
-  switch (pn_class_id(pn_event_class(event))) {
+  switch (pn_class_id(event->clazz)) {
   case CID_pn_link:
-    return (pn_link_t *) pn_event_context(event);
+    return (pn_link_t *) event->context;
   default:
     dlv = pn_event_delivery(event);
     if (dlv)
@@ -439,9 +377,9 @@ pn_link_t *pn_event_link(pn_event_t *event)
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (pn_class_id(pn_event_class(event))) {
+  switch (pn_class_id(event->clazz)) {
   case CID_pn_delivery:
-    return (pn_delivery_t *) pn_event_context(event);
+    return (pn_delivery_t *) event->context;
   default:
     return NULL;
   }
@@ -449,9 +387,9 @@ pn_delivery_t *pn_event_delivery(pn_event_t *event)
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  switch (pn_class_id(pn_event_class(event))) {
+  switch (pn_class_id(event->clazz)) {
   case CID_pn_transport:
-    return (pn_transport_t *) pn_event_context(event);
+    return (pn_transport_t *) event->context;
   default:
     {
       pn_connection_t *conn = pn_event_connection(event);

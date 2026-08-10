@@ -24,6 +24,7 @@
 #include "framing.h"
 #include "core/connection.h"
 #include "core/delivery.h"
+#include "core/event-internal.h"
 #include "core/frame_generators.h"
 #include "core/frame_consumers.h"
 #include "core/link.h"
@@ -673,10 +674,10 @@ static inline void endpoint_set_remote_state(pni_endpoint_t *endpoint, uint8_t r
 }
 
 static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
-    pn_collector_put_object(connection->collector, connection, PN_CONNECTION_REMOTE_OPEN);
+    pni_collector_put_object(connection->collector, connection, PN_CONNECTION_REMOTE_OPEN);
 
     if (transport->remote_idle_timeout) {
-      pn_collector_put_object(connection->collector, transport, PN_TRANSPORT);
+      pni_collector_put_object(connection->collector, transport, PN_TRANSPORT);
     }
 }
 
@@ -768,7 +769,7 @@ int pn_transport_unbind(pn_transport_t *transport)
   transport->connection = NULL;
   bool was_referenced = transport->referenced;
 
-  pn_collector_put_object(conn->collector, conn, PN_CONNECTION_UNBOUND);
+  pni_collector_put_object(conn->collector, conn, PN_CONNECTION_UNBOUND);
 
   // XXX: what happens if the endpoints are freed before we get here?
   pn_session_t *ssn = pn_session_head(conn, 0);
@@ -943,7 +944,7 @@ static void pni_maybe_post_closed(pn_transport_t *transport)
 {
   pn_collector_t *collector = pni_transport_collector(transport);
   if (transport->head_closed && transport->tail_closed) {
-    pn_collector_put_object(collector, transport, PN_TRANSPORT_CLOSED);
+    pni_collector_put_object(collector, transport, PN_TRANSPORT_CLOSED);
   }
 }
 
@@ -952,7 +953,7 @@ static void pni_close_tail(pn_transport_t *transport)
   if (!transport->tail_closed) {
     transport->tail_closed = true;
     pn_collector_t *collector = pni_transport_collector(transport);
-    pn_collector_put_object(collector, transport, PN_TRANSPORT_TAIL_CLOSED);
+    pni_collector_put_object(collector, transport, PN_TRANSPORT_TAIL_CLOSED);
     pni_maybe_post_closed(transport);
   }
 }
@@ -986,7 +987,7 @@ int pn_do_error(pn_transport_t *transport, const char *condition, PN_PRINTF_FORM
     }
   }
   pn_collector_t *collector = pni_transport_collector(transport);
-  pn_collector_put_object(collector, transport, PN_TRANSPORT_ERROR);
+  pni_collector_put_object(collector, transport, PN_TRANSPORT_ERROR);
   // Special case being called with no condition and no fmt to log the existing error condition
   if (fmt && condition) {
     PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "%s %s", condition, buf);
@@ -1114,7 +1115,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   }
   pni_map_remote_channel(ssn, channel);
   endpoint_set_remote_state(&ssn->endpoint, PN_REMOTE_ACTIVE);
-  pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_OPEN);
+  pni_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_OPEN);
   return 0;
 }
 
@@ -1321,7 +1322,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     link->remote_max_message_size = max_msgsz;
   }
 
-  pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_OPEN);
+  pni_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_OPEN);
   return 0;
 }
 
@@ -1457,7 +1458,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       delivery->updated = true;
       link->more_pending = false;
     }
-    pn_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
+    pni_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
   }
 
   ssn->incoming_bytes += payload.size;
@@ -1496,7 +1497,7 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     ssn->state.remote_incoming_window = iwin;
   }
 
-  pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
+  pni_collector_put_object(transport->connection->collector, ssn, PN_SESSION_FLOW);
 
   if (handle_init) {
     pn_link_t *link = pni_handle_state(ssn, handle);
@@ -1525,7 +1526,7 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
       }
     }
 
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+    pni_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
   }
 
   return 0;
@@ -1653,7 +1654,7 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
   remote->settled = settled;
   delivery->updated = true;
 
-  pn_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
+  pni_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);
 
   return 0;
 }
@@ -1741,9 +1742,9 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   if (closed)
   {
     endpoint_set_remote_state(&link->endpoint, PN_REMOTE_CLOSED);
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_CLOSE);
+    pni_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_CLOSE);
   } else {
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_DETACH);
+    pni_collector_put_object(transport->connection->collector, link, PN_LINK_REMOTE_DETACH);
   }
 
   pni_unmap_remote_handle(link);
@@ -1764,7 +1765,7 @@ int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, p
   pn_condition_t* condition = &ssn->endpoint.remote_condition;
   pn_condition_set(condition, cond, desc, info);
   endpoint_set_remote_state(&ssn->endpoint, PN_REMOTE_CLOSED);
-  pn_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_CLOSE);
+  pni_collector_put_object(transport->connection->collector, ssn, PN_SESSION_REMOTE_CLOSE);
   pni_unmap_remote_channel(ssn);
   return 0;
 }
@@ -1781,7 +1782,7 @@ int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   pn_condition_set(condition, cond, desc, info);
   transport->close_rcvd = true;
   endpoint_set_remote_state(&conn->endpoint, PN_REMOTE_CLOSED);
-  pn_collector_put_object(transport->connection->collector, conn, PN_CONNECTION_REMOTE_CLOSE);
+  pni_collector_put_object(transport->connection->collector, conn, PN_CONNECTION_REMOTE_CLOSE);
   return 0;
 }
 
@@ -2239,7 +2240,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     // Aborted delivery with no data yet sent, drop it and issue a FLOW as we may have credit.
     *settle = true;
     state->sent = true;
-    pn_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
+    pni_collector_put_object(transport->connection->collector, link, PN_LINK_FLOW);
     return 0;
   }
   *settle = false;
@@ -2285,7 +2286,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
         link->session->outgoing_deliveries--;
       }
 
-      pn_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
+      pni_collector_put_object(transport->connection->collector, link, PN_LINK_WORK);
     }
   }
 
@@ -2727,7 +2728,7 @@ static void pni_close_head(pn_transport_t *transport)
   if (!transport->head_closed) {
     transport->head_closed = true;
     pn_collector_t *collector = pni_transport_collector(transport);
-    pn_collector_put_object(collector, transport, PN_TRANSPORT_HEAD_CLOSED);
+    pni_collector_put_object(collector, transport, PN_TRANSPORT_HEAD_CLOSED);
     pni_maybe_post_closed(transport);
   }
 }

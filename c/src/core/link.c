@@ -143,7 +143,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
   pni_terminus_init(&link->remote_source, PN_UNSPECIFIED);
   pni_terminus_init(&link->remote_target, PN_UNSPECIFIED);
 
-  pn_collector_put_object(session->connection->collector, link, PN_LINK_INIT);
+  pni_collector_put_object(session->connection->collector, link, PN_LINK_INIT);
 
   if (session->connection->transport) {
     pni_link_bound(link);
@@ -282,7 +282,7 @@ void pn_link_detach(pn_link_t *link)
   if (link->detached) return;
 
   link->detached = true;
-  pn_collector_put_object(link->session->connection->collector, link, PN_LINK_LOCAL_DETACH);
+  pni_collector_put_object(link->session->connection->collector, link, PN_LINK_LOCAL_DETACH);
   pni_connection_add_endpoint_work(link->session->connection, &link->endpoint, true);
 }
 
