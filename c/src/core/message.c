@@ -841,40 +841,70 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   return 0;
 }
 
+static int switch_to_raw_bytes(pn_rwbytes_t scratch, pn_data_t **data, pn_bytes_t *bytes)
+{
+  assert(*data);
+
+  if (pni_data_size(*data)) {
+    pn_data_rewind(*data);
+
+    ssize_t size = pn_data_encode(*data, scratch.start, scratch.size);
+    if (size == PN_OVERFLOW) return size;
+
+    pn_bytes_free(*bytes);
+    *bytes = pn_bytes_dup((pn_bytes_t) { .size = size, .start = scratch.start });
+
+    pni_data_clear(*data);
+  }
+  return 0;
+}
+
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 {
-  pn_rwbytes_t scratch = (pn_rwbytes_t){.size=*isize, .start=bytes};
-  if (!pni_switch_to_raw_bytes(scratch, &msg->instructions_deprecated, &msg->instructions_raw)) {
-    return PN_OVERFLOW;
+  assert(msg);
+
+  pn_rwbytes_t scratch = (pn_rwbytes_t) { .size = *isize, .start = bytes };
+  int err;
+
+  if (msg->instructions_deprecated) {
+    err = switch_to_raw_bytes(scratch, &msg->instructions_deprecated, &msg->instructions_raw);
+    if (err) return err;
   }
-  if (!pni_switch_to_raw_bytes(scratch, &msg->annotations_deprecated, &msg->annotations_raw)) {
-    return PN_OVERFLOW;
+
+  if (msg->annotations_deprecated) {
+    err = switch_to_raw_bytes(scratch, &msg->annotations_deprecated, &msg->annotations_raw);
+    if (err) return err;
   }
-  if (!pni_switch_to_raw_bytes(scratch, &msg->properties_deprecated, &msg->properties_raw)) {
-    return PN_OVERFLOW;
+
+  if (msg->properties_deprecated) {
+    err = switch_to_raw_bytes(scratch, &msg->properties_deprecated, &msg->properties_raw);
+    if (err) return err;
   }
-  if (!pni_switch_to_raw_bytes(scratch, &msg->body_deprecated, &msg->body_raw)) {
-    return PN_OVERFLOW;
+
+  if (msg->body_deprecated) {
+    err = switch_to_raw_bytes(scratch, &msg->body_deprecated, &msg->body_raw);
+    if (err) return err;
   }
 
   size_t remaining = *isize;
   size_t total = 0;
 
   /* "DL[?o?B?I?o?I]!" */
-  size_t last_size = pn_amqp_encode_bytes_message_header(bytes, remaining, AMQP_DESC_HEADER,
-                        msg->durable, msg->durable,
-                         msg->priority!=AMQP_HEADER_PRIORITY_DEFAULT, msg->priority,
-                         (bool)msg->ttl, msg->ttl,
-                         msg->first_acquirer, msg->first_acquirer,
-                         (bool)msg->delivery_count, msg->delivery_count);
+  size_t last_size = pn_amqp_encode_bytes_message_header
+    (bytes, remaining, AMQP_DESC_HEADER,
+     msg->durable, msg->durable,
+     msg->priority != AMQP_HEADER_PRIORITY_DEFAULT, msg->priority,
+     (bool) msg->ttl, msg->ttl,
+     msg->first_acquirer, msg->first_acquirer,
+     (bool) msg->delivery_count, msg->delivery_count);
+
   if (last_size > remaining) return PN_OVERFLOW;
 
   remaining -= last_size;
   bytes += last_size;
   total += last_size;
 
-
-  if (msg->instructions_raw.size>0) {
+  if (msg->instructions_raw.size > 0) {
     last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_DELIVERY_ANNOTATIONS, msg->instructions_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
@@ -883,7 +913,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
     total += last_size;
   }
 
-  if (msg->annotations_raw.size>0) {
+  if (msg->annotations_raw.size > 0) {
     last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_MESSAGE_ANNOTATIONS, msg->annotations_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
@@ -895,32 +925,34 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   /* "DL[azSSSass?t?tS?IS]!" */
   pn_atom_t id = pn_message_get_id(msg);
   pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
-  last_size = pn_amqp_encode_bytes_message_properties(bytes, remaining, AMQP_DESC_PROPERTIES,
-                     &id,
-                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
-                     pn_string_bytes(msg->address),
-                     pn_string_bytes(msg->subject),
-                     pn_string_bytes(msg->reply_to),
-                     &correlation_id,
-                     pn_string_bytes(msg->content_type),
-                     pn_string_bytes(msg->content_encoding),
-                     (bool)msg->expiry_time, msg->expiry_time,
-                     (bool)msg->creation_time, msg->creation_time,
-                     pn_string_bytes(msg->group_id),
-                     /*
-                      * As a heuristic, null out group_sequence if there is no group_id and
-                      * group_sequence is 0. In this case it is extremely unlikely we want
-                      * group semantics
-                      */
-                     (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
-                     pn_string_bytes(msg->reply_to_group_id));
+
+  last_size = pn_amqp_encode_bytes_message_properties
+    (bytes, remaining, AMQP_DESC_PROPERTIES,
+     &id,
+     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
+     pn_string_bytes(msg->address),
+     pn_string_bytes(msg->subject),
+     pn_string_bytes(msg->reply_to),
+     &correlation_id,
+     pn_string_bytes(msg->content_type),
+     pn_string_bytes(msg->content_encoding),
+     (bool) msg->expiry_time, msg->expiry_time,
+     (bool) msg->creation_time, msg->creation_time,
+     pn_string_bytes(msg->group_id),
+     // As a heuristic, null out group_sequence if
+     // there is no group_id and group_sequence is
+     // 0. In this case it is extremely unlikely we
+     // want group semantics.
+     (bool) pn_string_get(msg->group_id) || (bool) msg->group_sequence , msg->group_sequence,
+     pn_string_bytes(msg->reply_to_group_id));
+
   if (last_size > remaining) return PN_OVERFLOW;
 
   remaining -= last_size;
   bytes += last_size;
   total += last_size;
 
-  if (msg->properties_raw.size>0) {
+  if (msg->properties_raw.size > 0) {
     last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_APPLICATION_PROPERTIES, msg->properties_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
@@ -929,10 +961,12 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
     total += last_size;
   }
 
-  if (msg->body_raw.size>0) {
-    uint64_t descriptor = AMQP_DESC_AMQP_VALUE;
+  uint64_t descriptor = AMQP_DESC_AMQP_VALUE;
+  pn_bytes_t body_raw;
+
+  if (msg->body_raw.size > 0) {
     if (msg->inferred) {
-      switch ((uint8_t)msg->body_raw.start[0]) {
+      switch ((uint8_t) msg->body_raw.start[0]) {
       case PNE_VBIN8:
       case PNE_VBIN32:
         descriptor = AMQP_DESC_DATA;
@@ -944,24 +978,24 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
         break;
       }
     }
-    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, descriptor, msg->body_raw);
-    if (last_size > remaining) return PN_OVERFLOW;
 
-    remaining -= last_size;
-    bytes += last_size;
-    total += last_size;
+    body_raw = msg->body_raw;
   } else {
-    // AMQP requires a body, so encode a null body if none present
-    static const char null_byte = PNE_NULL;
-    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_AMQP_VALUE, (pn_bytes_t){.size=1, .start=&null_byte});
-    if (last_size > remaining) return PN_OVERFLOW;
+    // AMQP requires a body, so encode a null body if none is present
 
-    remaining -= last_size;
-    bytes += last_size;
-    total += last_size;
+    static const char null_byte = PNE_NULL;
+    body_raw = (pn_bytes_t) { .size = 1, .start = &null_byte };
   }
 
+  last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, descriptor, body_raw);
+  if (last_size > remaining) return PN_OVERFLOW;
+
+  remaining -= last_size;
+  bytes += last_size;
+  total += last_size;
+
   *isize = total;
+
   return 0;
 }
 

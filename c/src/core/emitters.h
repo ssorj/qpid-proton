@@ -247,21 +247,19 @@ PN_ALWAYS_INLINE static inline void emit_accumulated_nulls(pni_emitter_t* emitte
   uint32_t count = compound->null_count;
   if (!count) return;
 
-  for (uint32_t i = 0; i < count; ++i) {
-    pni_emitter_writef8(emitter, PNE_NULL);
+  char *bytes = &emitter->output_start[emitter->position];
+
+  if (pni_emitter_remaining(emitter, count)) {
+    for (uint32_t i = 0; i < count; i++) {
+      bytes[i] = PNE_NULL;
+    }
   }
+
+  emitter->position += count;
 
   compound->count += count;
   compound->null_count = 0;
 }
-
-// PN_ALWAYS_INLINE static inline void emit_accumulated_nulls(pni_emitter_t* emitter, pni_compound_context* compound) {
-//   for (uint32_t i=compound->null_count; i>0; --i) {
-//     pni_emitter_writef8(emitter, PNE_NULL);
-//     compound->count++;
-//   }
-//   compound->null_count = 0;
-// }
 
 PN_ALWAYS_INLINE static inline void emit_bool(pni_emitter_t* emitter, pni_compound_context* compound, bool b) {
   emit_accumulated_nulls(emitter, compound);

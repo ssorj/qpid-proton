@@ -94,20 +94,6 @@ static inline void pn_rwbytes_free(pn_rwbytes_t in) {
   free((void*)in.start);
 }
 
-static inline bool pni_switch_to_raw_bytes(pn_rwbytes_t scratch, pn_data_t **data, pn_bytes_t *bytes)
-{
-  if (*data && pni_data_size(*data)) {
-    pn_data_rewind(*data);
-    ssize_t size = pn_data_encode(*data, scratch.start, scratch.size);
-    if (size == PN_OVERFLOW) return false;
-
-    pn_bytes_free(*bytes);
-    *bytes = pn_bytes_dup((pn_bytes_t){.size=size, .start=scratch.start});
-    pni_data_clear(*data);
-  }
-  return true;
-}
-
 static inline void pni_switch_to_raw(pn_rwbytes_t *scratch, pn_data_t **data, pn_bytes_t *bytes) {
   if (*data == NULL || pni_data_size(*data)==0) {
     return;
