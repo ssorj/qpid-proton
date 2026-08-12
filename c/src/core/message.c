@@ -293,28 +293,28 @@ void pn_message_inspect(void *obj, pn_fixed_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->instructions_deprecated)) {
+  if (pni_data_size(msg->instructions_deprecated)) {
     pn_fixed_string_addf(dst, "instructions=");
     pn_finspect(msg->instructions_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->annotations_deprecated)) {
+  if (pni_data_size(msg->annotations_deprecated)) {
     pn_fixed_string_addf(dst, "annotations=");
     pn_finspect(msg->annotations_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->properties_deprecated)) {
+  if (pni_data_size(msg->properties_deprecated)) {
     pn_fixed_string_addf(dst, "properties=");
     pn_finspect(msg->properties_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->body_deprecated)) {
+  if (pni_data_size(msg->body_deprecated)) {
     pn_fixed_string_addf(dst, "body=");
     pn_finspect(msg->body_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
@@ -424,12 +424,12 @@ void pn_message_clear(pn_message_t *msg)
   msg->annotations_raw = (pn_bytes_t){0, NULL};
   msg->properties_raw = (pn_bytes_t){0, NULL};
   msg->body_raw = (pn_bytes_t){0, NULL};
-  pn_data_clear(msg->id_deprecated);
-  pn_data_clear(msg->correlation_id_deprecated);
-  pn_data_clear(msg->instructions_deprecated);
-  pn_data_clear(msg->annotations_deprecated);
-  pn_data_clear(msg->properties_deprecated);
-  pn_data_clear(msg->body_deprecated);
+  if (msg->id_deprecated) pni_data_clear(msg->id_deprecated);
+  if (msg->correlation_id_deprecated) pni_data_clear(msg->correlation_id_deprecated);
+  if (msg->instructions_deprecated) pni_data_clear(msg->instructions_deprecated);
+  if (msg->annotations_deprecated) pni_data_clear(msg->annotations_deprecated);
+  if (msg->properties_deprecated) pni_data_clear(msg->properties_deprecated);
+  if (msg->body_deprecated) pni_data_clear(msg->body_deprecated);
 }
 
 int pn_message_errno(pn_message_t *msg)
@@ -561,7 +561,7 @@ int pn_message_set_id(pn_message_t *msg, pn_msgid_t id)
   return 0;
 }
 
-static int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
+static inline int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 {
   return pn_string_setn(string, bytes.start, bytes.size);
 }
@@ -728,21 +728,9 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
-static size_t decode_calls = 0;
-static size_t encode_calls = 0;
-
-__attribute__((destructor))
-static void print_metrics(void)
-{
-    fprintf(stderr, "Decode calls:              %lu\n", decode_calls);
-    fprintf(stderr, "Encode calls:              %lu\n", encode_calls);
-}
-
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg);
-
-  decode_calls++;
 
   if (!bytes || !size) {
     return pn_error_format(msg->error, PN_ARG_ERR, "invalid message bytes");
@@ -855,8 +843,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 {
-  encode_calls++;
-
   pn_rwbytes_t scratch = (pn_rwbytes_t){.size=*isize, .start=bytes};
   if (!pni_switch_to_raw_bytes(scratch, &msg->instructions_deprecated, &msg->instructions_raw)) {
     return PN_OVERFLOW;
@@ -981,7 +967,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
-  pn_data_clear(data);
+  pni_data_clear(data);
   int err = pn_data_fill(data, "DL[?o?B?I?o?I]", AMQP_DESC_HEADER,
                          msg->durable, msg->durable,
                          msg->priority!=AMQP_HEADER_PRIORITY_DEFAULT, msg->priority,
@@ -992,7 +978,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
 
-  if (pn_data_size(msg->instructions_deprecated)) {
+  if (pni_data_size(msg->instructions_deprecated)) {
     pn_data_rewind(msg->instructions_deprecated);
     err = pn_data_fill(data, "DLC", AMQP_DESC_DELIVERY_ANNOTATIONS, msg->instructions_deprecated);
     if (err)
@@ -1000,7 +986,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                              pn_error_text(pn_data_error(data)));
   }
 
-  if (pn_data_size(msg->annotations_deprecated)) {
+  if (pni_data_size(msg->annotations_deprecated)) {
     pn_data_rewind(msg->annotations_deprecated);
     err = pn_data_fill(data, "DLC", AMQP_DESC_MESSAGE_ANNOTATIONS, msg->annotations_deprecated);
     if (err)
@@ -1033,7 +1019,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
 
-  if (pn_data_size(msg->properties_deprecated)) {
+  if (pni_data_size(msg->properties_deprecated)) {
     pn_data_rewind(msg->properties_deprecated);
     err = pn_data_fill(data, "DLC", AMQP_DESC_APPLICATION_PROPERTIES, msg->properties_deprecated);
     if (err)
@@ -1041,7 +1027,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                              pn_error_text(pn_data_error(data)));
   }
 
-  if (pn_data_size(msg->body_deprecated)) {
+  if (pni_data_size(msg->body_deprecated)) {
     pn_data_rewind(msg->body_deprecated);
     pn_data_next(msg->body_deprecated);
     pn_type_t body_type = pn_data_type(msg->body_deprecated);

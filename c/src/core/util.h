@@ -33,6 +33,7 @@
 #include <proton/types.h>
 
 #include "object_private.h"
+#include "data.h"
 
 #if __cplusplus
 extern "C" {
@@ -67,7 +68,7 @@ static inline void pni_switch_to_data(pn_bytes_t *bytes, pn_data_t **data) {
     *data = pn_data(0);
   }
   if (bytes->start) {
-    pn_data_clear(*data);
+    pni_data_clear(*data);
     pn_data_decode(*data, bytes->start, bytes->size);
     pn_data_rewind(*data);
 
@@ -95,20 +96,20 @@ static inline void pn_rwbytes_free(pn_rwbytes_t in) {
 
 static inline bool pni_switch_to_raw_bytes(pn_rwbytes_t scratch, pn_data_t **data, pn_bytes_t *bytes)
 {
-  if (pn_data_size(*data)) {
+  if (*data && pni_data_size(*data)) {
     pn_data_rewind(*data);
     ssize_t size = pn_data_encode(*data, scratch.start, scratch.size);
     if (size == PN_OVERFLOW) return false;
 
     pn_bytes_free(*bytes);
     *bytes = pn_bytes_dup((pn_bytes_t){.size=size, .start=scratch.start});
-    pn_data_clear(*data);
+    pni_data_clear(*data);
   }
   return true;
 }
 
 static inline void pni_switch_to_raw(pn_rwbytes_t *scratch, pn_data_t **data, pn_bytes_t *bytes) {
-  if (*data == NULL || pn_data_size(*data)==0) {
+  if (*data == NULL || pni_data_size(*data)==0) {
     return;
   }
   ssize_t data_size = 0;
@@ -119,11 +120,11 @@ static inline void pni_switch_to_raw(pn_rwbytes_t *scratch, pn_data_t **data, pn
 
   pn_bytes_free(*bytes);
   *bytes = pn_bytes_dup((pn_bytes_t){.size=data_size, .start=scratch->start});
-  pn_data_clear(*data);
+  pni_data_clear(*data);
 }
 
 static inline void pni_switch_to_raw_multiple(pn_rwbytes_t *scratch, pn_data_t **data, pn_bytes_t *bytes) {
-  if (!*data || pn_data_size(*data) == 0) {
+  if (!*data || pni_data_size(*data) == 0) {
     return;
   }
   pn_data_rewind(*data);
@@ -135,7 +136,7 @@ static inline void pni_switch_to_raw_multiple(pn_rwbytes_t *scratch, pn_data_t *
       case 0:
         pn_bytes_free(*bytes);
         *bytes = (pn_bytes_t){0, NULL};
-        pn_data_clear(*data);
+        pni_data_clear(*data);
         break;
       case 1:
         pn_data_enter(*data);

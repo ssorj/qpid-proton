@@ -23,9 +23,12 @@
  */
 
 #include <proton/codec.h>
+
 #include "buffer.h"
 #include "decoder.h"
 #include "encoder.h"
+
+#include <assert.h>
 
 typedef uint16_t pni_nid_t;
 #define PNI_NID_MAX ((pni_nid_t)-1)
@@ -60,9 +63,29 @@ struct pn_data_t {
   pni_nid_t base_current;
 };
 
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
+static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   return nd ? (data->nodes + nd - 1) : NULL;
+}
+
+static inline size_t pni_data_size(pn_data_t *data)
+{
+  assert(data);
+  return data->size;
+}
+
+static inline void pni_data_clear(pn_data_t *data)
+{
+  assert(data);
+
+  data->size = 0;
+  data->parent = 0;
+  data->current = 0;
+  data->base_parent = 0;
+  data->base_current = 0;
+
+  if (data->error) pn_error_clear(data->error);
+  if (data->buf) pn_buffer_clear(data->buf);
 }
 
 int pni_data_traverse(pn_data_t *data,

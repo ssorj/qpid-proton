@@ -37,6 +37,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#define PN_ALWAYS_INLINE __attribute__((always_inline))
+
 typedef struct current {
   uint32_t null_count;
   uint32_t count;
@@ -48,7 +50,7 @@ typedef struct current {
   bool is_described_list;
 } pni_compound_context;
 
-__attribute__((always_inline)) static inline pni_compound_context make_compound(void) {
+PN_ALWAYS_INLINE static inline pni_compound_context make_compound(void) {
   return (pni_compound_context){
     .count = 0
   };
@@ -60,7 +62,7 @@ typedef struct pni_emitter_t {
   size_t position;
 } pni_emitter_t;
 
-__attribute__((always_inline)) static inline pni_emitter_t make_emitter_from_rwbytes(pn_rwbytes_t* output_bytes) {
+PN_ALWAYS_INLINE static inline pni_emitter_t make_emitter_from_rwbytes(pn_rwbytes_t* output_bytes) {
   return (pni_emitter_t){
     .output_start = output_bytes->start,
     .size = output_bytes->size,
@@ -68,7 +70,7 @@ __attribute__((always_inline)) static inline pni_emitter_t make_emitter_from_rwb
   };
 }
 
-__attribute__((always_inline)) static inline pni_emitter_t make_emitter_from_bytes(pn_rwbytes_t output_bytes) {
+PN_ALWAYS_INLINE static inline pni_emitter_t make_emitter_from_bytes(pn_rwbytes_t output_bytes) {
   return (pni_emitter_t){
     .output_start = output_bytes.start,
     .size = output_bytes.size,
@@ -76,27 +78,27 @@ __attribute__((always_inline)) static inline pni_emitter_t make_emitter_from_byt
   };
 }
 
-__attribute__((always_inline)) static inline pn_bytes_t make_bytes_from_emitter(pni_emitter_t emitter) {
+PN_ALWAYS_INLINE static inline pn_bytes_t make_bytes_from_emitter(pni_emitter_t emitter) {
     return (pn_bytes_t){.size = emitter.position, .start = emitter.output_start};
 }
 
-__attribute__((always_inline)) static inline bool resize_required(pni_emitter_t* emitter) {
+PN_ALWAYS_INLINE static inline bool resize_required(pni_emitter_t* emitter) {
   return emitter->position > emitter->size;
 }
 
-__attribute__((always_inline)) static inline void size_buffer_to_emitter(pn_rwbytes_t* buffer, pni_emitter_t* emitter) {
+PN_ALWAYS_INLINE static inline void size_buffer_to_emitter(pn_rwbytes_t* buffer, pni_emitter_t* emitter) {
   pn_rwbytes_realloc(buffer, buffer->size+emitter->position-emitter->size);
 }
 
-__attribute__((always_inline)) static inline bool encode_succeeded(pni_emitter_t* emitter, pni_compound_context* compound) {
+PN_ALWAYS_INLINE static inline bool encode_succeeded(pni_emitter_t* emitter, pni_compound_context* compound) {
   return compound->encoding_succeeded;
 }
 
-__attribute__((always_inline)) static inline bool pni_emitter_remaining(pni_emitter_t* e, size_t need) {
+PN_ALWAYS_INLINE static inline bool pni_emitter_remaining(pni_emitter_t* e, size_t need) {
   return (e->size >= e->position+need);
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writef8(pni_emitter_t* emitter, uint8_t value)
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8(pni_emitter_t* emitter, uint8_t value)
 {
   if (pni_emitter_remaining(emitter, 1)) {
     emitter->output_start[emitter->position+0] = value;
@@ -104,17 +106,7 @@ __attribute__((always_inline)) static inline void pni_emitter_writef8(pni_emitte
   emitter->position++;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writef8f8(pni_emitter_t* emitter, uint8_t value1, uint8_t value2)
-{
-  if (pni_emitter_remaining(emitter, 2)) {
-    char *bytes = &emitter->output_start[emitter->position];
-    bytes[0] = value1;
-    bytes[1] = value2;
-  }
-  emitter->position += 2;
-}
-
-__attribute__((always_inline)) static inline void pni_emitter_writef16(pni_emitter_t* emitter, uint16_t value)
+PN_ALWAYS_INLINE static inline void pni_emitter_writef16(pni_emitter_t* emitter, uint16_t value)
 {
   if (pni_emitter_remaining(emitter, 2)) {
     char *bytes = &emitter->output_start[emitter->position];
@@ -124,7 +116,7 @@ __attribute__((always_inline)) static inline void pni_emitter_writef16(pni_emitt
   emitter->position += 2;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writef32(pni_emitter_t* emitter, uint32_t value)
+PN_ALWAYS_INLINE static inline void pni_emitter_writef32(pni_emitter_t* emitter, uint32_t value)
 {
   if (pni_emitter_remaining(emitter, 4)) {
     char *bytes = &emitter->output_start[emitter->position];
@@ -136,7 +128,7 @@ __attribute__((always_inline)) static inline void pni_emitter_writef32(pni_emitt
   emitter->position += 4;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writef64(pni_emitter_t* emitter, uint64_t value) {
+PN_ALWAYS_INLINE static inline void pni_emitter_writef64(pni_emitter_t* emitter, uint64_t value) {
   if (pni_emitter_remaining(emitter, 8)) {
     char *bytes = &emitter->output_start[emitter->position];
     bytes[0] = 0xFF & (value >> 56);
@@ -151,14 +143,14 @@ __attribute__((always_inline)) static inline void pni_emitter_writef64(pni_emitt
   emitter->position += 8;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writef128(pni_emitter_t* emitter, void *value) {
+PN_ALWAYS_INLINE static inline void pni_emitter_writef128(pni_emitter_t* emitter, void *value) {
   if (pni_emitter_remaining(emitter, 16)) {
     memcpy(emitter->output_start + emitter->position, value, 16);
   }
   emitter->position += 16;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writev8(pni_emitter_t* emitter, const pn_bytes_t value)
+PN_ALWAYS_INLINE static inline void pni_emitter_writev8(pni_emitter_t* emitter, const pn_bytes_t value)
 {
   pni_emitter_writef8(emitter, value.size);
   if (pni_emitter_remaining(emitter, value.size))
@@ -166,7 +158,7 @@ __attribute__((always_inline)) static inline void pni_emitter_writev8(pni_emitte
   emitter->position += value.size;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_writev32(pni_emitter_t* emitter, const pn_bytes_t value)
+PN_ALWAYS_INLINE static inline void pni_emitter_writev32(pni_emitter_t* emitter, const pn_bytes_t value)
 {
   pni_emitter_writef32(emitter, value.size);
   if (pni_emitter_remaining(emitter, value.size))
@@ -174,7 +166,66 @@ __attribute__((always_inline)) static inline void pni_emitter_writev32(pni_emitt
   emitter->position += value.size;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_raw(pni_emitter_t* emitter, const pn_bytes_t raw)
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8f8(pni_emitter_t* emitter, uint8_t value1, uint8_t value2)
+{
+  if (pni_emitter_remaining(emitter, 2)) {
+    char *bytes = &emitter->output_start[emitter->position];
+    bytes[0] = value1;
+    bytes[1] = value2;
+  }
+  emitter->position += 2;
+}
+
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8f16(pni_emitter_t* emitter, uint8_t value1, uint16_t value2)
+{
+  if (pni_emitter_remaining(emitter, 3)) {
+    char *bytes = &emitter->output_start[emitter->position];
+    bytes[0] = value1;
+    bytes[1] = 0xFF & (value2 >> 8);
+    bytes[2] = 0xFF & (value2     );
+  }
+  emitter->position += 3;
+}
+
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8f32(pni_emitter_t* emitter, uint8_t value1, uint32_t value2)
+{
+  if (pni_emitter_remaining(emitter, 5)) {
+    char *bytes = &emitter->output_start[emitter->position];
+    bytes[0] = value1;
+    bytes[1] = 0xFF & (value2 >> 24);
+    bytes[2] = 0xFF & (value2 >> 16);
+    bytes[3] = 0xFF & (value2 >>  8);
+    bytes[4] = 0xFF & (value2      );
+  }
+  emitter->position += 5;
+}
+
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8v8(pni_emitter_t* emitter, uint8_t value1, const pn_bytes_t value2)
+{
+  if (pni_emitter_remaining(emitter, 2 + value2.size)) {
+    char *bytes = &emitter->output_start[emitter->position];
+    bytes[0] = value1;
+    bytes[1] = value2.size;
+    memcpy(bytes + 2, value2.start, value2.size);
+  }
+  emitter->position += 2 + value2.size;
+}
+
+PN_ALWAYS_INLINE static inline void pni_emitter_writef8v32(pni_emitter_t* emitter, uint8_t value1, const pn_bytes_t value2)
+{
+  if (pni_emitter_remaining(emitter, 5 + value2.size)) {
+    char *bytes = &emitter->output_start[emitter->position];
+    bytes[0] = value1;
+    bytes[1] = 0xFF & (value2.size >> 24);
+    bytes[2] = 0xFF & (value2.size >> 16);
+    bytes[3] = 0xFF & (value2.size >>  8);
+    bytes[4] = 0xFF & (value2.size      );
+    memcpy(bytes + 5, value2.start, value2.size);
+  }
+  emitter->position += 5 + value2.size;
+}
+
+PN_ALWAYS_INLINE static inline void pni_emitter_raw(pni_emitter_t* emitter, const pn_bytes_t raw)
 {
   if (pni_emitter_remaining(emitter, raw.size))
     memcpy(emitter->output_start+emitter->position, raw.start, raw.size);
@@ -183,7 +234,7 @@ __attribute__((always_inline)) static inline void pni_emitter_raw(pni_emitter_t*
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-__attribute__((always_inline)) static inline void emit_null(pni_emitter_t* emitter, pni_compound_context* compound) {
+PN_ALWAYS_INLINE static inline void emit_null(pni_emitter_t* emitter, pni_compound_context* compound) {
   if (compound->is_described_list) {
     compound->null_count++;
     return;
@@ -192,7 +243,7 @@ __attribute__((always_inline)) static inline void emit_null(pni_emitter_t* emitt
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_accumulated_nulls(pni_emitter_t* emitter, pni_compound_context* compound) {
+PN_ALWAYS_INLINE static inline void emit_accumulated_nulls(pni_emitter_t* emitter, pni_compound_context* compound) {
   uint32_t count = compound->null_count;
   if (!count) return;
 
@@ -204,7 +255,7 @@ __attribute__((always_inline)) static inline void emit_accumulated_nulls(pni_emi
   compound->null_count = 0;
 }
 
-// __attribute__((always_inline)) static inline void emit_accumulated_nulls(pni_emitter_t* emitter, pni_compound_context* compound) {
+// PN_ALWAYS_INLINE static inline void emit_accumulated_nulls(pni_emitter_t* emitter, pni_compound_context* compound) {
 //   for (uint32_t i=compound->null_count; i>0; --i) {
 //     pni_emitter_writef8(emitter, PNE_NULL);
 //     compound->count++;
@@ -212,43 +263,37 @@ __attribute__((always_inline)) static inline void emit_accumulated_nulls(pni_emi
 //   compound->null_count = 0;
 // }
 
-__attribute__((always_inline)) static inline void emit_bool(pni_emitter_t* emitter, pni_compound_context* compound, bool b) {
+PN_ALWAYS_INLINE static inline void emit_bool(pni_emitter_t* emitter, pni_compound_context* compound, bool b) {
   emit_accumulated_nulls(emitter, compound);
-  if (b) {
-    pni_emitter_writef8(emitter, PNE_TRUE);
-  } else {
-    pni_emitter_writef8(emitter, PNE_FALSE);
-  }
+  pni_emitter_writef8(emitter, b ? PNE_TRUE : PNE_FALSE);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_ubyte(pni_emitter_t* emitter, pni_compound_context* compound, uint8_t ubyte) {
+PN_ALWAYS_INLINE static inline void emit_ubyte(pni_emitter_t* emitter, pni_compound_context* compound, uint8_t ubyte) {
   emit_accumulated_nulls(emitter, compound);
   pni_emitter_writef8f8(emitter, PNE_UBYTE, ubyte);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_ushort(pni_emitter_t* emitter, pni_compound_context* compound, uint16_t ushort) {
+PN_ALWAYS_INLINE static inline void emit_ushort(pni_emitter_t* emitter, pni_compound_context* compound, uint16_t ushort) {
   emit_accumulated_nulls(emitter, compound);
-  pni_emitter_writef8(emitter, PNE_USHORT);
-  pni_emitter_writef16(emitter, ushort);
+  pni_emitter_writef8f16(emitter, PNE_USHORT, ushort);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_uint(pni_emitter_t* emitter, pni_compound_context* compound, uint32_t uint) {
+PN_ALWAYS_INLINE static inline void emit_uint(pni_emitter_t* emitter, pni_compound_context* compound, uint32_t uint) {
   emit_accumulated_nulls(emitter, compound);
   if (uint == 0) {
     pni_emitter_writef8(emitter, PNE_UINT0);
   } else if (uint < 256) {
     pni_emitter_writef8f8(emitter, PNE_SMALLUINT, uint);
   } else {
-    pni_emitter_writef8(emitter, PNE_UINT);
-    pni_emitter_writef32(emitter, uint);
+    pni_emitter_writef8f32(emitter, PNE_UINT, uint);
   }
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_ulong(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t ulong) {
+PN_ALWAYS_INLINE static inline void emit_ulong(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t ulong) {
   emit_accumulated_nulls(emitter, compound);
   if (ulong == 0) {
     pni_emitter_writef8(emitter, PNE_ULONG0);
@@ -261,21 +306,21 @@ __attribute__((always_inline)) static inline void emit_ulong(pni_emitter_t* emit
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_timestamp(pni_emitter_t* emitter, pni_compound_context* compound, pn_timestamp_t timestamp) {
+PN_ALWAYS_INLINE static inline void emit_timestamp(pni_emitter_t* emitter, pni_compound_context* compound, pn_timestamp_t timestamp) {
   emit_accumulated_nulls(emitter, compound);
   pni_emitter_writef8(emitter, PNE_MS64);
   pni_emitter_writef64(emitter, timestamp);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_uuid(pni_emitter_t* emitter, pni_compound_context* compound, pn_uuid_t* uuid) {
+PN_ALWAYS_INLINE static inline void emit_uuid(pni_emitter_t* emitter, pni_compound_context* compound, pn_uuid_t* uuid) {
   emit_accumulated_nulls(emitter, compound);
   pni_emitter_writef8(emitter, PNE_UUID);
   pni_emitter_writef128(emitter, uuid);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_descriptor(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t ulong) {
+PN_ALWAYS_INLINE static inline void emit_descriptor(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t ulong) {
   emit_accumulated_nulls(emitter, compound);
   pni_emitter_writef8(emitter, PNE_DESCRIPTOR);
 
@@ -287,7 +332,7 @@ __attribute__((always_inline)) static inline void emit_descriptor(pni_emitter_t*
   }
 }
 
-__attribute__((always_inline)) static inline pni_compound_context emit_list(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding, bool is_described_list) {
+PN_ALWAYS_INLINE static inline pni_compound_context emit_list(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding, bool is_described_list) {
   emit_accumulated_nulls(emitter, compound);
 
   // Need to fill in size and count later
@@ -316,7 +361,7 @@ __attribute__((always_inline)) static inline pni_compound_context emit_list(pni_
   };
 }
 
-__attribute__((always_inline)) static inline void emit_end_list(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding) {
+PN_ALWAYS_INLINE static inline void emit_end_list(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding) {
   // Check if list was 0 length
   if (compound->count == 0) {
     emitter->position = compound->size_position - 1;
@@ -345,7 +390,7 @@ __attribute__((always_inline)) static inline void emit_end_list(pni_emitter_t* e
   compound->encoding_succeeded = true;
 }
 
-__attribute__((always_inline)) static inline pni_compound_context emit_array(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding, pn_type_t type) {
+PN_ALWAYS_INLINE static inline pni_compound_context emit_array(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding, pn_type_t type) {
   emit_accumulated_nulls(emitter, compound);
   if (small_encoding) {
     pni_emitter_writef8(emitter, PNE_ARRAY8);
@@ -353,8 +398,7 @@ __attribute__((always_inline)) static inline pni_compound_context emit_array(pni
     size_t size_position = emitter->position;
     pni_emitter_writef8(emitter, 0);
     size_t start_position = emitter->position;
-    pni_emitter_writef8(emitter, 0);
-    pni_emitter_writef8(emitter, 0);
+    pni_emitter_writef8f8(emitter, 0, 0);
     return (pni_compound_context){
       .previous_compound = compound,
       .size_position = size_position,
@@ -378,7 +422,7 @@ __attribute__((always_inline)) static inline pni_compound_context emit_array(pni
   }
 }
 
-__attribute__((always_inline)) static inline void emit_end_array(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding) {
+PN_ALWAYS_INLINE static inline void emit_end_array(pni_emitter_t* emitter, pni_compound_context* compound, bool small_encoding) {
   // Fill in size, count and type
   size_t current = emitter->position;
   emitter->position = compound->size_position;
@@ -402,43 +446,37 @@ __attribute__((always_inline)) static inline void emit_end_array(pni_emitter_t* 
   compound->encoding_succeeded = true;
 }
 
-__attribute__((always_inline)) static inline void emit_binary_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_binary_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
   emit_accumulated_nulls(emitter, compound);
   if (bytes.size < 256) {
-    pni_emitter_writef8(emitter, PNE_VBIN8);
-    pni_emitter_writev8(emitter, bytes);
+    pni_emitter_writef8v8(emitter, PNE_VBIN8, bytes);
   } else {
-    pni_emitter_writef8(emitter, PNE_VBIN32);
-    pni_emitter_writev32(emitter, bytes);
+    pni_emitter_writef8v32(emitter, PNE_VBIN32, bytes);
   }
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_string_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_string_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
   emit_accumulated_nulls(emitter, compound);
   if (bytes.size < 256) {
-    pni_emitter_writef8(emitter, PNE_STR8_UTF8);
-    pni_emitter_writev8(emitter, bytes);
+    pni_emitter_writef8v8(emitter, PNE_STR8_UTF8, bytes);
   } else {
-    pni_emitter_writef8(emitter, PNE_STR32_UTF8);
-    pni_emitter_writev32(emitter, bytes);
+    pni_emitter_writef8v32(emitter, PNE_STR32_UTF8, bytes);
   }
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_symbol_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_symbol_bytes(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
   emit_accumulated_nulls(emitter, compound);
   if (bytes.size < 256) {
-    pni_emitter_writef8(emitter, PNE_SYM8);
-    pni_emitter_writev8(emitter, bytes);
+    pni_emitter_writef8v8(emitter, PNE_SYM8, bytes);
   } else {
-    pni_emitter_writef8(emitter, PNE_SYM32);
-    pni_emitter_writev32(emitter, bytes);
+    pni_emitter_writef8v32(emitter, PNE_SYM32, bytes);
   }
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_symbol(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_symbol(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
   if (bytes.start == NULL) {
     emit_null(emitter, compound);
   } else {
@@ -446,7 +484,7 @@ __attribute__((always_inline)) static inline void emit_symbol(pni_emitter_t* emi
   }
 }
 
-__attribute__((always_inline)) static inline void emit_string(pni_emitter_t* emitter, pni_compound_context* compound,  pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_string(pni_emitter_t* emitter, pni_compound_context* compound,  pn_bytes_t bytes) {
   if (bytes.start == NULL) {
     emit_null(emitter, compound);
   } else {
@@ -454,11 +492,11 @@ __attribute__((always_inline)) static inline void emit_string(pni_emitter_t* emi
   }
 }
 
-__attribute__((always_inline)) static inline void emit_binarynonull(pni_emitter_t* emitter, pni_compound_context* compound, size_t size, const char* bytes) {
+PN_ALWAYS_INLINE static inline void emit_binarynonull(pni_emitter_t* emitter, pni_compound_context* compound, size_t size, const char* bytes) {
   emit_binary_bytes(emitter, compound, (pn_bytes_t){.size = size, .start = bytes});
 }
 
-__attribute__((always_inline)) static inline void emit_binaryornull(pni_emitter_t* emitter, pni_compound_context* compound, size_t size, const char* bytes) {
+PN_ALWAYS_INLINE static inline void emit_binaryornull(pni_emitter_t* emitter, pni_compound_context* compound, size_t size, const char* bytes) {
   if (bytes == NULL) {
     emit_null(emitter, compound);
   } else {
@@ -466,12 +504,13 @@ __attribute__((always_inline)) static inline void emit_binaryornull(pni_emitter_
   }
 }
 
-__attribute__((always_inline)) static inline void emit_atom(pni_emitter_t* emitter, pni_compound_context* compound, pn_atom_t* atom) {
+PN_ALWAYS_INLINE static inline void emit_atom(pni_emitter_t* emitter, pni_compound_context* compound, pn_atom_t* atom) {
+  if (atom->type == PN_NULL) {
+    emit_null(emitter, compound);
+    return;
+  }
+
   switch (atom->type) {
-    default:
-    case PN_NULL:
-      emit_null(emitter, compound);
-      return;
     case PN_BOOL:
       emit_bool(emitter, compound, atom->u.as_bool);
       return;
@@ -502,11 +541,14 @@ __attribute__((always_inline)) static inline void emit_atom(pni_emitter_t* emitt
     case PN_SYMBOL:
       emit_symbol_bytes(emitter, compound, atom->u.as_bytes);
       return;
+    default:
+      emit_null(emitter, compound);
+      return;
   }
 }
 
 // NB: This function is only correct because it currently can only be called to fill out an array
-__attribute__((always_inline)) static inline void emit_counted_symbols(pni_emitter_t* emitter, pni_compound_context* compound, size_t count, char** symbols) {
+PN_ALWAYS_INLINE static inline void emit_counted_symbols(pni_emitter_t* emitter, pni_compound_context* compound, size_t count, char** symbols) {
   // 64 is a heuristic - 64 3 character symbols will already be 256 bytes
   if (count>64){
     compound->type = PNE_SYM32;
@@ -540,7 +582,7 @@ __attribute__((always_inline)) static inline void emit_counted_symbols(pni_emitt
   compound->count+=count;
 }
 
-__attribute__((always_inline)) static inline void pni_emitter_data(pni_emitter_t* emitter, pn_data_t* data) {
+PN_ALWAYS_INLINE static inline void pni_emitter_data(pni_emitter_t* emitter, pn_data_t* data) {
   ssize_t data_size = 0;
   if (emitter->position >= emitter->size ||
       PN_OVERFLOW == (data_size = pn_data_encode(data, emitter->output_start+emitter->position, emitter->size-emitter->position))) {
@@ -550,7 +592,7 @@ __attribute__((always_inline)) static inline void pni_emitter_data(pni_emitter_t
   }
 }
 
-__attribute__((always_inline)) static inline void emit_copy(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
+PN_ALWAYS_INLINE static inline void emit_copy(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
   if (!data || pn_data_size(data) == 0) {
     emit_null(emitter, compound);
     return;
@@ -564,7 +606,7 @@ __attribute__((always_inline)) static inline void emit_copy(pni_emitter_t* emitt
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_raw(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_raw(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
   if (bytes.size==0 || bytes.start == 0) {
     emit_null(emitter, compound);
     return;
@@ -576,11 +618,11 @@ __attribute__((always_inline)) static inline void emit_raw(pni_emitter_t* emitte
 }
 
 // Keep this here as a placeholder until we do something more intelligent
-__attribute__((always_inline)) static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
   emit_raw(emitter, compound, bytes);
 }
 
-__attribute__((always_inline)) static inline void emit_described_type_raw(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, const pn_bytes_t bytes) {
+PN_ALWAYS_INLINE static inline void emit_described_type_raw(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, const pn_bytes_t bytes) {
   emit_descriptor(emitter, compound, descriptor);
   pni_compound_context c = make_compound();
   emit_raw(emitter, &c, bytes);
@@ -588,7 +630,7 @@ __attribute__((always_inline)) static inline void emit_described_type_raw(pni_em
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_copy_or_raw(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data, pn_bytes_t raw)
+PN_ALWAYS_INLINE static inline void emit_copy_or_raw(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data, pn_bytes_t raw)
 {
   if (data) {
     emit_copy(emitter, compound, data);
@@ -597,13 +639,13 @@ __attribute__((always_inline)) static inline void emit_copy_or_raw(pni_emitter_t
   }
 }
 
-__attribute__((always_inline)) static inline void emit_list0(pni_emitter_t* emitter, pni_compound_context* compound)
+PN_ALWAYS_INLINE static inline void emit_list0(pni_emitter_t* emitter, pni_compound_context* compound)
 {
   pni_emitter_writef8(emitter, PNE_LIST0);
   compound->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_condition_t* condition) {
+PN_ALWAYS_INLINE static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_condition_t* condition) {
   if (!condition || !condition->name || !pn_string_get(condition->name)) {
     emit_null(emitter, compound0);
     return;
@@ -631,7 +673,7 @@ __attribute__((always_inline)) static inline void emit_condition(pni_emitter_t* 
   }
 }
 
-__attribute__((always_inline)) static inline void emit_received_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_received_disposition_t *disposition) {
+PN_ALWAYS_INLINE static inline void emit_received_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_received_disposition_t *disposition) {
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;
@@ -642,7 +684,7 @@ __attribute__((always_inline)) static inline void emit_received_disposition(pni_
   }
 }
 
-__attribute__((always_inline)) static inline void emit_rejected_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_rejected_disposition_t *disposition) {
+PN_ALWAYS_INLINE static inline void emit_rejected_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_rejected_disposition_t *disposition) {
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;
@@ -652,7 +694,7 @@ __attribute__((always_inline)) static inline void emit_rejected_disposition(pni_
   }
 }
 
-__attribute__((always_inline)) static inline void emit_modified_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_modified_disposition_t *disposition){
+PN_ALWAYS_INLINE static inline void emit_modified_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_modified_disposition_t *disposition){
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;
@@ -664,7 +706,7 @@ __attribute__((always_inline)) static inline void emit_modified_disposition(pni_
   }
 }
 
-__attribute__((always_inline)) static inline void emit_declared_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_declared_disposition_t *disposition){
+PN_ALWAYS_INLINE static inline void emit_declared_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_declared_disposition_t *disposition){
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;
@@ -674,7 +716,7 @@ __attribute__((always_inline)) static inline void emit_declared_disposition(pni_
   }
 }
 
-__attribute__((always_inline)) static inline void emit_transactional_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_transactional_disposition_t *disposition){
+PN_ALWAYS_INLINE static inline void emit_transactional_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_transactional_disposition_t *disposition){
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;
@@ -685,7 +727,7 @@ __attribute__((always_inline)) static inline void emit_transactional_disposition
   }
 }
 
-__attribute__((always_inline)) static inline void emit_custom_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_custom_disposition_t *disposition){
+PN_ALWAYS_INLINE static inline void emit_custom_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_custom_disposition_t *disposition){
   emit_descriptor(emitter, compound0, disposition->type);
   if ((disposition->data && pn_data_size(disposition->data) == 0) ||
       (!disposition->data && disposition->data_raw.size == 0)) {
@@ -697,7 +739,7 @@ __attribute__((always_inline)) static inline void emit_custom_disposition(pni_em
   compound0->count++;
 }
 
-__attribute__((always_inline)) static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_disposition_t *disposition)
+PN_ALWAYS_INLINE static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_disposition_t *disposition)
 {
   if (!disposition || pn_disposition_type(disposition)==PN_DISP_EMPTY) {
     emit_null(emitter, compound0);
