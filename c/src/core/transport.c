@@ -1340,6 +1340,201 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 
 static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp);
 
+static inline uint16_t read_u16(const uint8_t *p) {
+  return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+}
+
+static inline uint32_t read_u32(const uint8_t *p) {
+  return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+         ((uint32_t)p[2] << 8) | p[3];
+}
+
+static inline uint64_t read_u64(const uint8_t *p) {
+  return ((uint64_t)read_u32(p) << 32) | read_u32(p + 4);
+}
+
+static inline size_t decode_value(const uint8_t *buf, size_t len, uint8_t *type,
+				  uint64_t *num_val, pn_bytes_t *bytes_val) {
+  if (len < 1) return 0;
+  uint8_t code = buf[0];
+  *type = code;
+
+  switch (code) {
+    case 0x40: // null
+      return 1;
+    case 0x41: // bool true
+      *num_val = 1;
+      return 1;
+    case 0x42: // bool false
+      *num_val = 0;
+      return 1;
+    case 0x56: // boolean byte
+      if (len < 2) return 0;
+      *num_val = buf[1] ? 1 : 0;
+      return 2;
+    case 0x43: // uint0
+    case 0x44: // ulong0
+      *num_val = 0;
+      return 1;
+    case 0x52: // smalluint
+    case 0x53: // smallulong
+    case 0x50: // ubyte
+      if (len < 2) return 0;
+      *num_val = buf[1];
+      return 2;
+    case 0x60: // ushort
+      if (len < 3) return 0;
+      *num_val = read_u16(buf + 1);
+      return 3;
+    case 0x70: // uint
+      if (len < 5) return 0;
+      *num_val = read_u32(buf + 1);
+      return 5;
+    case 0x80: // ulong
+      if (len < 9) return 0;
+      *num_val = read_u64(buf + 1);
+      return 9;
+    case 0xA0: { // vbin8
+      if (len < 2) return 0;
+      size_t size = buf[1];
+      if (len < 2 + size) return 0;
+      bytes_val->size = size;
+      bytes_val->start = (const char *)(buf + 2);
+      return 2 + size;
+    }
+    case 0xB0: { // vbin32
+      if (len < 5) return 0;
+      size_t size = read_u32(buf + 1);
+      if (len < 5 + size) return 0;
+      bytes_val->size = size;
+      bytes_val->start = (const char *)(buf + 5);
+      return 5 + size;
+    }
+    default:
+      if (code == 0xC0 || code == 0xE0) { // list8 / map8
+        if (len < 2) return 0;
+        size_t size = buf[1];
+        if (len < 2 + size) return 0;
+        bytes_val->size = 2 + size;
+        bytes_val->start = (const char *)buf;
+        return 2 + size;
+      } else if (code == 0xD0 || code == 0xF0) { // list32 / map32
+        if (len < 5) return 0;
+        size_t size = read_u32(buf + 1);
+        if (len < 5 + size) return 0;
+        bytes_val->size = 5 + size;
+        bytes_val->start = (const char *)buf;
+        return 5 + size;
+      }
+      return 0;
+  }
+}
+
+static inline size_t decode_transfer(pn_bytes_t bytes,
+				     uint32_t *handle,
+                                     bool *delivery_id_is_set,
+                                     uint32_t *delivery_id,
+                                     pn_bytes_t *delivery_tag,
+                                     bool *settled_is_set,
+                                     bool *settled,
+                                     bool *more,
+                                     bool *disposition_type_is_set,
+                                     uint64_t *disposition_type,
+                                     pn_bytes_t *disposition_data,
+                                     bool *resume,
+                                     bool *aborted,
+                                     bool *batchable)
+{
+  assert(handle);
+  assert(delivery_id_is_set);
+  assert(delivery_id);
+  assert(delivery_tag);
+  assert(settled_is_set);
+  assert(settled);
+  assert(more);
+  assert(disposition_type_is_set);
+  assert(disposition_type);
+  assert(disposition_data);
+  assert(resume);
+  assert(aborted);
+  assert(batchable);
+
+  // Defaults
+  //*delivery_id_is_set = false;
+  *delivery_tag = (pn_bytes_t) {0};
+  *settled_is_set = false;
+  *settled = false;
+  *more = false;
+  *disposition_type_is_set = false;
+  *disposition_type = 0;
+  *disposition_data = (pn_bytes_t) {0};
+  *resume = false;
+  *aborted = false;
+  *batchable = false;
+
+  uint8_t  descriptor_prefix;  	// 0x00
+  uint8_t  descriptor_type;    	// 0x53 (smallulong) or 0x44
+  uint8_t  descriptor_code;    	// 0x14 (transfer)
+
+  uint8_t  list_type;          	// 0xC0 (list8)
+  uint8_t  list_size;
+  uint8_t  list_count;
+
+  uint8_t  handle_type;        	// 0x70 (uint32)
+  uint32_t handle_value;
+
+  uint8_t  delivery_id_type;    // 0x70 (uint32) or 0x40 (null)
+  // bool *delivery_id_is_set   // Out parameter
+  // uint32_t *delivery_id      // Out parameter
+
+  uint8_t  delivery_tag_type;   // 0xa0 (vbin8)
+  uint8_t  delivery_tag_size;
+  // pn_bytes_t *delivery_tag   // Out parameter
+
+  if (bytes.size < 12) {
+    // there is not enough input data to decode through
+    // delivery_id_type
+    return 0;
+  }
+
+  const char *buffer = bytes.start;
+  size_t position = 0;
+
+  descriptor_prefix = buffer[position++];
+  descriptor_type = buffer[position++];
+  descriptor_code = buffer[position++];
+
+  list_type = buffer[position++];
+  list_size = buffer[position++];
+  list_count = buffer[position++];
+
+  handle_type = buffer[position++];
+  handle_value = (uint32_t) buffer[position]; position += 4;
+
+  delivery_id_type = buffer[position++];
+
+  if (delivery_id_type == 0x70) {
+    if (bytes.size < 16) return 0;
+    *delivery_id_is_set = true;
+    *delivery_id = read_u32(buffer[position]); position += 4;
+  } else {
+    if (delivery_type_id != 0x40) abort();
+    *delivery_id_is_set = false;
+    *delivery_id = 0;
+  }
+
+  if (bytes.size - position < 2) return 0;
+
+  delivery_tag_type = buffer[position++];
+  delivery_tag_size =
+  delivery_tag->size = (size_t) buffer[position++];
+
+  if (bytes.size - position < delivery_tag->size) return 0;
+
+  delivery_tag->start = (const char *) buffer[position]; position += delivery_tag.
+
+}
+
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   // XXX: multi transfer
@@ -1354,10 +1549,9 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   uint64_t type;
 
   pn_bytes_t disp_data;
-  size_t dsize =
-    pn_amqp_decode_transfer(payload, &handle, &id_present, &id, &tag,
-                                        &settled_set, &settled, &more, &has_type, &type, &disp_data,
-                                        &resume, &aborted, &batchable);
+  size_t dsize = decode_transfer(payload, &handle, &id_present, &id, &tag,
+				 &settled_set, &settled, &more, &has_type, &type, &disp_data,
+				 &resume, &aborted, &batchable);
   payload.size -= dsize;
   payload.start += dsize;
 
