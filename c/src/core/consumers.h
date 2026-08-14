@@ -240,7 +240,6 @@ PN_ALWAYS_INLINE static inline bool pni_consumer_skip_value(pni_consumer_t* cons
     if (!pni_consumer_readf8(consumer, &type)) return false;
     if (!pni_consumer_skip_value_not_described(consumer, type)) return false;
     if (!pni_consumer_readf8(consumer, &type)) return false;
-    return pni_consumer_skip_value_not_described(consumer, type);
   }
   return pni_consumer_skip_value_not_described(consumer, type);
 }
