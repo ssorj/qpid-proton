@@ -1354,7 +1354,7 @@ static inline uint64_t read_u64(const uint8_t *p) {
 }
 
 static inline size_t decode_value(const uint8_t *buf, size_t len, uint8_t *type,
-				  uint64_t *num_val, pn_bytes_t *bytes_val) {
+                                  uint64_t *num_val, pn_bytes_t *bytes_val) {
   if (len < 1) return 0;
   uint8_t code = buf[0];
   *type = code;
@@ -1431,7 +1431,7 @@ static inline size_t decode_value(const uint8_t *buf, size_t len, uint8_t *type,
 }
 
 static inline size_t decode_transfer(pn_bytes_t bytes,
-				     uint32_t *handle,
+                                     uint32_t *handle,
                                      bool *delivery_id_is_set,
                                      uint32_t *delivery_id,
                                      pn_bytes_t *delivery_tag,
@@ -1472,22 +1472,22 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   *aborted = false;
   *batchable = false;
 
-  uint8_t  descriptor_prefix;  	// 0x00
-  uint8_t  descriptor_type;    	// 0x53 (smallulong) or 0x44
-  uint8_t  descriptor_code;    	// 0x14 (transfer)
+  uint8_t descriptor_prefix;    // 0x00
+  uint8_t descriptor_type;      // 0x53 (smallulong) or 0x44
+  uint8_t descriptor_code;      // 0x14 (transfer)
 
-  uint8_t  list_type;          	// 0xC0 (list8)
-  uint8_t  list_size;
-  uint8_t  list_count;
+  uint8_t list_type;            // 0xC0 (list8)
+  uint8_t list_size;
+  uint8_t list_count;
 
-  uint8_t  handle_type;        	// 0x70 (uint32)
-  uint32_t handle_value;
+  // uint8_t type_code          // 0x70 (uint32)
+  // uint32_t handle            // Out parameter
 
-  uint8_t  delivery_id_type;    // 0x70 (uint32) or 0x40 (null)
+  // uint8_t type_code          // 0x70 (uint32) or 0x40 (null)
   // bool *delivery_id_is_set   // Out parameter
   // uint32_t *delivery_id      // Out parameter
 
-  uint8_t  delivery_tag_type;   // 0xa0 (vbin8)
+  // uint8_t type_code          // 0xa0 (vbin8) or 0x40 (null)
   uint8_t  delivery_tag_size;
   // pn_bytes_t *delivery_tag   // Out parameter
 
@@ -1497,8 +1497,10 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
     return 0;
   }
 
-  const char *buffer = bytes.start;
+  const size_t buffer_size = bytes.size;
+  const uint8_t *buffer = (uint8_t *) bytes.start;
   size_t position = 0;
+  uint8_t type_code;
 
   descriptor_prefix = buffer[position++];
   descriptor_type = buffer[position++];
@@ -1508,31 +1510,187 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   list_size = buffer[position++];
   list_count = buffer[position++];
 
-  handle_type = buffer[position++];
-  handle_value = (uint32_t) buffer[position]; position += 4;
+  // Checks
 
+  if (descriptor_prefix != 0x00) abort();
+  if (descriptor_type != 0x53) abort();
+  if (descriptor_code != 0x14) abort();
+  if (list_type != 0xC0) abort();
+  if (!list_size) abort();
+
+  // 1. Handle
+
+  if (buffer_size == 0) return 0;
+  handle_type = buffer[position++];
+
+  if (handle_type == 0x70) {
+    *handle = read_u32(&buffer[position]); position += 4;
+  } else if (handle_type == 0x43) {
+    *handle = 0;
+  } else {
+    abort();
+  }
+
+  if (list_count == 1) return position;
+
+  // 2. Delivery ID
+
+  if (buffer_size - position < 1) return 0;
   delivery_id_type = buffer[position++];
 
   if (delivery_id_type == 0x70) {
-    if (bytes.size < 16) return 0;
+    if (buffer_size - position < 4) return 0;
+
     *delivery_id_is_set = true;
-    *delivery_id = read_u32(buffer[position]); position += 4;
-  } else {
-    if (delivery_type_id != 0x40) abort();
+    *delivery_id = read_u32(&buffer[position]); position += 4;
+  } else if (delivery_id_type == 0x40) {
     *delivery_id_is_set = false;
     *delivery_id = 0;
+  } else if (delivery_id_type == 0x43) {
+    *delivery_id_is_set = true;
+    *delivery_id = 0;
+  } else {
+    abort();
   }
 
-  if (bytes.size - position < 2) return 0;
+  if (list_count == 2) return position;
 
-  delivery_tag_type = buffer[position++];
-  delivery_tag_size =
-  delivery_tag->size = (size_t) buffer[position++];
+  // 3. Delivery tag
 
-  if (bytes.size - position < delivery_tag->size) return 0;
+  if (buffer_size - position < 1) return 0;
+  type_code = buffer[position++];
 
-  delivery_tag->start = (const char *) buffer[position]; position += delivery_tag.
+  if (type_code == 0xa0) {
+    delivery_tag_size = buffer[position++];
 
+    if (bytes.size - position < delivery_tag_size) return 0;
+
+    *delivery_tag = (pn_bytes_t) {
+      .size = (size_t) delivery_tag_size,
+      .start = (const char *) &buffer[position],
+    };
+
+    position += delivery_tag_size;
+  } else if (type_code == 0x40) {
+    *delivery_tag = (pn_bytes_t) {0};
+  } else {
+    abort();
+  }
+
+  if (list_count == 3) return position;
+
+  // 4. Message format
+
+  if (buffer_size - position < 1) return 0;
+  type_code = buffer[position++];
+
+  if (type_code == 0x40 || type_code == 0x43) {
+    // We are not using message format at the moment
+  } else if (type_code == 0x52) {
+    if (buffer_size - position < 1) return 0;
+    position += 1;
+  } else if (type_code == 0x70) {
+    if (buffer_size - position < 4) return 0;
+    position += 4;
+  } else {
+    abort();
+  }
+
+  if (list_count == 4) return position;
+
+  // 5. Settled flag
+
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+
+  if (type_code != 0x40) {
+    *settled_is_set = true;
+    *settled = parse_bool_type(type_code, buffer, buffer_size, &position);
+  }
+
+  if (list_count == 5) return position;
+
+  // Index 5: more
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    *more = parse_bool_type(type_code, buffer, buffer_size, &position);
+  }
+  if (list_count == 6) return position;
+
+  // Index 6: rcv-settle-mode
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    if (type_code == 0x50 || type_code == 0x52) {
+      if (buffer_size - position < 1) return 0;
+      position += 1;
+    } else {
+      abort();
+    }
+  }
+  if (list_count == 7) return position;
+
+  // Index 7: state / disposition
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    if (type_code == 0x00) {
+      size_t state_start = position - 1;
+      if (buffer_size - position < 2) return 0;
+      position += 2; // skip descriptor
+
+      uint8_t inner_type = (uint8_t)buffer[position++];
+      if (inner_type == 0x45) { // list0
+        // empty list
+      } else if (inner_type == 0xC0) { // list8
+        if (buffer_size - position < 2) return 0;
+        uint8_t len = (uint8_t)buffer[position];
+        position += 1 + len;
+      } else if (inner_type == 0xD0) { // list32
+        if (buffer_size - position < 8) return 0;
+        uint32_t len = read_u32(&buffer[position]);
+        position += 4 + len;
+      } else {
+        abort();
+      }
+
+      if (position > buffer_size) return 0;
+      *disposition_data = (pn_bytes_t){
+          .size = position - state_start,
+          .start = &buffer[state_start]
+      };
+      *disposition_type_is_set = true;
+    } else {
+      abort();
+    }
+  }
+  if (list_count == 8) return position;
+
+  // Index 8: resume
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    *resume = parse_bool_type(type_code, buffer, buffer_size, &position);
+  }
+  if (list_count == 9) return position;
+
+  // Index 9: aborted
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    *aborted = parse_bool_type(type_code, buffer, buffer_size, &position);
+  }
+  if (list_count == 10) return position;
+
+  // Index 10: batchable
+  if (buffer_size - position < 1) return 0;
+  type_code = (uint8_t)buffer[position++];
+  if (type_code != 0x40) {
+    *batchable = parse_bool_type(type_code, buffer, buffer_size, &position);
+  }
+
+  return position;
 }
 
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
