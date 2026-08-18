@@ -1340,94 +1340,40 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 
 static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp);
 
+#define PN_UNLIKELY(x) __builtin_expect(!!(x), 0)
+// #define PN_UNLIKELY(x) x
+
 static inline uint16_t read_u16(const uint8_t *p) {
-  return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+  return (uint16_t) (((uint16_t) p[0] << 8) | p[1]);
 }
 
 static inline uint32_t read_u32(const uint8_t *p) {
-  return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-         ((uint32_t)p[2] << 8) | p[3];
+  return ((uint32_t) p[0] << 24) | ((uint32_t) p[1] << 16) | ((uint32_t) p[2] << 8) | p[3];
 }
 
 static inline uint64_t read_u64(const uint8_t *p) {
-  return ((uint64_t)read_u32(p) << 32) | read_u32(p + 4);
+  return ((uint64_t) read_u32(p) << 32) | read_u32(p + 4);
 }
 
-static inline size_t decode_value(const uint8_t *buf, size_t len, uint8_t *type,
-                                  uint64_t *num_val, pn_bytes_t *bytes_val) {
-  if (len < 1) return 0;
-  uint8_t code = buf[0];
-  *type = code;
+static inline int consume_boolean(const uint8_t *buffer, const size_t buffer_size, size_t *position, bool *value)
+{
+  if (buffer_size - *position < 1) return -1;
+  uint8_t type_code = buffer[*position++];
 
-  switch (code) {
-    case 0x40: // null
-      return 1;
-    case 0x41: // bool true
-      *num_val = 1;
-      return 1;
-    case 0x42: // bool false
-      *num_val = 0;
-      return 1;
-    case 0x56: // boolean byte
-      if (len < 2) return 0;
-      *num_val = buf[1] ? 1 : 0;
-      return 2;
-    case 0x43: // uint0
-    case 0x44: // ulong0
-      *num_val = 0;
-      return 1;
-    case 0x52: // smalluint
-    case 0x53: // smallulong
-    case 0x50: // ubyte
-      if (len < 2) return 0;
-      *num_val = buf[1];
-      return 2;
-    case 0x60: // ushort
-      if (len < 3) return 0;
-      *num_val = read_u16(buf + 1);
-      return 3;
-    case 0x70: // uint
-      if (len < 5) return 0;
-      *num_val = read_u32(buf + 1);
-      return 5;
-    case 0x80: // ulong
-      if (len < 9) return 0;
-      *num_val = read_u64(buf + 1);
-      return 9;
-    case 0xA0: { // vbin8
-      if (len < 2) return 0;
-      size_t size = buf[1];
-      if (len < 2 + size) return 0;
-      bytes_val->size = size;
-      bytes_val->start = (const char *)(buf + 2);
-      return 2 + size;
-    }
-    case 0xB0: { // vbin32
-      if (len < 5) return 0;
-      size_t size = read_u32(buf + 1);
-      if (len < 5 + size) return 0;
-      bytes_val->size = size;
-      bytes_val->start = (const char *)(buf + 5);
-      return 5 + size;
-    }
-    default:
-      if (code == 0xC0 || code == 0xE0) { // list8 / map8
-        if (len < 2) return 0;
-        size_t size = buf[1];
-        if (len < 2 + size) return 0;
-        bytes_val->size = 2 + size;
-        bytes_val->start = (const char *)buf;
-        return 2 + size;
-      } else if (code == 0xD0 || code == 0xF0) { // list32 / map32
-        if (len < 5) return 0;
-        size_t size = read_u32(buf + 1);
-        if (len < 5 + size) return 0;
-        bytes_val->size = 5 + size;
-        bytes_val->start = (const char *)buf;
-        return 5 + size;
-      }
-      return 0;
+  if (type_code == 0x40) {
+    // Nothing
+  } else if (type_code == 0x41) {
+    *value = true;
+  } else if (PN_UNLIKELY(type_code == 0x42)) {
+    *value = false;
+  } else if (PN_UNLIKELY(type_code == 0x56)) {
+    if (buffer_size - *position < 1) return -1;
+    *value = buffer[*position++] ? 1 : 0;
+  } else {
+    abort();
   }
+
+  return 0;
 }
 
 static inline size_t decode_transfer(pn_bytes_t bytes,
@@ -1461,7 +1407,7 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
 
   // Defaults
   //*delivery_id_is_set = false;
-  *delivery_tag = (pn_bytes_t) {0};
+  //*delivery_tag = (pn_bytes_t) {0};
   *settled_is_set = false;
   *settled = false;
   *more = false;
@@ -1471,25 +1417,6 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   *resume = false;
   *aborted = false;
   *batchable = false;
-
-  uint8_t descriptor_prefix;    // 0x00
-  uint8_t descriptor_type;      // 0x53 (smallulong) or 0x44
-  uint8_t descriptor_code;      // 0x14 (transfer)
-
-  uint8_t list_type;            // 0xC0 (list8)
-  uint8_t list_size;
-  uint8_t list_count;
-
-  // uint8_t type_code          // 0x70 (uint32)
-  // uint32_t handle            // Out parameter
-
-  // uint8_t type_code          // 0x70 (uint32) or 0x40 (null)
-  // bool *delivery_id_is_set   // Out parameter
-  // uint32_t *delivery_id      // Out parameter
-
-  // uint8_t type_code          // 0xa0 (vbin8) or 0x40 (null)
-  uint8_t  delivery_tag_size;
-  // pn_bytes_t *delivery_tag   // Out parameter
 
   if (bytes.size < 12) {
     // there is not enough input data to decode through
@@ -1501,32 +1428,37 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   const uint8_t *buffer = (uint8_t *) bytes.start;
   size_t position = 0;
   uint8_t type_code;
+  int err;
 
-  descriptor_prefix = buffer[position++];
-  descriptor_type = buffer[position++];
-  descriptor_code = buffer[position++];
+  uint8_t descriptor_prefix = buffer[position++]; // 0x00
+  uint8_t descriptor_type = buffer[position++];   // 0x53 (smallulong) // XXX 0x44 check
+  uint8_t descriptor_code = buffer[position++];   // 0x14 (transfer)
 
-  list_type = buffer[position++];
-  list_size = buffer[position++];
-  list_count = buffer[position++];
+  uint8_t list_type = buffer[position++];         // 0xc0 (list8)
+  uint8_t list_size = buffer[position++];
+  uint8_t list_count = buffer[position++];
 
   // Checks
 
-  if (descriptor_prefix != 0x00) abort();
-  if (descriptor_type != 0x53) abort();
-  if (descriptor_code != 0x14) abort();
-  if (list_type != 0xC0) abort();
-  if (!list_size) abort();
+  if (PN_UNLIKELY(descriptor_prefix != 0x00)) abort();
+  if (PN_UNLIKELY(descriptor_type != 0x53)) abort();
+  if (PN_UNLIKELY(descriptor_code != 0x14)) abort();
+  if (PN_UNLIKELY(list_type != 0xc0)) abort();
+  if (PN_UNLIKELY(!list_size)) abort();
+  if (PN_UNLIKELY(!list_count)) abort();
 
-  // 1. Handle
+  // 1. Handle (the link ID)
 
   if (buffer_size == 0) return 0;
-  handle_type = buffer[position++];
+  type_code = buffer[position++];
 
-  if (handle_type == 0x70) {
-    *handle = read_u32(&buffer[position]); position += 4;
-  } else if (handle_type == 0x43) {
+  if (type_code == 0x43) {
     *handle = 0;
+  } else if (type_code == 0x52) {
+    *handle = buffer[position++];
+  } else if (type_code == 0x70) {
+    *handle = read_u32(&buffer[position]);
+    position += 4;
   } else {
     abort();
   }
@@ -1536,17 +1468,23 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   // 2. Delivery ID
 
   if (buffer_size - position < 1) return 0;
-  delivery_id_type = buffer[position++];
+  type_code = buffer[position++];
 
-  if (delivery_id_type == 0x70) {
+  if (type_code == 0x70) {
     if (buffer_size - position < 4) return 0;
 
     *delivery_id_is_set = true;
-    *delivery_id = read_u32(&buffer[position]); position += 4;
-  } else if (delivery_id_type == 0x40) {
+    *delivery_id = read_u32(&buffer[position]);
+    position += 4;
+  } else if (type_code == 0x52) {
+    if (buffer_size - position < 1) return 0;
+
+    *delivery_id_is_set = true;
+    *delivery_id = buffer[position++];
+  } else if (PN_UNLIKELY(type_code == 0x40)) {
     *delivery_id_is_set = false;
     *delivery_id = 0;
-  } else if (delivery_id_type == 0x43) {
+  } else if (PN_UNLIKELY(type_code == 0x43)) {
     *delivery_id_is_set = true;
     *delivery_id = 0;
   } else {
@@ -1561,7 +1499,7 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
   type_code = buffer[position++];
 
   if (type_code == 0xa0) {
-    delivery_tag_size = buffer[position++];
+    uint8_t delivery_tag_size = buffer[position++];
 
     if (bytes.size - position < delivery_tag_size) return 0;
 
@@ -1588,7 +1526,7 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
     // We are not using message format at the moment
   } else if (type_code == 0x52) {
     if (buffer_size - position < 1) return 0;
-    position += 1;
+    position++;
   } else if (type_code == 0x70) {
     if (buffer_size - position < 4) return 0;
     position += 4;
@@ -1600,95 +1538,62 @@ static inline size_t decode_transfer(pn_bytes_t bytes,
 
   // 5. Settled flag
 
-  if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-
-  if (type_code != 0x40) {
-    *settled_is_set = true;
-    *settled = parse_bool_type(type_code, buffer, buffer_size, &position);
-  }
+  err = consume_boolean(buffer, buffer_size, &position, settled);
+  if (err) abort();
 
   if (list_count == 5) return position;
 
-  // Index 5: more
-  if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    *more = parse_bool_type(type_code, buffer, buffer_size, &position);
-  }
+  // 6. More flag
+
+  err = consume_boolean(buffer, buffer_size, &position, more);
+
   if (list_count == 6) return position;
 
-  // Index 6: rcv-settle-mode
+  // 7. Receiver settle mode
+
   if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    if (type_code == 0x50 || type_code == 0x52) {
-      if (buffer_size - position < 1) return 0;
-      position += 1;
-    } else {
-      abort();
-    }
-  }
+  type_code = buffer[position++];
+
+  // if (type_code == 0x40) {
+  //   //
+  // } else if (type_code == 0x50 || type_code == 0x52) {
+  //   if (buffer_size - position < 1) return 0;
+
+  //   position += 1;
+  // } else {
+  //   abort();
+  // }
+
   if (list_count == 7) return position;
 
-  // Index 7: state / disposition
+  // 8. Disposition
+
   if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    if (type_code == 0x00) {
-      size_t state_start = position - 1;
-      if (buffer_size - position < 2) return 0;
-      position += 2; // skip descriptor
+  type_code = buffer[position++];
 
-      uint8_t inner_type = (uint8_t)buffer[position++];
-      if (inner_type == 0x45) { // list0
-        // empty list
-      } else if (inner_type == 0xC0) { // list8
-        if (buffer_size - position < 2) return 0;
-        uint8_t len = (uint8_t)buffer[position];
-        position += 1 + len;
-      } else if (inner_type == 0xD0) { // list32
-        if (buffer_size - position < 8) return 0;
-        uint32_t len = read_u32(&buffer[position]);
-        position += 4 + len;
-      } else {
-        abort();
-      }
+  // XXX
+  if (type_code != 0x40) abort();
 
-      if (position > buffer_size) return 0;
-      *disposition_data = (pn_bytes_t){
-          .size = position - state_start,
-          .start = &buffer[state_start]
-      };
-      *disposition_type_is_set = true;
-    } else {
-      abort();
-    }
-  }
   if (list_count == 8) return position;
 
-  // Index 8: resume
-  if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    *resume = parse_bool_type(type_code, buffer, buffer_size, &position);
-  }
+  // 9. Resume
+
+  err = consume_boolean(buffer, buffer_size, &position, resume);
+  if (err) abort();
+
   if (list_count == 9) return position;
 
-  // Index 9: aborted
-  if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    *aborted = parse_bool_type(type_code, buffer, buffer_size, &position);
-  }
+  // 10. Aborted
+
+  err = consume_boolean(buffer, buffer_size, &position, aborted);
+  if (err) abort();
+
   if (list_count == 10) return position;
 
-  // Index 10: batchable
-  if (buffer_size - position < 1) return 0;
-  type_code = (uint8_t)buffer[position++];
-  if (type_code != 0x40) {
-    *batchable = parse_bool_type(type_code, buffer, buffer_size, &position);
-  }
+  // 11. Batchable
+
+  err = consume_boolean(buffer, buffer_size, &position, batchable);
+  if (err) abort();
 
   return position;
 }
